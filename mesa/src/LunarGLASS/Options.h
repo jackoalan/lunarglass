@@ -30,31 +30,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <iostream>
-#include <vector>
-#include <cstdio>
-#include <cstdlib>
-
 
 namespace gla {
-    enum Backend { GLSL      // GLSL backed
-                 , TGSI      // TGSI backend
-                 };
+    enum BackendOption { GLSL      // GLSL backed
+                       , TGSI      // TGSI backend
+                       };
 
-  // Anonymous Options struct
+    // Options struct
     struct OptionsType {
         bool dumpAst;
         bool obfuscate;
-        Backend backend;
+        BackendOption backend;
     };
-
-    // Handle the commandline arguments to the program
-    // Returns the index of the first non-flag argument
-    // Assumes that all option/flagged arguments come before non-flagged arguments
-    int handleArgs(int, char**);
-
-    // Print out description and help
-    void printHelp();
 
     extern OptionsType Options;
 }

@@ -20,6 +20,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+
+// Define main_cpp, so we can include Options.cpp safely
+#define MAIN_CPP
+
 #include <cstdlib>
 #include <cstdio>
 
@@ -55,7 +59,8 @@ typedef int ssize_t;
 #include <iostream>
 
 // LunarGLASS runtime options handling
-#include "Options.h"
+#include "Options.cpp"
+
 
 // End: LunarG
 
@@ -300,7 +305,7 @@ main(int argc, char **argv)
    //   usage_fail(argv[0]);
 
    if (argc < 2)
-      gla::printHelp();
+      gla::PrintHelp();
 
    dump_hir = 0;
    dump_lir = 0;
@@ -309,7 +314,7 @@ main(int argc, char **argv)
 
    // Handle some LunarGLASS specific options in a more platform-independent manner
    // Overwrites argc and argv
-   int optind = gla::handleArgs(argc, argv);
+   int optind = gla::HandleArgs(argc, argv);
    dump_ast = gla::Options.dumpAst;
 
    initialize_context(ctx, (glsl_es) ? API_OPENGLES2 : API_OPENGL);

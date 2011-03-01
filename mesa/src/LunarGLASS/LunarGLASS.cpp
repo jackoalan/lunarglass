@@ -51,6 +51,8 @@ gla::PrivateManager::PrivateManager() : module(0)
         backEndTranslator = gla::GetGlslTranslator();
         backEnd = gla::GetGlslBackEnd();
         break;
+    default:
+        assert(!"Internal error: unknown backend");
     }
 }
 
@@ -59,14 +61,17 @@ gla::PrivateManager::~PrivateManager()
     delete module;
     switch (Options.backend) {
     case TGSI:
-      gla::ReleaseTgsiTranslator(backEndTranslator);
-      gla::ReleaseTgsiBackEnd(backEnd);
-      break;
+        gla::ReleaseTgsiTranslator(backEndTranslator);
+        gla::ReleaseTgsiBackEnd(backEnd);
+        break;
     case GLSL:
-      gla::ReleaseGlslTranslator(backEndTranslator);
-      gla::ReleaseGlslBackEnd(backEnd);
-      break;
+        gla::ReleaseGlslTranslator(backEndTranslator);
+        gla::ReleaseGlslBackEnd(backEnd);
+        break;
+    default:
+        assert(!"Internal error: unknown backend");
     }
+
 }
 
 void gla::BackEnd::getRegisterForm(int& outerSoA, int& innerAoS)

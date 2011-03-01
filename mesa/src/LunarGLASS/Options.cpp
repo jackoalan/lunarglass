@@ -1,4 +1,4 @@
-//===- Options.cpp - Help Translate GLSL IR to LunarGLASS Top IR -===//
+//===- Options.cpp - Global run-time options ------------------------------===//
 //
 // LunarGLASS: An Open Modular Shader Compiler Architecture
 // Copyright © 2011, LunarG, Inc.
@@ -30,7 +30,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <Options.h>
+#include "Options.h"
+#include <string>
+
+// Function prototypes, so that main.cpp can include this file safely
+namespace gla {
+    bool IsOption(std::string);
+    void PrintHelp();
+    int HandleArgs(int, char**);
+}
+
+#ifndef MAIN_CPP
+
+#include <iostream>
+#include <vector>
+#include <cstdio>
+#include <cstdlib>
 
 // Description and usage information
 const std::string Description = "\
@@ -50,23 +65,25 @@ Usage: ./StandAlone[.exe] [options] file1.frag ...\n\
          -o --obfuscate  Obfuscate the output\n\
 ";
 
-// Is the string an option/flagged argument?
-bool isOption(std::string s) { return !s.compare(0, 1, "-"); }
 
 namespace gla {
 
+    // Global Options
     OptionsType Options = { false   // Dump the ast
                           , false   // Obfuscate
                           , GLSL    // Backend
                           };
 
+    // Is the string an option/flagged argument?
+    bool IsOption(std::string s) { return !s.compare(0, 1, "-"); }
+
 
     // Print out description and help
-    void printHelp() { std::cout << Description << Usage; }
+    void PrintHelp() { std::cout << Description << Usage; }
 
     // Returns the index of the first non-flag argument
     // Assumes that all option/flagged arguments come before non-flagged arguments
-    int handleArgs(int argc, char **argv) {
+    int HandleArgs(int argc, char **argv) {
         using std::vector;
         using std::string;
         using std::iterator;
@@ -77,7 +94,7 @@ namespace gla {
         vector<string> flaggedArgs;
         flaggedArgs.clear();
         for (int i = 1; i < argc; ++i) {
-            if (isOption((string) argv[i])) {
+            if (IsOption((string) argv[i])) {
                 flaggedArgs.push_back(argv[i]);
             } else {
                 argIndex = i;
@@ -88,7 +105,7 @@ namespace gla {
         // Handle each option
         for (vector<string>::iterator i = flaggedArgs.begin(), e = flaggedArgs.end(); i != e; ++i){
             if (*i == "-h" || *i == "--help") {
-                printHelp();
+                PrintHelp();
                 exit(0);
             } else if (*i == "--dump-ast") {
                 Options.dumpAst = true;
@@ -98,7 +115,7 @@ namespace gla {
                 Options.backend = TGSI;
             } else {
                 std::cout << "Unknown option: " << *i << std::endl;
-                printHelp();
+                PrintHelp();
                 exit(0);
             }
         }
@@ -108,4 +125,4 @@ namespace gla {
 
 }
 
-
+#endif

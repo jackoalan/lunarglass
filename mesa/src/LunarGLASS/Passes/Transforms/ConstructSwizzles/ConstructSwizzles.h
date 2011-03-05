@@ -32,18 +32,8 @@
 
 
 #include "llvm/Pass.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
     FunctionPass* createConstructSwizzlesPass();
+} // End llvm namespace
 
-    struct ConstructSwizzles : public FunctionPass {
-
-        // Rest is standard pass stuff
-        static char ID;
-        ConstructSwizzles() : FunctionPass(ID) {}
-        virtual bool runOnFunction(Function&);
-        void print(raw_ostream&, const Module* = 0) const;
-        virtual void getAnalysisUsage(AnalysisUsage&) const;
-    };
-} // End  namespace

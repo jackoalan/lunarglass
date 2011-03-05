@@ -35,16 +35,74 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/InstIterator.h"
 #include "ConstructSwizzles.h"
+#include "llvm/ADT/ilist.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace llvm;
 
-bool ConstructSwizzles::runOnFunction(Function& F) {
-    for (inst_iterator i = inst_begin(F), e = inst_end(F); i != e; ++i){
-    }
+namespace {
+    struct ConstructSwizzles : public FunctionPass {
 
-    return false;
+        // Rest is standard pass stuff
+        static char ID;
+        ConstructSwizzles() : FunctionPass(ID) {}
+        virtual bool runOnFunction(Function&);
+        void print(raw_ostream&, const Module* = 0) const;
+        virtual void getAnalysisUsage(AnalysisUsage&) const;
+
+    private:
+        typedef iplist<Instruction>::reverse_iterator reverse_iterator;
+        typedef SmallVector<reverse_iterator,8> InstVec;
+
+        // Gather all contiguous candidate instructions together
+        InstVec* gather(reverse_iterator&, reverse_iterator&);
+
+        // Group instructions into the individual swizzles
+        SmallVector<InstVec*, 4>* group(InstVec&);
+    };
+} // End  namespace
+
+// Predicate for whether the instruction is an insert
+inline bool IsInsert(Instruction &i) {
+    return strcmp(i.getOpcodeName(), "insertelement") == 0;
 }
 
+// Predicate for whether the instruction is an extract
+inline bool IsExtract(Instruction &i) {
+    return strcmp(i.getOpcodeName(), "extractelement") == 0;
+}
+
+// Predicate for whether the instruction is the last use in the
+// function. TODO: implement
+
+// inline bool IsLastUse(Instruction &i) {
+//     return false
+// }
+
+// Predicate for whether the instruction is a swizzle component
+// candidate
+inline bool IsCandidate(Instruction &i) {
+    return (IsInsert(i) || IsExtract(i)) && i.hasOneUse();
+}
+
+bool ConstructSwizzles::runOnFunction(Function &F) {
+    for (Function::iterator bb = F.begin(), ebb = F.end(); bb != ebb; ++bb) {
+        errs() << "processing basic block " << bb->getName() << "\n";
+        BasicBlock::InstListType &instList = bb->getInstList();
+        for (ConstructSwizzles::reverse_iterator i = instList.rbegin(), e = instList.rend(); i != e; ++i){
+            if (IsCandidate(*i)) {
+                ConstructSwizzles::InstVec *vec = new SmallVector<ConstructSwizzles::reverse_iterator, 8>();
+                for (/*blank*/; (i != e) && IsCandidate(*i); ++i) {
+                    errs() << "  " << *i;
+                    errs() << "\t\t;| " << IsCandidate(*i) << "\n";
+                    vec->push_back(i);
+                }
+            } else
+                errs() << "  " << *i << "\n";
+        }
+    }
+    return false;
+}
 
 void ConstructSwizzles::getAnalysisUsage(AnalysisUsage& AU) const {
     return;

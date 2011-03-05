@@ -48,6 +48,9 @@
 #include "GlslTarget.h"
 #include "Options.h"
 
+// LunarGLASS Passes
+#include "Passes/Transforms/ConstructSwizzles/ConstructSwizzles.h"
+
 void gla::PrivateManager::translateTopToBottom()
 {
     runLLVMOptimizations1();
@@ -77,6 +80,7 @@ void gla::PrivateManager::runLLVMOptimizations1()
     passManager.add(llvm::createReassociatePass());
     passManager.add(llvm::createAggressiveDCEPass());
     passManager.add(llvm::createGVNPass());
+    passManager.add(llvm::createConstructSwizzlesPass());
     llvm::Module::iterator function, lastFunction;
 
     // run them across all functions

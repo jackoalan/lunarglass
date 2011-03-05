@@ -18,8 +18,12 @@ talloc_SOURCES := \
 	talloc.c
 talloc_SOURCES := $(addprefix ../talloc/, $(talloc_SOURCES))
 
+passes_SOURCES := \
+    $(shell find ../LunarGLASS/Passes -type f -name "*.cpp")
+
 lunarglass_SOURCES := \
-	$(wildcard ../LunarGLASS/*.cpp)
+	$(wildcard ../LunarGLASS/*.cpp) \
+	$(passes_SOURCES)
 
 glsl_SOURCES := \
 	glcpp/glcpp-lex.c \

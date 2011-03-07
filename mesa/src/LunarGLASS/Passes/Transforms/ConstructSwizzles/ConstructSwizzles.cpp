@@ -37,11 +37,22 @@
 #include "ConstructSwizzles.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/Type.h"
+
+#define INSTRUCTION_COUNT 16
+#define GROUP_COUNT 8
 
 using namespace llvm;
 
 namespace {
-    struct ConstructSwizzles : public FunctionPass {
+    class ConstructSwizzles : public FunctionPass {
+    public:
+        // Typedefs
+        typedef iplist<Instruction>::reverse_iterator reverse_iterator;
+        typedef SmallVector<Instruction*,INSTRUCTION_COUNT> InstVec;
+        typedef SmallSet<Instruction*, INSTRUCTION_COUNT> InstSet;
+        typedef SmallVector<InstVec*, GROUP_COUNT> GroupVec;
 
         // Rest is standard pass stuff
         static char ID;
@@ -51,14 +62,12 @@ namespace {
         virtual void getAnalysisUsage(AnalysisUsage&) const;
 
     private:
-        typedef iplist<Instruction>::reverse_iterator reverse_iterator;
-        typedef SmallVector<reverse_iterator,8> InstVec;
-
         // Gather all contiguous candidate instructions together
-        InstVec* gather(reverse_iterator&, reverse_iterator&);
+        InstVec* gather(BasicBlock::InstListType&);
 
         // Group instructions into the individual swizzles
-        SmallVector<InstVec*, 4>* group(InstVec&);
+        GroupVec* group(InstVec&);
+
     };
 } // End  namespace
 
@@ -87,22 +96,102 @@ inline bool IsCandidate(Instruction &i) {
 
 bool ConstructSwizzles::runOnFunction(Function &F) {
     for (Function::iterator bb = F.begin(), ebb = F.end(); bb != ebb; ++bb) {
-        errs() << "processing basic block " << bb->getName() << "\n";
-        BasicBlock::InstListType &instList = bb->getInstList();
-        for (ConstructSwizzles::reverse_iterator i = instList.rbegin(), e = instList.rend(); i != e; ++i){
-            if (IsCandidate(*i)) {
-                ConstructSwizzles::InstVec *vec = new SmallVector<ConstructSwizzles::reverse_iterator, 8>();
-                for (/*blank*/; (i != e) && IsCandidate(*i); ++i) {
-                    errs() << "  " << *i;
-                    errs() << "\t\t;| " << IsCandidate(*i) << "\n";
-                    vec->push_back(i);
-                }
-            } else
-                errs() << "  " << *i << "\n";
+
+        //print block
+        errs() << "processing basic block " << bb->getName() << "\n" << *bb;
+
+        // Gather the candidate instructions
+        InstVec *v = gather(bb->getInstList());
+
+        // print candidates
+        errs() << "\nThis block's candidates: \n";
+        for (InstVec::iterator i = v->begin(), e = v->end(); i != e; ++i) {
+            errs() << **i << "\n";
+        }
+
+        // Group them
+        GroupVec *groupVec = group(*v);
+
+        // print groups
+        errs() << "\nThis block's groups: \n";
+        int i = 0;
+        for (GroupVec::iterator gI = groupVec->begin(), gE = groupVec->end(); gI != gE; ++gI) {
+            ++i;
+            errs() << "Group " << i << ":";
+            for (InstVec::iterator instI = (*gI)->begin(), instE = (*gI)->end(); instI != instE; ++instI) {
+                if (instI == ((*gI)->begin()))
+                    errs() << **instI;
+                else
+                    errs() <<  "   <|> " << **instI;
+            }
+            errs() << "\n";
         }
     }
     return false;
 }
+
+// Add the value to the provided set and vector if it's a candidate
+// instruction. Recursively add its operands.
+void AddInstructionRec(Value* v, ConstructSwizzles::InstSet &s, ConstructSwizzles::InstVec &vec) {
+
+    // If it's an instruction and a candidate, insert it and all it's
+    // operands recursively
+    if (Instruction* inst = dyn_cast<Instruction>(v)) {
+        if (IsCandidate(*inst)) {
+            s.insert(inst);
+            vec.push_back(inst);
+            for (User::op_iterator oi = inst->op_begin(), oe = inst->op_end(); oi != oe; ++oi) {
+                AddInstructionRec(*oi, s, vec);
+            }
+        }
+    }
+
+    // Base case: not a candidate instruction
+    return;
+}
+
+
+// Gather all candidate instructions together
+ConstructSwizzles::InstVec* ConstructSwizzles::gather(BasicBlock::InstListType &instList) {
+    ConstructSwizzles::InstVec *vec = new ConstructSwizzles::InstVec();
+    for (ConstructSwizzles::reverse_iterator i = instList.rbegin(), e = instList.rend(); i != e; ++i){
+        if (IsCandidate(*i)) {
+            for (/*blank*/; (i != e) && IsCandidate(*i); ++i) {
+                vec->push_back(&*i);
+            }
+        }
+    }
+    return vec;
+}
+
+// Group instructions into the individual swizzles
+ConstructSwizzles::GroupVec* ConstructSwizzles::group(InstVec &vec) {
+    ConstructSwizzles::GroupVec *groupVec = new ConstructSwizzles::GroupVec();
+    ConstructSwizzles::InstSet *instSet = new ConstructSwizzles::InstSet();
+    for (InstVec::iterator i = vec.begin(), e = vec.end(); i != e; ++i) {
+
+        // Convert to an instruction (should not fail)
+        Instruction *inst = dyn_cast<Instruction>(&**i);
+        if (!inst) {
+            assert(!"attempting to gather non-instructions");
+        }
+
+        // If we've already seen it, continue
+        if (instSet->count(inst)) {
+            continue;
+        }
+
+        // Else this is a new group
+
+        ConstructSwizzles::InstVec *newGroup = new ConstructSwizzles::InstVec();
+
+        AddInstructionRec(inst, *instSet, *newGroup);
+        groupVec->push_back(newGroup);
+    }
+
+    return groupVec;
+}
+
 
 void ConstructSwizzles::getAnalysisUsage(AnalysisUsage& AU) const {
     return;

@@ -39,6 +39,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Type.h"
+#include "llvm/Constants.h"
 
 #define INSTRUCTION_COUNT 16
 #define GROUP_COUNT 8
@@ -68,8 +69,30 @@ namespace {
         // Group instructions into the individual swizzles
         GroupVec* group(InstVec&);
 
+        // Add the value to the provided set and vector if it's a candidate
+        // instruction. Recursively add its operands.
+        void addInstructionRec(Value*, InstSet&, InstVec&);
     };
 } // End  namespace
+
+typedef Value* Vec;
+
+struct SwizzleOp {
+    int x;
+    int y;
+    int z;
+    int w;
+    int mask;
+    Vec xV;
+    Vec yV;
+    Vec zV;
+    Vec wV;
+    int xO;
+    int yO;
+    int zO;
+    int wO;
+};
+
 
 // Predicate for whether the instruction is an insert
 inline bool IsInsert(Instruction &i) {
@@ -94,45 +117,144 @@ inline bool IsCandidate(Instruction &i) {
     return (IsInsert(i) || IsExtract(i)) && i.hasOneUse();
 }
 
+// If the Value is a constant int, return it as an unsigned char. Otherwise return -1
+unsigned char GetChar(Value *val) {
+    if (ConstantInt *c = dyn_cast<ConstantInt>(val))
+        return c->getLimitedValue(255);
+    return -1;
+}
+
+// Set the offsets for the group
+void SetOffsets(ConstructSwizzles::InstVec &vec, SwizzleOp &sop) {
+    sop.xO = sop.yO = sop.zO = sop.wO = 0;
+    for (ConstructSwizzles::InstVec::iterator instI = vec.begin(), instE = vec.end(); instI != instE; ++instI) {
+        // Follow the ops of an insert only to know what place to put
+        // the offset in
+        if (!IsInsert(**instI)) {
+            continue;
+        }
+
+        // If the operand is an extract instruction, then set the offset
+        Value *val = (*instI)->getOperand(1);
+        if (Instruction *inst = dyn_cast<Instruction>(val)) {
+            if (IsExtract(*inst)) {
+                switch (GetChar(inst->getOperand(2))) {
+                case 0:
+                    break;
+                case 1:
+                    break;
+                case 2:
+                    break;
+                case 3:
+                    break;
+                default:
+                    assert(!" Unkown access mask found");
+                }
+            }
+        }
+    }
+    return;
+}
+
+// Produce a write mask mask for the group, and set it
+void SetWriteMaskMask(ConstructSwizzles::InstVec &vec, SwizzleOp &sop) {
+    sop.x = sop.y = sop.z = sop.w = 0;
+    for (ConstructSwizzles::InstVec::iterator instI = vec.begin(), instE = vec.end(); instI != instE; ++instI) {
+        // The mask only cares about inserts
+        if (!IsInsert(**instI))
+            continue;
+
+        switch (GetChar((*instI)->getOperand(2))) {
+            case 0:
+                sop.x = 1;
+                break;
+            case 1:
+                sop.y = 1;
+                break;
+            case 2:
+                sop.z = 1;
+                break;
+            case 3:
+                sop.w = 1;
+                break;
+            default:
+                assert(!" Unknown access mask found");
+        }
+    }
+    sop.mask = sop.x*8 + sop.y*4 + sop.z*2 + sop.w;
+    return;
+}
+
+
+
+// Print the block
+void PrintBlock(BasicBlock &bb) {
+    errs() << "processing basic block " << bb.getName() << "\n" << bb;
+    return;
+}
+
+void PrintCandidates(ConstructSwizzles::InstVec &v) {
+    errs() << "\nThis block's candidates: \n";
+    for (ConstructSwizzles::InstVec::iterator i = v.begin(), e = v.end(); i != e; ++i) {
+        errs() << **i << "\n";
+    }
+    return;
+}
+
+void PrintGroups(ConstructSwizzles::GroupVec &groupVec) {
+    errs() << "\nThis block's groups: \n";
+    int i = 0;
+    for (ConstructSwizzles::GroupVec::iterator gI = groupVec.begin(), gE = groupVec.end(); gI != gE; ++gI) {
+        ++i;
+        errs() << "Group " << i << ":";
+        for (ConstructSwizzles::InstVec::iterator instI = (*gI)->begin(), instE = (*gI)->end(); instI != instE; ++instI) {
+            if (instI == ((*gI)->begin()))
+                errs() << **instI;
+            else
+                errs() <<  "   <|> " << **instI;
+        }
+        errs() << "\n";
+    }
+
+}
+
+void PrintWriteMaskMasks(ConstructSwizzles::GroupVec &groupVec) {
+    errs() << "\nWrite masks/offsets for each group:\n";
+    SwizzleOp sop;
+    for (ConstructSwizzles::GroupVec::iterator gI = groupVec.begin(), gE = groupVec.end(); gI != gE; ++gI) {
+        SetWriteMaskMask(**gI, sop);
+        errs() << "  " << sop.mask;
+        SetOffsets(**gI, sop);
+        errs() << "  | " << sop.xO << " " << sop.yO << " " << sop.zO << " " << sop.wO;
+        errs() << "\n";
+    }
+
+
+}
+
 bool ConstructSwizzles::runOnFunction(Function &F) {
     for (Function::iterator bb = F.begin(), ebb = F.end(); bb != ebb; ++bb) {
 
-        //print block
-        errs() << "processing basic block " << bb->getName() << "\n" << *bb;
+        PrintBlock(*bb);
 
         // Gather the candidate instructions
         InstVec *v = gather(bb->getInstList());
-
-        // print candidates
-        errs() << "\nThis block's candidates: \n";
-        for (InstVec::iterator i = v->begin(), e = v->end(); i != e; ++i) {
-            errs() << **i << "\n";
-        }
+        PrintCandidates(*v);
 
         // Group them
         GroupVec *groupVec = group(*v);
+        PrintGroups(*groupVec);
 
-        // print groups
-        errs() << "\nThis block's groups: \n";
-        int i = 0;
-        for (GroupVec::iterator gI = groupVec->begin(), gE = groupVec->end(); gI != gE; ++gI) {
-            ++i;
-            errs() << "Group " << i << ":";
-            for (InstVec::iterator instI = (*gI)->begin(), instE = (*gI)->end(); instI != instE; ++instI) {
-                if (instI == ((*gI)->begin()))
-                    errs() << **instI;
-                else
-                    errs() <<  "   <|> " << **instI;
-            }
-            errs() << "\n";
-        }
+
+        PrintWriteMaskMasks(*groupVec);
+
     }
     return false;
 }
 
 // Add the value to the provided set and vector if it's a candidate
 // instruction. Recursively add its operands.
-void AddInstructionRec(Value* v, ConstructSwizzles::InstSet &s, ConstructSwizzles::InstVec &vec) {
+void ConstructSwizzles::addInstructionRec(Value* v, InstSet &s, InstVec &vec) {
 
     // If it's an instruction and a candidate, insert it and all it's
     // operands recursively
@@ -141,7 +263,7 @@ void AddInstructionRec(Value* v, ConstructSwizzles::InstSet &s, ConstructSwizzle
             s.insert(inst);
             vec.push_back(inst);
             for (User::op_iterator oi = inst->op_begin(), oe = inst->op_end(); oi != oe; ++oi) {
-                AddInstructionRec(*oi, s, vec);
+                addInstructionRec(*oi, s, vec);
             }
         }
     }
@@ -153,7 +275,7 @@ void AddInstructionRec(Value* v, ConstructSwizzles::InstSet &s, ConstructSwizzle
 
 // Gather all candidate instructions together
 ConstructSwizzles::InstVec* ConstructSwizzles::gather(BasicBlock::InstListType &instList) {
-    ConstructSwizzles::InstVec *vec = new ConstructSwizzles::InstVec();
+    InstVec *vec = new InstVec();
     for (ConstructSwizzles::reverse_iterator i = instList.rbegin(), e = instList.rend(); i != e; ++i){
         if (IsCandidate(*i)) {
             for (/*blank*/; (i != e) && IsCandidate(*i); ++i) {
@@ -166,8 +288,8 @@ ConstructSwizzles::InstVec* ConstructSwizzles::gather(BasicBlock::InstListType &
 
 // Group instructions into the individual swizzles
 ConstructSwizzles::GroupVec* ConstructSwizzles::group(InstVec &vec) {
-    ConstructSwizzles::GroupVec *groupVec = new ConstructSwizzles::GroupVec();
-    ConstructSwizzles::InstSet *instSet = new ConstructSwizzles::InstSet();
+    GroupVec *groupVec = new GroupVec();
+    InstSet *instSet = new InstSet();
     for (InstVec::iterator i = vec.begin(), e = vec.end(); i != e; ++i) {
 
         // Convert to an instruction (should not fail)
@@ -183,9 +305,9 @@ ConstructSwizzles::GroupVec* ConstructSwizzles::group(InstVec &vec) {
 
         // Else this is a new group
 
-        ConstructSwizzles::InstVec *newGroup = new ConstructSwizzles::InstVec();
+        InstVec *newGroup = new InstVec();
 
-        AddInstructionRec(inst, *instSet, *newGroup);
+        addInstructionRec(inst, *instSet, *newGroup);
         groupVec->push_back(newGroup);
     }
 

@@ -39,7 +39,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Type.h"
+#include "llvm/DerivedTypes.h"
 #include "llvm/Constants.h"
+#include "llvm/Intrinsics.h"
 
 #define INSTRUCTION_COUNT 16
 #define GROUP_COUNT 8
@@ -91,6 +93,8 @@ struct SwizzleOp {
     int yO;
     int zO;
     int wO;
+    Vec inst;
+    Vec original;
 };
 
 
@@ -126,56 +130,58 @@ unsigned char GetChar(Value *val) {
 
 // Set the offsets for the group
 void SetOffsets(ConstructSwizzles::InstVec &vec, SwizzleOp &sop) {
-    sop.xO = sop.yO = sop.zO = sop.wO = 0;
-    for (ConstructSwizzles::InstVec::iterator instI = vec.begin(), instE = vec.end(); instI != instE; ++instI) {
-        // Follow the ops of an insert only to know what place to put
-        // the offset in
-        if (!IsInsert(**instI)) {
-            continue;
-        }
-
-        // If the operand is an extract instruction, then set the offset
-        Value *val = (*instI)->getOperand(1);
-        if (Instruction *inst = dyn_cast<Instruction>(val)) {
-            if (IsExtract(*inst)) {
-                switch (GetChar(inst->getOperand(2))) {
-                case 0:
-                    break;
-                case 1:
-                    break;
-                case 2:
-                    break;
-                case 3:
-                    break;
-                default:
-                    assert(!" Unkown access mask found");
-                }
-            }
-        }
-    }
     return;
 }
 
+// Given a value, if it's an extract return its offset
+// Return -1 if not an extract
+int GetOffset(Value *v) {
+    // If the operand is an extract instruction, then get the offset
+    int offset = -1;
+    if (Instruction *inst = dyn_cast<Instruction>(v)) {
+        if (IsExtract(*inst)) {
+            offset = GetChar(inst->getOperand(1));
+        }
+    }
+    return offset;
+}
+
 // Produce a write mask mask for the group, and set it
-void SetWriteMaskMask(ConstructSwizzles::InstVec &vec, SwizzleOp &sop) {
-    sop.x = sop.y = sop.z = sop.w = 0;
+void SetWriteMaskAndOffsets(ConstructSwizzles::InstVec &vec, SwizzleOp &sop) {
     for (ConstructSwizzles::InstVec::iterator instI = vec.begin(), instE = vec.end(); instI != instE; ++instI) {
-        // The mask only cares about inserts
+
+        // Only operate on inserts at the top
         if (!IsInsert(**instI))
             continue;
 
+        // The source operand
+        Value *src = (*instI)->getOperand(1);
+
+        // Find the access offset of the underlying extract intrinsic
+        int offset = GetOffset(src);
+
+        // Match up the data with the corresponding field specified in
+        // the insert
         switch (GetChar((*instI)->getOperand(2))) {
             case 0:
                 sop.x = 1;
+                sop.xO = offset;
+                sop.xV = src;
                 break;
             case 1:
                 sop.y = 1;
+                sop.yO = offset;
+                sop.yV = src;
                 break;
             case 2:
                 sop.z = 1;
+                sop.zO = offset;
+                sop.zV = src;
                 break;
             case 3:
                 sop.w = 1;
+                sop.wO = offset;
+                sop.wV = src;
                 break;
             default:
                 assert(!" Unknown access mask found");
@@ -185,7 +191,11 @@ void SetWriteMaskMask(ConstructSwizzles::InstVec &vec, SwizzleOp &sop) {
     return;
 }
 
+//CallInst* ConstructCall(Value *f, sop) {
 
+    // return new CallInst(f, argBegin, argEnd, "name", insertbefore);
+//    return void
+    //}
 
 // Print the block
 void PrintBlock(BasicBlock &bb) {
@@ -218,21 +228,81 @@ void PrintGroups(ConstructSwizzles::GroupVec &groupVec) {
 
 }
 
-void PrintWriteMaskMasks(ConstructSwizzles::GroupVec &groupVec) {
-    errs() << "\nWrite masks/offsets for each group:\n";
-    SwizzleOp sop;
-    for (ConstructSwizzles::GroupVec::iterator gI = groupVec.begin(), gE = groupVec.end(); gI != gE; ++gI) {
-        SetWriteMaskMask(**gI, sop);
-        errs() << "  " << sop.mask;
-        SetOffsets(**gI, sop);
-        errs() << "  | " << sop.xO << " " << sop.yO << " " << sop.zO << " " << sop.wO;
-        errs() << "\n";
+void InitSOp(SwizzleOp &sop, ConstructSwizzles::InstVec &vec) {
+    sop.x = sop.y = sop.z = sop.w = 0;
+    sop.xO = sop.yO = sop.zO = sop.wO = -1;
+    sop.xV = sop.yV = sop.zV = sop.wV = NULL;
+    sop.mask = -1;
+    sop.inst = *(vec.begin());
+    sop.original = NULL;
+    return;
+}
+
+void PrintVec(Vec v) {
+    if (v)
+        errs() << " | " << (*v);
+    else
+        errs() << " |  null ";
+}
+
+void PrintSwizzleOp(SwizzleOp &sop) {
+    errs() << "\nSwizzle for" << *sop.inst << ":\n";
+    errs() << "  " << sop.mask;
+    errs() << " <|> " << sop.xO << "  |  " << sop.yO << "  |  " << sop.zO << "  |  " << sop.wO;
+    errs() << "\n     ";
+    PrintVec(sop.xV);
+    PrintVec(sop.yV);
+    PrintVec(sop.zV);
+    PrintVec(sop.wV);
+    errs() << "\n";
+}
+
+
+
+void PrintSwizzleIntrinsic(SwizzleOp &sop, Module *M, LLVMContext &C) {
+
+    errs() << "Swizzle intrinsic:\n";
+
+    // Set up types array
+    const llvm::Type* intrinsicTypes[6] = {0};
+    intrinsicTypes[2] = sop.xV ? sop.xV->getType() : Type::getFloatTy(C);
+    intrinsicTypes[3] = sop.yV ? sop.yV->getType() : Type::getFloatTy(C);
+    intrinsicTypes[4] = sop.zV ? sop.zV->getType() : Type::getFloatTy(C);
+    intrinsicTypes[5] = sop.wV ? sop.wV->getType() : Type::getFloatTy(C);
+
+    int typesCount = 4;
+
+    // Determine if it's a fWriteMask or writeMask, and set types accordingly
+    Intrinsic::ID intrinsicID;
+    unsigned vecCount = 4;
+    switch (sop.inst->getType()->getContainedType(0)->getTypeID()) {
+    case Type::FloatTyID:
+        intrinsicID = Intrinsic::gla_fWriteMask;
+        intrinsicTypes[0] = VectorType::get(Type::getFloatTy(C), vecCount);
+        break;
+    case Type::IntegerTyID:
+        intrinsicID = Intrinsic::gla_writeMask;
+        intrinsicTypes[0] = VectorType::get(Type::getInt32Ty(C), vecCount);
+        break;
+    default:
+        assert(!"Unknown write mask intrinsic type");
     }
 
+    //    Function* callee = llvm::Intrinsic::getDeclaration(M, intrinsicID, intrinsicTypes, typesCount);
 
+    // Value *args[] = { mask, a1, a2, a3, a4, a5, a6, a7, a8 };
+    // Instruction *inst = CallInst::Create(callee, args, args+9, sop.inst);
+
+    errs() << "\n";
+
+    errs() << "<coming soon>\n";
+    errs() << "\n";
 }
 
 bool ConstructSwizzles::runOnFunction(Function &F) {
+    Module* M = F.getParent();
+    LLVMContext &C = F.getContext();
+
     for (Function::iterator bb = F.begin(), ebb = F.end(); bb != ebb; ++bb) {
 
         PrintBlock(*bb);
@@ -245,15 +315,28 @@ bool ConstructSwizzles::runOnFunction(Function &F) {
         GroupVec *groupVec = group(*v);
         PrintGroups(*groupVec);
 
+        // For each group, make a SwizzleOp
+        for (ConstructSwizzles::GroupVec::iterator gI = groupVec->begin(), gE = groupVec->end(); gI != gE; ++gI) {
+            SwizzleOp sop;
+            InitSOp(sop, **gI);
 
-        PrintWriteMaskMasks(*groupVec);
+            SetWriteMaskAndOffsets(**gI, sop);
+
+            PrintSwizzleOp(sop);
+
+            PrintSwizzleIntrinsic(sop, M, C);
+
+        }
+
+
 
     }
     return false;
 }
 
 // Add the value to the provided set and vector if it's a candidate
-// instruction. Recursively add its operands.
+// instruction. Recursively add its operands. This effectively
+// constructs a depth-first traversal, starting with the insertion destinations
 void ConstructSwizzles::addInstructionRec(Value* v, InstSet &s, InstVec &vec) {
 
     // If it's an instruction and a candidate, insert it and all it's

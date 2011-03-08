@@ -10,13 +10,18 @@ void main()
     vec4 w = u;
     vec4 w2 = u;
     vec4 w3 = u;
+    vec4 w4 = u;
 
     w.x = blendscale;
     w.y = blendscale;
     w.z = blendscale;
 
     w2.wy = t;
+
     w3.zw = t;
 
-    gl_FragColor = mix(w, w3, w2);
+    w4.xz = w.yz;
+
+    mix(w2, w3, w4);
+    gl_FragColor = mix(w * w2, w3, w4);
 }

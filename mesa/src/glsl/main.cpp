@@ -21,9 +21,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-// Define main_cpp, so we can include Options.cpp safely
-#define MAIN_CPP
-
 #include <cstdlib>
 #include <cstdio>
 
@@ -59,8 +56,8 @@ typedef int ssize_t;
 #include <iostream>
 
 // LunarGLASS runtime options handling
-#include "Options.cpp"
-
+#include "OptionParse.h"
+#include "Options.h"
 
 // End: LunarG
 
@@ -317,6 +314,8 @@ main(int argc, char **argv)
    int optind = gla::HandleArgs(argc, argv);
    dump_ast = gla::Options.debug;
    do_glsl_to_mesa_ir = gla::Options.backend == gla::TGSI;
+   if (gla::Options.backend == gla::GLSL)
+       do_link = 0;
 
    initialize_context(ctx, (glsl_es) ? API_OPENGLES2 : API_OPENGL);
 

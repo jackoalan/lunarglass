@@ -107,8 +107,10 @@ public:
     llvm::Function* getLLVMIntrinsicFunction4(llvm::Intrinsic::ID, const llvm::Type*, const llvm::Type*, const llvm::Type*, const llvm::Type*);
 
     void createLLVMTextureIntrinsic(llvm::Function* &, int &, llvm::Value**, llvm::Value**, llvm::Type*, llvm::Intrinsic::ID,  gla::ESamplerType, gla::ETextureFlags);
+    void findAndSmearScalars(llvm::Value**, int);
 
     llvm::Type::TypeID getLLVMBaseType(llvm::Value*);
+    llvm::Type::TypeID getLLVMBaseType(llvm::Type*);
 
 protected:
     llvm::LLVMContext &context;

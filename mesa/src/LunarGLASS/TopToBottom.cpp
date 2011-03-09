@@ -82,6 +82,7 @@ void gla::PrivateManager::runLLVMOptimizations1()
     passManager.add(llvm::createAggressiveDCEPass());
     passManager.add(llvm::createGVNPass());
     passManager.add(llvm::createConstructSwizzlesPass());
+    passManager.add(llvm::createAggressiveDCEPass());
     llvm::Module::iterator function, lastFunction;
 
     // run them across all functions

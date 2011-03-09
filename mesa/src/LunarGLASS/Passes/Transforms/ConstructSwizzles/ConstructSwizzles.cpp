@@ -109,17 +109,10 @@ inline bool IsExtract(Instruction &i) {
     return strcmp(i.getOpcodeName(), "extractelement") == 0;
 }
 
-// Predicate for whether the instruction is the last use in the
-// function. TODO: implement
-
-// inline bool IsLastUse(Instruction &i) {
-//     return false
-// }
-
 // Predicate for whether the instruction is a swizzle component
 // candidate
 inline bool IsCandidate(Instruction &i) {
-    return (IsInsert(i) || IsExtract(i)) && i.hasOneUse();
+    return (IsInsert(i) || IsExtract(i));
 }
 
 // If the Value is a constant int, return it as an unsigned char. Otherwise return -1
@@ -324,7 +317,7 @@ Instruction* MakeSwizzleIntrinsic(SwizzleOp &sop, Module *M, LLVMContext &C) {
     intrinsicTypes[4] = sop.zV       ? sop.zV->getType()       : Type::getFloatTy(C);
     intrinsicTypes[5] = sop.wV       ? sop.wV->getType()       : Type::getFloatTy(C);
 
-    int typesCount = 4;
+    int typesCount = 6;
 
     errs() << "\n types:\n";
     errs() <<  *intrinsicTypes[0] << " " << *intrinsicTypes[1] << " " <<  *intrinsicTypes[2] << " " <<  *intrinsicTypes[3] << " " <<  *intrinsicTypes[4] << " " <<  *intrinsicTypes[5] << " ";
@@ -353,6 +346,7 @@ void InsertSwizzleAndRemoveInstructions(ConstructSwizzles::InstVec &vec, Instruc
     for (BasicBlock::InstListType::iterator instI = instList.begin(), instE = instList.end(); instI != instE; ++instI) {
         if (instI->isIdenticalTo(*vec.begin())) {
             instList.insertAfter(instI, newInst);
+            errs() << "\n\n||| " << *newInst << "\n\n";
             instI->replaceAllUsesWith(newInst);
         }
     }
@@ -423,10 +417,8 @@ void ConstructSwizzles::addInstructionRec(Value* v, InstSet &s, InstVec &vec) {
 ConstructSwizzles::InstVec* ConstructSwizzles::gather(BasicBlock::InstListType &instList) {
     InstVec *vec = new InstVec();
     for (ConstructSwizzles::reverse_iterator i = instList.rbegin(), e = instList.rend(); i != e; ++i){
-        if (IsInsert(*i)) {
-            for (/*blank*/; (i != e) && IsCandidate(*i); ++i) {
-                vec->push_back(&*i);
-            }
+        for (/*blank*/; (i != e) && IsCandidate(*i); ++i) {
+            vec->push_back(&*i);
         }
     }
     return vec;

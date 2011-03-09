@@ -42,6 +42,7 @@
 #include "llvm/DerivedTypes.h"
 #include "llvm/Constants.h"
 #include "llvm/Intrinsics.h"
+#include "llvm/Instructions.h"
 
 #define INSTRUCTION_COUNT 16
 #define GROUP_COUNT 8
@@ -147,7 +148,18 @@ int GetOffset(Value *v) {
 }
 
 // Produce a write mask mask for the group, and set it
-void SetWriteMaskAndOffsets(ConstructSwizzles::InstVec &vec, SwizzleOp &sop) {
+void BuildSwizzleOp(ConstructSwizzles::InstVec &vec, SwizzleOp &sop) {
+
+    // Find the orignal insert destination. It will be the last one
+    // listed, due to the groups being in depth-first order
+    for (ConstructSwizzles::InstVec::reverse_iterator instI = vec.rbegin(), instE = vec.rend(); instI != instE; ++instI) {
+        if (IsInsert(**instI)) {
+            sop.original = (*instI)->getOperand(0);
+            break;
+        }
+    }
+
+    // For each member of the group, set the relevant fields.
     for (ConstructSwizzles::InstVec::iterator instI = vec.begin(), instE = vec.end(); instI != instE; ++instI) {
 
         // Only operate on inserts at the top
@@ -255,22 +267,22 @@ void PrintSwizzleOp(SwizzleOp &sop) {
     PrintVec(sop.zV);
     PrintVec(sop.wV);
     errs() << "\n";
+    errs() << "Original insert destination: " << *sop.original << "\n";
 }
 
 
 
-void PrintSwizzleIntrinsic(SwizzleOp &sop, Module *M, LLVMContext &C) {
+void PrintSwizzleIntrinsic(Instruction &inst) {
 
     errs() << "Swizzle intrinsic:\n";
 
+    errs() << inst << "\n";
+    errs() << "\n";
+}
+
+Instruction* MakeSwizzleIntrinsic(SwizzleOp &sop, Module *M, LLVMContext &C) {
     // Set up types array
     const llvm::Type* intrinsicTypes[6] = {0};
-    intrinsicTypes[2] = sop.xV ? sop.xV->getType() : Type::getFloatTy(C);
-    intrinsicTypes[3] = sop.yV ? sop.yV->getType() : Type::getFloatTy(C);
-    intrinsicTypes[4] = sop.zV ? sop.zV->getType() : Type::getFloatTy(C);
-    intrinsicTypes[5] = sop.wV ? sop.wV->getType() : Type::getFloatTy(C);
-
-    int typesCount = 4;
 
     // Determine if it's a fWriteMask or writeMask, and set types accordingly
     Intrinsic::ID intrinsicID;
@@ -288,15 +300,40 @@ void PrintSwizzleIntrinsic(SwizzleOp &sop, Module *M, LLVMContext &C) {
         assert(!"Unknown write mask intrinsic type");
     }
 
-    //    Function* callee = llvm::Intrinsic::getDeclaration(M, intrinsicID, intrinsicTypes, typesCount);
+    // Set up each of the operand types
+    intrinsicTypes[1] = sop.original ? sop.original->getType() : Type::getFloatTy(C);
+    intrinsicTypes[2] = sop.xV       ? sop.xV->getType()       : Type::getFloatTy(C);
+    intrinsicTypes[3] = sop.yV       ? sop.yV->getType()       : Type::getFloatTy(C);
+    intrinsicTypes[4] = sop.zV       ? sop.zV->getType()       : Type::getFloatTy(C);
+    intrinsicTypes[5] = sop.wV       ? sop.wV->getType()       : Type::getFloatTy(C);
 
-    // Value *args[] = { mask, a1, a2, a3, a4, a5, a6, a7, a8 };
-    // Instruction *inst = CallInst::Create(callee, args, args+9, sop.inst);
+    int typesCount = 4;
 
-    errs() << "\n";
+    // Get the function declaration for this intrinsic
+    Value* callee = llvm::Intrinsic::getDeclaration(M, intrinsicID, intrinsicTypes, typesCount);
 
-    errs() << "<coming soon>\n";
-    errs() << "\n";
+    Value* mask = ConstantInt::get(Type::getInt32Ty(C), sop.mask);
+    Value* xO   = ConstantInt::get(Type::getInt32Ty(C), sop.xO);
+    Value* yO   = ConstantInt::get(Type::getInt32Ty(C), sop.yO);
+    Value* zO   = ConstantInt::get(Type::getInt32Ty(C), sop.zO);
+    Value* wO   = ConstantInt::get(Type::getInt32Ty(C), sop.wO);
+
+    Value* xV   = sop.xV ? sop.xV : Constant::getNullValue(Type::getFloatTy(C));
+    Value* yV   = sop.yV ? sop.yV : Constant::getNullValue(Type::getFloatTy(C));
+    Value* zV   = sop.zV ? sop.zV : Constant::getNullValue(Type::getFloatTy(C));
+    Value* wV   = sop.wV ? sop.wV : Constant::getNullValue(Type::getFloatTy(C));
+
+    Value *args[] = { sop.original, mask, xV, xO, yV, yO, zV, zO, wV, wO };
+    Instruction *inst = CallInst::Create(callee, args, args+10);
+    return inst;
+}
+
+void InsertSwizzleAndRemoveGroupInstructions(ConstructSwizzles::InstVec &vec, Instruction *newInst) {
+    for (ConstructSwizzles::InstVec::iterator instI = vec.begin(), instE = vec.end(); instI != instE; ++instI) {
+        if (instI == vec.begin()) {
+            (*instI)->replaceAllUsesWith(newInst);
+        }
+    }
 }
 
 bool ConstructSwizzles::runOnFunction(Function &F) {
@@ -320,15 +357,19 @@ bool ConstructSwizzles::runOnFunction(Function &F) {
             SwizzleOp sop;
             InitSOp(sop, **gI);
 
-            SetWriteMaskAndOffsets(**gI, sop);
+            BuildSwizzleOp(**gI, sop);
 
             PrintSwizzleOp(sop);
 
-            PrintSwizzleIntrinsic(sop, M, C);
+            Instruction *inst = MakeSwizzleIntrinsic(sop, M, C);
+
+            InsertSwizzleAndRemoveGroupInstructions(**gI, inst);
+
+            PrintSwizzleIntrinsic(*inst);
 
         }
 
-
+        PrintBlock(*bb);
 
     }
     return false;

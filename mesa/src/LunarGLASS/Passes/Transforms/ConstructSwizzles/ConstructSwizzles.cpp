@@ -147,6 +147,19 @@ int GetOffset(Value *v) {
     return offset;
 }
 
+Value* GetExtractFrom(Value *v) {
+    // If the value is an extract instruction, then get the vector
+    // extraced from, else return NULL
+    Value *ret = NULL;
+    if (Instruction *inst = dyn_cast<Instruction>(v)) {
+        if (IsExtract(*inst)) {
+            ret = (inst->getOperand(0));
+        }
+    }
+    return ret;
+}
+
+
 // Produce a write mask mask for the group, and set it
 void BuildSwizzleOp(ConstructSwizzles::InstVec &vec, SwizzleOp &sop) {
 
@@ -172,28 +185,34 @@ void BuildSwizzleOp(ConstructSwizzles::InstVec &vec, SwizzleOp &sop) {
         // Find the access offset of the underlying extract intrinsic
         int offset = GetOffset(src);
 
+        // The value the extract statement is extracting from
+        // If it isn't an extract statement, make it be the scalar
+        Value *extractFrom = GetExtractFrom(src);
+        if (extractFrom == NULL)
+            extractFrom = src;
+
         // Match up the data with the corresponding field specified in
         // the insert
         switch (GetChar((*instI)->getOperand(2))) {
             case 0:
                 sop.x = 1;
                 sop.xO = offset;
-                sop.xV = src;
+                sop.xV = extractFrom;
                 break;
             case 1:
                 sop.y = 1;
                 sop.yO = offset;
-                sop.yV = src;
+                sop.yV = extractFrom;
                 break;
             case 2:
                 sop.z = 1;
                 sop.zO = offset;
-                sop.zV = src;
+                sop.zV = extractFrom;
                 break;
             case 3:
                 sop.w = 1;
                 sop.wO = offset;
-                sop.wV = src;
+                sop.wV = extractFrom;
                 break;
             default:
                 assert(!" Unknown access mask found");
@@ -328,10 +347,12 @@ Instruction* MakeSwizzleIntrinsic(SwizzleOp &sop, Module *M, LLVMContext &C) {
     return inst;
 }
 
-void InsertSwizzleAndRemoveGroupInstructions(ConstructSwizzles::InstVec &vec, Instruction *newInst) {
-    for (ConstructSwizzles::InstVec::iterator instI = vec.begin(), instE = vec.end(); instI != instE; ++instI) {
-        if (instI == vec.begin()) {
-            (*instI)->replaceAllUsesWith(newInst);
+void InsertSwizzleAndRemoveInstructions(ConstructSwizzles::InstVec &vec, Instruction *newInst, BasicBlock &bb) {
+    BasicBlock::InstListType &instList = bb.getInstList();
+    for (BasicBlock::InstListType::iterator instI = instList.begin(), instE = instList.end(); instI != instE; ++instI) {
+        if (instI->isIdenticalTo(*vec.begin())) {
+            instList.insertAfter(instI, newInst);
+            instI->replaceAllUsesWith(newInst);
         }
     }
 }
@@ -363,7 +384,7 @@ bool ConstructSwizzles::runOnFunction(Function &F) {
 
             Instruction *inst = MakeSwizzleIntrinsic(sop, M, C);
 
-            InsertSwizzleAndRemoveGroupInstructions(**gI, inst);
+            InsertSwizzleAndRemoveInstructions(**gI, inst, *bb);
 
             PrintSwizzleIntrinsic(*inst);
 

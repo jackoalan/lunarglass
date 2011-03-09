@@ -149,8 +149,8 @@ int GetOffset(Value *v) {
 
 Value* GetExtractFrom(Value *v) {
     // If the value is an extract instruction, then get the vector
-    // extraced from, else return NULL
-    Value *ret = NULL;
+    // extraced from, else return v
+    Value *ret = v;
     if (Instruction *inst = dyn_cast<Instruction>(v)) {
         if (IsExtract(*inst)) {
             ret = (inst->getOperand(0));
@@ -188,8 +188,6 @@ void BuildSwizzleOp(ConstructSwizzles::InstVec &vec, SwizzleOp &sop) {
         // The value the extract statement is extracting from
         // If it isn't an extract statement, make it be the scalar
         Value *extractFrom = GetExtractFrom(src);
-        if (extractFrom == NULL)
-            extractFrom = src;
 
         // Match up the data with the corresponding field specified in
         // the insert
@@ -328,6 +326,9 @@ Instruction* MakeSwizzleIntrinsic(SwizzleOp &sop, Module *M, LLVMContext &C) {
 
     int typesCount = 4;
 
+    errs() << "\n types:\n";
+    errs() <<  *intrinsicTypes[0] << " " << *intrinsicTypes[1] << " " <<  *intrinsicTypes[2] << " " <<  *intrinsicTypes[3] << " " <<  *intrinsicTypes[4] << " " <<  *intrinsicTypes[5] << " ";
+
     // Get the function declaration for this intrinsic
     Value* callee = llvm::Intrinsic::getDeclaration(M, intrinsicID, intrinsicTypes, typesCount);
 
@@ -422,7 +423,7 @@ void ConstructSwizzles::addInstructionRec(Value* v, InstSet &s, InstVec &vec) {
 ConstructSwizzles::InstVec* ConstructSwizzles::gather(BasicBlock::InstListType &instList) {
     InstVec *vec = new InstVec();
     for (ConstructSwizzles::reverse_iterator i = instList.rbegin(), e = instList.rend(); i != e; ++i){
-        if (IsCandidate(*i)) {
+        if (IsInsert(*i)) {
             for (/*blank*/; (i != e) && IsCandidate(*i); ++i) {
                 vec->push_back(&*i);
             }

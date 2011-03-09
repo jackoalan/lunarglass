@@ -473,6 +473,73 @@ protected:
             mapComponentToSwizzle((glaSwizzle >> i*2) & 0x3);
     }
 
+    // Whether the given intrinsic's specified operand is the same as
+    // the passed value, and its type is a vector.
+    bool isSameSource(llvm::Value *source, const llvm::IntrinsicInst *inst, int operand)
+    {
+        return (inst->getOperand(operand) == source)
+            && (source->getType()->getTypeID() == llvm::Type::VectorTyID);
+    }
+
+    void mapGlaWriteMask(const llvm::IntrinsicInst *inst)
+    {
+        int wmask = GetConstantValue(inst->getOperand(1));
+        bool x,y,z,w;
+        x = y = z = w = 0;
+        llvm::Value *source = NULL;
+        bool sameSource = true;
+
+        // Output LHS, set up what bits are set, and see if we have the same source
+        shader << ".";
+        if (wmask >= 8) {
+            shader << "x";
+            x = 1;
+            if (source)
+                sameSource = sameSource && isSameSource(source, inst, 2);
+            else
+                source = inst->getOperand(2);
+            wmask -= 8;
+        }
+        if (wmask >= 4) {
+            shader << "y";
+            y = 1;
+            if (source)
+                sameSource = sameSource && isSameSource(source, inst, 4);
+            else
+                source = inst->getOperand(4);
+            wmask -= 4;
+        }
+        if (wmask >= 2) {
+            shader << "z";
+            z = 1;
+            if (source)
+                sameSource = sameSource && isSameSource(source, inst, 6);
+            else
+                source = inst->getOperand(6);
+            wmask -= 2;
+        }
+        if (wmask >= 1) {
+            shader << "w";
+            w = 1;
+            if (source)
+                sameSource = sameSource && isSameSource(source, inst, 8);
+            else
+                source = inst->getOperand(8);
+
+        }
+
+        shader << " = ";
+        if (!sameSource) {
+            shader << " !!! Internal error: creating new vec constructor not done yet";
+        } else {
+
+            mapGlaDestination(source);
+            newLine();
+            shader << "// Same source";
+        }
+
+    }
+
     // mapping from LLVM values to Glsl variables
     std::map<const llvm::Value*, std::string*> valueMap;
 
@@ -531,7 +598,7 @@ void gla::GlslTarget::add(const llvm::Instruction* llvmInstruction)
     case llvm::Instruction::ICmp:
     case llvm::Instruction::FCmp:
         if (! llvm::isa<llvm::VectorType>(llvmInstruction->getOperand(0)->getType())) {
-            
+
             const llvm::Type* type = llvmInstruction->getOperand(0)->getType();
             if (type != type->getFloatTy(llvmInstruction->getContext()) &&
                 type != type->getDoubleTy(llvmInstruction->getContext()) &&
@@ -547,22 +614,22 @@ void gla::GlslTarget::add(const llvm::Instruction* llvmInstruction)
                 switch (cmp->getPredicate()) {
                 case llvm::FCmpInst::FCMP_OEQ:
                 case llvm::ICmpInst::ICMP_EQ:   charOp = "==";  break;
-                
+
                 case llvm::FCmpInst::FCMP_ONE:
                 case llvm::ICmpInst::ICMP_NE:   charOp = "!=";  break;
-                
+
                 case llvm::FCmpInst::FCMP_OGT:
                 case llvm::ICmpInst::ICMP_UGT:
                 case llvm::ICmpInst::ICMP_SGT:  charOp = ">";   break;
-                
+
                 case llvm::FCmpInst::FCMP_OGE:
                 case llvm::ICmpInst::ICMP_UGE:
                 case llvm::ICmpInst::ICMP_SGE:  charOp = ">=";  break;
-                
+
                 case llvm::FCmpInst::FCMP_OLT:
                 case llvm::ICmpInst::ICMP_ULT:
                 case llvm::ICmpInst::ICMP_SLT:  charOp = "<";   break;
-                
+
                 case llvm::FCmpInst::FCMP_OLE:
                 case llvm::ICmpInst::ICMP_ULE:
                 case llvm::ICmpInst::ICMP_SLE:  charOp = "<=";  break;
@@ -674,22 +741,22 @@ void gla::GlslTarget::add(const llvm::Instruction* llvmInstruction)
                 switch (cmp->getPredicate()) {
                 case llvm::FCmpInst::FCMP_OEQ:
                 case llvm::ICmpInst::ICMP_EQ:   charOp = "equal";             break;
-                
+
                 case llvm::FCmpInst::FCMP_ONE:
                 case llvm::ICmpInst::ICMP_NE:   charOp = "notEqual";          break;
-                
+
                 case llvm::FCmpInst::FCMP_OGT:
                 case llvm::ICmpInst::ICMP_UGT:
                 case llvm::ICmpInst::ICMP_SGT:  charOp = "greaterThan";       break;
-                
+
                 case llvm::FCmpInst::FCMP_OGE:
                 case llvm::ICmpInst::ICMP_UGE:
                 case llvm::ICmpInst::ICMP_SGE:  charOp = "greaterThanEqual";  break;
-                
+
                 case llvm::FCmpInst::FCMP_OLT:
                 case llvm::ICmpInst::ICMP_ULT:
                 case llvm::ICmpInst::ICMP_SLT:  charOp = "lessThan";          break;
-                
+
                 case llvm::FCmpInst::FCMP_OLE:
                 case llvm::ICmpInst::ICMP_ULE:
                 case llvm::ICmpInst::ICMP_SLE:  charOp = "lessThanEqual";     break;
@@ -700,7 +767,7 @@ void gla::GlslTarget::add(const llvm::Instruction* llvmInstruction)
             } else {
                 assert(! "Cmp vector instruction found that cannot dyncast to CmpInst");
             }
-            
+
             newLine();
             mapGlaValue(llvmInstruction);
             shader << " = " << charOp << "(";
@@ -732,7 +799,7 @@ void gla::GlslTarget::add(const llvm::Instruction* llvmInstruction)
             assert(! "store instruction is not through pointer\n");
         }
         return;
-        
+
     case llvm::Instruction::ExtractElement:
         {
             // copy propagate, by name string, the extracted component
@@ -745,14 +812,14 @@ void gla::GlslTarget::add(const llvm::Instruction* llvmInstruction)
     case llvm::Instruction::InsertElement:
         // copy propagate, by name string the, the starting name of the object
         // addNewVariable(llvmInstruction, valueMap[llvmInstruction->getOperand(0)]->c_str());
-        
+
         // first, copy whole the structure "inserted into" to the resulting "value" of the insert
         newLine();
         mapGlaDestination(llvmInstruction);
         shader << " = ";
         mapGlaOperand(llvmInstruction->getOperand(0));
         shader << ";";
-        
+
         // second, overwrite the element being inserted
         newLine();
         mapGlaDestination(llvmInstruction);
@@ -843,6 +910,21 @@ void gla::GlslTarget::mapGlaIntrinsic(const llvm::IntrinsicInst* llvmInstruction
         shader << ";";
         return;
     }
+
+    // Handle WriteMasks
+    switch (llvmInstruction->getIntrinsicID()) {
+    case llvm::Intrinsic::gla_fWriteMask:
+    case llvm::Intrinsic::gla_writeMask:
+        newLine();
+        newLine();
+        shader << "//WRITEMASK:";
+        newLine();
+        mapGlaDestination(llvmInstruction);
+        mapGlaWriteMask(llvmInstruction);
+        newLine();
+        return;
+    }
+
 
     // Handle the one-to-one mappings
     const char* callString = 0;

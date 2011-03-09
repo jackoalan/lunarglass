@@ -481,9 +481,34 @@ protected:
             && (source->getType()->getTypeID() == llvm::Type::VectorTyID);
     }
 
+    // Writes out the vector arguments for the RHS of a
+    // writeMask. Sets its first argument to false upon first execution
+    void writeVecArgs(bool &firstArg, const llvm::IntrinsicInst *inst, int operand) {
+        if (firstArg) {
+            firstArg = false;
+        } else {
+            shader << ", ";
+        }
+
+        // If it's a vector, extract the value
+        if (inst->getOperand(operand)->getType()->getTypeID() == llvm::Type::VectorTyID) {
+            mapGlaDestination(inst->getOperand(operand));
+            shader << ".";
+            switch (GetConstantValue(inst->getOperand(operand+1))) {
+            case 0: shader << "x"; break;
+            case 1: shader << "y"; break;
+            case 2: shader << "z"; break;
+            case 3: shader << "w"; break;
+            }
+        } else {
+            shader << " !!! constants not handled yet !!! ";
+        }
+    }
+
     void mapGlaWriteMask(const llvm::IntrinsicInst *inst)
     {
         int wmask = GetConstantValue(inst->getOperand(1));
+        int argCount = 0;
         bool x,y,z,w;
         x = y = z = w = 0;
         llvm::Value *source = NULL;
@@ -494,6 +519,7 @@ protected:
         if (wmask >= 8) {
             shader << "x";
             x = 1;
+            ++argCount;
             if (source)
                 sameSource = sameSource && isSameSource(source, inst, 2);
             else
@@ -503,6 +529,7 @@ protected:
         if (wmask >= 4) {
             shader << "y";
             y = 1;
+            ++argCount;
             if (source)
                 sameSource = sameSource && isSameSource(source, inst, 4);
             else
@@ -512,6 +539,7 @@ protected:
         if (wmask >= 2) {
             shader << "z";
             z = 1;
+            ++argCount;
             if (source)
                 sameSource = sameSource && isSameSource(source, inst, 6);
             else
@@ -521,6 +549,7 @@ protected:
         if (wmask >= 1) {
             shader << "w";
             w = 1;
+            ++argCount;
             if (source)
                 sameSource = sameSource && isSameSource(source, inst, 8);
             else
@@ -529,13 +558,30 @@ protected:
         }
 
         shader << " = ";
-        if (!sameSource) {
-            shader << " !!! Internal error: creating new vec constructor not done yet";
-        } else {
 
+        // If they're all from the same source just get it. Otherwise construct a new vector
+        if (sameSource) {
             mapGlaDestination(source);
             newLine();
             shader << "// Same source";
+
+        } else {
+            shader << " vec" << argCount << "(";
+
+            bool firstArg = true;
+            if (x) {
+                writeVecArgs(firstArg, inst, 2);
+            }
+            if (y) {
+                writeVecArgs(firstArg, inst, 4);
+            }
+            if (z) {
+                writeVecArgs(firstArg, inst, 6);
+            }
+            if (w) {
+                writeVecArgs(firstArg, inst, 8);
+            }
+            shader << ");";
         }
 
     }

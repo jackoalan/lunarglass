@@ -44,7 +44,7 @@
 #include "llvm/Intrinsics.h"
 #include "llvm/Instructions.h"
 
-#define INSTRUCTION_COUNT 16
+#define INSTRUCTION_COUNT 32
 #define GROUP_COUNT 8
 
 #define DEBUG_P 1
@@ -111,12 +111,6 @@ inline bool IsExtract(Instruction &i) {
     return strcmp(i.getOpcodeName(), "extractelement") == 0;
 }
 
-// Predicate for whether the instruction is a swizzle component
-// candidate
-inline bool IsCandidate(Instruction &i) {
-    return (IsInsert(i) || IsExtract(i));
-}
-
 // If the Value is a constant int, return it as an unsigned char. Otherwise return -1
 unsigned char GetChar(Value *val) {
     if (ConstantInt *c = dyn_cast<ConstantInt>(val))
@@ -173,12 +167,7 @@ void BuildSwizzleOp(ConstructSwizzles::InstVec &vec, SwizzleOp &sop) {
 
     // Find the orignal insert destination. It will be the last one
     // listed, due to the groups being in depth-first order
-    for (ConstructSwizzles::InstVec::reverse_iterator instI = vec.rbegin(), instE = vec.rend(); instI != instE; ++instI) {
-        if (IsInsert(**instI)) {
-            sop.original = (*instI)->getOperand(0);
-            break;
-        }
-    }
+    sop.original = vec.back()->getOperand(0);
 
     // For each member of the group, set the relevant fields.
     for (ConstructSwizzles::InstVec::iterator instI = vec.begin(), instE = vec.end(); instI != instE; ++instI) {
@@ -236,7 +225,7 @@ void PrintBlock(BasicBlock &bb) {
 
 // Print the candidates
 void PrintCandidates(ConstructSwizzles::InstVec &v) {
-    errs() << "\nThis block's candidates: \n";
+    errs() << "\nThis block's candidates for intrinsic substitution: \n";
     for (ConstructSwizzles::InstVec::iterator i = v.begin(), e = v.end(); i != e; ++i) {
         errs() << **i << "\n";
     }
@@ -264,30 +253,30 @@ void PrintGroups(ConstructSwizzles::GroupVec &groupVec) {
 // Print out a textual representation of the writeMask operand
 void PrintVec(Vec v) {
     if (v)
-        errs() << " | " << (*v);
+        errs() << "|" << (*v) << " ";
     else
-        errs() << " |  null ";
+        errs() << "|  null  ";
 }
 
 // Print out the struct representing a writeMask
 void PrintSwizzleOp(SwizzleOp &sop) {
     errs() << "\nSwizzleOp for" << *sop.inst << ":\n";
-    errs() << "Write mask and offset:\n";
-    errs() << "  " << sop.mask;
-    errs() << " <|> " << sop.xO << "  |  " << sop.yO << "  |  " << sop.zO << "  |  " << sop.wO;
-    errs() << "\n     ";
+    errs() << "  Write mask and offset:\n";
+    errs() << "    " << sop.mask;
+    errs() << " <| " << sop.xO << "  |  " << sop.yO << "  |  " << sop.zO << "  |  " << sop.wO;
+    errs() << "\n       <";
     PrintVec(sop.xV);
     PrintVec(sop.yV);
     PrintVec(sop.zV);
     PrintVec(sop.wV);
     errs() << "\n";
-    errs() << "Original insert destination: " << *sop.original << "\n";
+    errs() << "  Original insert destination: " << *sop.original << "\n";
 }
 
 // Print out the created intrinsic instruction
 void PrintSwizzleIntrinsic(Instruction &inst) {
 
-    errs() << "Swizzle intrinsic:\n";
+    errs() << "Swizzle intrinsic: ";
 
     errs() << inst << "\n";
     errs() << "\n";
@@ -354,17 +343,18 @@ void InsertSwizzleIntrinsic(ConstructSwizzles::InstVec &vec, Instruction *newIns
     }
 }
 
-// Add the value to the provided set and vector if it's a candidate
+// Add the value to the provided set and vector if it's an insert
 // instruction. Recursively add its operands. This effectively
 // constructs a depth-first traversal, starting with the insertion destinations
 void ConstructSwizzles::addInstructionRec(Value* v, InstSet &s, InstVec &vec) {
 
-    // If it's an instruction and a candidate, insert it and all it's
-    // operands recursively
+    // If it's an instruction and an insert, put it and all it's
+    // operands that are inserts recursively into s and vec
     if (Instruction* inst = dyn_cast<Instruction>(v)) {
-        if (IsCandidate(*inst)) {
+        if (IsInsert(*inst)) {
             s.insert(inst);
             vec.push_back(inst);
+
             for (User::op_iterator oi = inst->op_begin(), oe = inst->op_end(); oi != oe; ++oi) {
                 addInstructionRec(*oi, s, vec);
             }
@@ -379,7 +369,7 @@ void ConstructSwizzles::addInstructionRec(Value* v, InstSet &s, InstVec &vec) {
 ConstructSwizzles::InstVec* ConstructSwizzles::gather(BasicBlock::InstListType &instList) {
     InstVec *vec = new InstVec();
     for (ConstructSwizzles::reverse_iterator i = instList.rbegin(), e = instList.rend(); i != e; ++i){
-        for (/*blank*/; (i != e) && IsCandidate(*i); ++i) {
+        for (/*blank*/; (i != e) && IsInsert(*i); ++i) {
             vec->push_back(&*i);
         }
     }
@@ -396,12 +386,6 @@ ConstructSwizzles::GroupVec* ConstructSwizzles::group(InstVec &vec) {
         Instruction *inst = dyn_cast<Instruction>(&**i);
         if (!inst) {
             assert(!"attempting to gather non-instructions");
-        }
-
-        // If it's just an extract, continue. New groups only begin
-        // with inserts, as it is the top-most insert that becomes a swizzle
-        if (IsExtract(*inst)) {
-            continue;
         }
 
         // If we've already seen it, continue
@@ -423,6 +407,8 @@ ConstructSwizzles::GroupVec* ConstructSwizzles::group(InstVec &vec) {
 bool ConstructSwizzles::runOnFunction(Function &F) {
     Module* M = F.getParent();
     LLVMContext &C = F.getContext();
+
+    bool wasModified = false;
 
     for (Function::iterator bb = F.begin(), ebb = F.end(); bb != ebb; ++bb) {
 
@@ -448,6 +434,8 @@ bool ConstructSwizzles::runOnFunction(Function &F) {
 
             InsertSwizzleIntrinsic(**gI, inst, *bb);
 
+            wasModified = true;
+
             DEBUG(PrintSwizzleIntrinsic(*inst));
 
         }
@@ -455,7 +443,7 @@ bool ConstructSwizzles::runOnFunction(Function &F) {
         DEBUG(PrintBlock(*bb));
 
     }
-    return false;
+    return wasModified;
 }
 
 void ConstructSwizzles::getAnalysisUsage(AnalysisUsage& AU) const {

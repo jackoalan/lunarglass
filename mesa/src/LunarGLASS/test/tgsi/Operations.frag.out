@@ -822,7 +822,7 @@ else106:                                          ; preds = %ifmerge100
 
 then107:                                          ; preds = %else106
   %346 = load float* %assignment_tmp102
-  %347 = fcmp one float %346, 2.000000e+000
+  %347 = fcmp one float %346, 2.000000e+00
   store i1 %347, i1* %and_tmp108
   br label %ifmerge110
 
@@ -841,7 +841,7 @@ ifmerge111:                                       ; preds = %ifmerge110, %then10
 
 then112:                                          ; preds = %ifmerge111
   %350 = load float* %assignment_tmp102
-  %351 = fadd float %350, 1.000000e+000
+  %351 = fadd float %350, 1.000000e+00
   store float %351, float* %f
   br label %ifmerge113
 
@@ -975,6 +975,852 @@ declare float @llvm.gla.fSwizzle.f32.v3f32(<3 x float>, i32) nounwind readnone
 declare <4 x float> @llvm.gla.fSwizzle.v4f32.f32(float, i32) nounwind readnone
 
 declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
+processing basic block entry
+
+entry:
+  %0 = load <4 x float> addrspace(1)* @uv4
+  %radians = call <4 x float> @llvm.gla.fRadians.v4f32.v4f32(<4 x float> %0)
+  %degrees = call <4 x float> @llvm.gla.fDegrees.v4f32.v4f32(<4 x float> %radians)
+  %1 = fadd <4 x float> %radians, %degrees
+  %sin = call <4 x float> @llvm.gla.fSin.v4f32.v4f32(<4 x float> %1)
+  %2 = fadd <4 x float> %1, %sin
+  %cos = call <4 x float> @llvm.gla.fCos.v4f32.v4f32(<4 x float> %2)
+  %3 = fadd <4 x float> %2, %cos
+  %tan = call <4 x float> @llvm.gla.fTan.v4f32.v4f32(<4 x float> %3)
+  %4 = fadd <4 x float> %3, %tan
+  %asin = call <4 x float> @llvm.gla.fAsin.v4f32.v4f32(<4 x float> %4)
+  %5 = fadd <4 x float> %4, %asin
+  %acos = call <4 x float> @llvm.gla.fAcos.v4f32.v4f32(<4 x float> %5)
+  %6 = fadd <4 x float> %5, %acos
+  %atan = call <4 x float> @llvm.gla.fAtan.v4f32.v4f32(<4 x float> %6)
+  %7 = fadd <4 x float> %6, %atan
+  %sinh = call <4 x float> @llvm.gla.fSinh.v4f32.v4f32(<4 x float> %7)
+  %8 = fadd <4 x float> %7, %sinh
+  %cosh = call <4 x float> @llvm.gla.fCosh.v4f32.v4f32(<4 x float> %8)
+  %9 = fadd <4 x float> %8, %cosh
+  %tanh = call <4 x float> @llvm.gla.fTanh.v4f32.v4f32(<4 x float> %9)
+  %10 = fadd <4 x float> %9, %tanh
+  %pow = call <4 x float> @llvm.gla.fPow.v4f32.v4f32.v4f32(<4 x float> %10, <4 x float> %10)
+  %11 = fadd <4 x float> %10, %pow
+  %exp = call <4 x float> @llvm.gla.fExp.v4f32.v4f32(<4 x float> %11)
+  %12 = fadd <4 x float> %11, %exp
+  %log = call <4 x float> @llvm.gla.fLog.v4f32.v4f32(<4 x float> %12)
+  %13 = fadd <4 x float> %12, %log
+  %exp2 = call <4 x float> @llvm.gla.fExp2.v4f32.v4f32(<4 x float> %13)
+  %14 = fadd <4 x float> %13, %exp2
+  %log2 = call <4 x float> @llvm.gla.fLog2.v4f32.v4f32(<4 x float> %14)
+  %15 = fadd <4 x float> %14, %log2
+  %sqrt = call <4 x float> @llvm.gla.fSqrt.v4f32.v4f32(<4 x float> %15)
+  %16 = fadd <4 x float> %15, %sqrt
+  %inversesqrt = call <4 x float> @llvm.gla.fInverseSqrt.v4f32.v4f32(<4 x float> %16)
+  %17 = fadd <4 x float> %16, %inversesqrt
+  %abs = call <4 x float> @llvm.gla.fAbs.v4f32.v4f32(<4 x float> %17)
+  %18 = fadd <4 x float> %17, %abs
+  %sign = call <4 x float> @llvm.gla.fSign.v4f32.v4f32(<4 x float> %18)
+  %19 = fadd <4 x float> %18, %sign
+  %floor = call <4 x float> @llvm.gla.fFloor.v4f32.v4f32(<4 x float> %19)
+  %20 = fadd <4 x float> %19, %floor
+  %ceil = call <4 x float> @llvm.gla.fCeiling.v4f32.v4f32(<4 x float> %20)
+  %21 = fadd <4 x float> %20, %ceil
+  %fract = call <4 x float> @llvm.gla.fFraction.v4f32.v4f32(<4 x float> %21)
+  %22 = fadd <4 x float> %21, %fract
+  %23 = frem <4 x float> %22, %22
+  %24 = fadd <4 x float> %22, %23
+  %min = call <4 x float> @llvm.gla.fMin.v4f32.v4f32.v4f32(<4 x float> %24, <4 x float> %0)
+  %25 = fadd <4 x float> %24, %min
+  %max = call <4 x float> @llvm.gla.fMax.v4f32.v4f32.v4f32(<4 x float> %25, <4 x float> %0)
+  %26 = fadd <4 x float> %25, %max
+  %clamp = call <4 x float> @llvm.gla.fClamp.v4f32.v4f32.v4f32.v4f32(<4 x float> %26, <4 x float> %0, <4 x float> %0)
+  %27 = fadd <4 x float> %26, %clamp
+  %mix = call <4 x float> @llvm.gla.fMix.v4f32.v4f32.v4f32.v4f32(<4 x float> %27, <4 x float> %27, <4 x float> %27)
+  %28 = fadd <4 x float> %27, %mix
+  %29 = load i1 addrspace(1)* @ub
+  %30 = uitofp i1 %29 to float
+  %mix28 = call <4 x float> @llvm.gla.fMix.v4f32.v4f32.v4f32.f32(<4 x float> %28, <4 x float> %28, float %30)
+  %31 = fadd <4 x float> %28, %mix28
+  %step = call <4 x float> @llvm.gla.fStep.v4f32.v4f32.v4f32(<4 x float> %31, <4 x float> %31)
+  %32 = fadd <4 x float> %31, %step
+  %smoothstep = call <4 x float> @llvm.gla.fSmoothStep.v4f32.v4f32.v4f32.v4f32(<4 x float> %32, <4 x float> %32, <4 x float> %32)
+  %33 = fadd <4 x float> %32, %smoothstep
+  %normalize = call <4 x float> @llvm.gla.fNormalize.v4f32.v4f32(<4 x float> %33)
+  %34 = fadd <4 x float> %33, %normalize
+  %faceforward = call <4 x float> @llvm.gla.fFaceForward.v4f32.v4f32.v4f32.v4f32(<4 x float> %34, <4 x float> %34, <4 x float> %34)
+  %35 = fadd <4 x float> %34, %faceforward
+  %reflect = call <4 x float> @llvm.gla.fReflect.v4f32.v4f32.v4f32(<4 x float> %35, <4 x float> %35)
+  %36 = fadd <4 x float> %35, %reflect
+  %37 = load float addrspace(1)* @uf
+  %refract = call <4 x float> @llvm.gla.fRefract.v4f32.v4f32.v4f32.f32(<4 x float> %36, <4 x float> %36, float %37)
+  %38 = fadd <4 x float> %36, %refract
+  %dFdx = call <4 x float> @llvm.gla.fDFdx.v4f32.v4f32(<4 x float> %38)
+  %39 = fadd <4 x float> %38, %dFdx
+  %dFdy = call <4 x float> @llvm.gla.fDFdy.v4f32.v4f32(<4 x float> %39)
+  %40 = fadd <4 x float> %39, %dFdy
+  %fwidth = call <4 x float> @llvm.gla.fFilterWidth.v4f32.v4f32(<4 x float> %40)
+  %41 = fadd <4 x float> %40, %fwidth
+  %42 = load i32 addrspace(1)* @ui
+  %abs39 = call i32 @llvm.gla.abs.i32.i32(i32 %42)
+  %min42 = call i32 @llvm.gla.sMin.i32.i32.i32(i32 %abs39, i32 %42)
+  %43 = add i32 %min42, %abs39
+  %max45 = call i32 @llvm.gla.sMax.i32.i32.i32(i32 %43, i32 %42)
+  %44 = add i32 %max45, %43
+  %clamp48 = call i32 @llvm.gla.sClamp.i32.i32.i32.i32(i32 %44, i32 %42, i32 %42)
+  %45 = add i32 %clamp48, %44
+  %46 = fcmp olt <4 x float> %41, %41
+  %any = call i1 @llvm.gla.any.v4i1(<4 x i1> %46)
+  br i1 %any, label %then, label %else
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block entry
+
+entry:
+  %0 = load <4 x float> addrspace(1)* @uv4
+  %radians = call <4 x float> @llvm.gla.fRadians.v4f32.v4f32(<4 x float> %0)
+  %degrees = call <4 x float> @llvm.gla.fDegrees.v4f32.v4f32(<4 x float> %radians)
+  %1 = fadd <4 x float> %radians, %degrees
+  %sin = call <4 x float> @llvm.gla.fSin.v4f32.v4f32(<4 x float> %1)
+  %2 = fadd <4 x float> %1, %sin
+  %cos = call <4 x float> @llvm.gla.fCos.v4f32.v4f32(<4 x float> %2)
+  %3 = fadd <4 x float> %2, %cos
+  %tan = call <4 x float> @llvm.gla.fTan.v4f32.v4f32(<4 x float> %3)
+  %4 = fadd <4 x float> %3, %tan
+  %asin = call <4 x float> @llvm.gla.fAsin.v4f32.v4f32(<4 x float> %4)
+  %5 = fadd <4 x float> %4, %asin
+  %acos = call <4 x float> @llvm.gla.fAcos.v4f32.v4f32(<4 x float> %5)
+  %6 = fadd <4 x float> %5, %acos
+  %atan = call <4 x float> @llvm.gla.fAtan.v4f32.v4f32(<4 x float> %6)
+  %7 = fadd <4 x float> %6, %atan
+  %sinh = call <4 x float> @llvm.gla.fSinh.v4f32.v4f32(<4 x float> %7)
+  %8 = fadd <4 x float> %7, %sinh
+  %cosh = call <4 x float> @llvm.gla.fCosh.v4f32.v4f32(<4 x float> %8)
+  %9 = fadd <4 x float> %8, %cosh
+  %tanh = call <4 x float> @llvm.gla.fTanh.v4f32.v4f32(<4 x float> %9)
+  %10 = fadd <4 x float> %9, %tanh
+  %pow = call <4 x float> @llvm.gla.fPow.v4f32.v4f32.v4f32(<4 x float> %10, <4 x float> %10)
+  %11 = fadd <4 x float> %10, %pow
+  %exp = call <4 x float> @llvm.gla.fExp.v4f32.v4f32(<4 x float> %11)
+  %12 = fadd <4 x float> %11, %exp
+  %log = call <4 x float> @llvm.gla.fLog.v4f32.v4f32(<4 x float> %12)
+  %13 = fadd <4 x float> %12, %log
+  %exp2 = call <4 x float> @llvm.gla.fExp2.v4f32.v4f32(<4 x float> %13)
+  %14 = fadd <4 x float> %13, %exp2
+  %log2 = call <4 x float> @llvm.gla.fLog2.v4f32.v4f32(<4 x float> %14)
+  %15 = fadd <4 x float> %14, %log2
+  %sqrt = call <4 x float> @llvm.gla.fSqrt.v4f32.v4f32(<4 x float> %15)
+  %16 = fadd <4 x float> %15, %sqrt
+  %inversesqrt = call <4 x float> @llvm.gla.fInverseSqrt.v4f32.v4f32(<4 x float> %16)
+  %17 = fadd <4 x float> %16, %inversesqrt
+  %abs = call <4 x float> @llvm.gla.fAbs.v4f32.v4f32(<4 x float> %17)
+  %18 = fadd <4 x float> %17, %abs
+  %sign = call <4 x float> @llvm.gla.fSign.v4f32.v4f32(<4 x float> %18)
+  %19 = fadd <4 x float> %18, %sign
+  %floor = call <4 x float> @llvm.gla.fFloor.v4f32.v4f32(<4 x float> %19)
+  %20 = fadd <4 x float> %19, %floor
+  %ceil = call <4 x float> @llvm.gla.fCeiling.v4f32.v4f32(<4 x float> %20)
+  %21 = fadd <4 x float> %20, %ceil
+  %fract = call <4 x float> @llvm.gla.fFraction.v4f32.v4f32(<4 x float> %21)
+  %22 = fadd <4 x float> %21, %fract
+  %23 = frem <4 x float> %22, %22
+  %24 = fadd <4 x float> %22, %23
+  %min = call <4 x float> @llvm.gla.fMin.v4f32.v4f32.v4f32(<4 x float> %24, <4 x float> %0)
+  %25 = fadd <4 x float> %24, %min
+  %max = call <4 x float> @llvm.gla.fMax.v4f32.v4f32.v4f32(<4 x float> %25, <4 x float> %0)
+  %26 = fadd <4 x float> %25, %max
+  %clamp = call <4 x float> @llvm.gla.fClamp.v4f32.v4f32.v4f32.v4f32(<4 x float> %26, <4 x float> %0, <4 x float> %0)
+  %27 = fadd <4 x float> %26, %clamp
+  %mix = call <4 x float> @llvm.gla.fMix.v4f32.v4f32.v4f32.v4f32(<4 x float> %27, <4 x float> %27, <4 x float> %27)
+  %28 = fadd <4 x float> %27, %mix
+  %29 = load i1 addrspace(1)* @ub
+  %30 = uitofp i1 %29 to float
+  %mix28 = call <4 x float> @llvm.gla.fMix.v4f32.v4f32.v4f32.f32(<4 x float> %28, <4 x float> %28, float %30)
+  %31 = fadd <4 x float> %28, %mix28
+  %step = call <4 x float> @llvm.gla.fStep.v4f32.v4f32.v4f32(<4 x float> %31, <4 x float> %31)
+  %32 = fadd <4 x float> %31, %step
+  %smoothstep = call <4 x float> @llvm.gla.fSmoothStep.v4f32.v4f32.v4f32.v4f32(<4 x float> %32, <4 x float> %32, <4 x float> %32)
+  %33 = fadd <4 x float> %32, %smoothstep
+  %normalize = call <4 x float> @llvm.gla.fNormalize.v4f32.v4f32(<4 x float> %33)
+  %34 = fadd <4 x float> %33, %normalize
+  %faceforward = call <4 x float> @llvm.gla.fFaceForward.v4f32.v4f32.v4f32.v4f32(<4 x float> %34, <4 x float> %34, <4 x float> %34)
+  %35 = fadd <4 x float> %34, %faceforward
+  %reflect = call <4 x float> @llvm.gla.fReflect.v4f32.v4f32.v4f32(<4 x float> %35, <4 x float> %35)
+  %36 = fadd <4 x float> %35, %reflect
+  %37 = load float addrspace(1)* @uf
+  %refract = call <4 x float> @llvm.gla.fRefract.v4f32.v4f32.v4f32.f32(<4 x float> %36, <4 x float> %36, float %37)
+  %38 = fadd <4 x float> %36, %refract
+  %dFdx = call <4 x float> @llvm.gla.fDFdx.v4f32.v4f32(<4 x float> %38)
+  %39 = fadd <4 x float> %38, %dFdx
+  %dFdy = call <4 x float> @llvm.gla.fDFdy.v4f32.v4f32(<4 x float> %39)
+  %40 = fadd <4 x float> %39, %dFdy
+  %fwidth = call <4 x float> @llvm.gla.fFilterWidth.v4f32.v4f32(<4 x float> %40)
+  %41 = fadd <4 x float> %40, %fwidth
+  %42 = load i32 addrspace(1)* @ui
+  %abs39 = call i32 @llvm.gla.abs.i32.i32(i32 %42)
+  %min42 = call i32 @llvm.gla.sMin.i32.i32.i32(i32 %abs39, i32 %42)
+  %43 = add i32 %min42, %abs39
+  %max45 = call i32 @llvm.gla.sMax.i32.i32.i32(i32 %43, i32 %42)
+  %44 = add i32 %max45, %43
+  %clamp48 = call i32 @llvm.gla.sClamp.i32.i32.i32.i32(i32 %44, i32 %42, i32 %42)
+  %45 = add i32 %clamp48, %44
+  %46 = fcmp olt <4 x float> %41, %41
+  %any = call i1 @llvm.gla.any.v4i1(<4 x i1> %46)
+  br i1 %any, label %then, label %else
+processing basic block then
+
+then:                                             ; preds = %entry
+  %47 = fcmp ole <4 x float> %41, %41
+  %any50 = call i1 @llvm.gla.any.v4i1(<4 x i1> %47)
+  br label %ifmerge
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then
+
+then:                                             ; preds = %entry
+  %47 = fcmp ole <4 x float> %41, %41
+  %any50 = call i1 @llvm.gla.any.v4i1(<4 x i1> %47)
+  br label %ifmerge
+processing basic block else
+
+else:                                             ; preds = %entry
+  br label %ifmerge
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block else
+
+else:                                             ; preds = %entry
+  br label %ifmerge
+processing basic block ifmerge
+
+ifmerge:                                          ; preds = %else, %then
+  %and_tmp.0 = phi i1 [ %any50, %then ], [ false, %else ]
+  br i1 %and_tmp.0, label %then51, label %else55
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge
+
+ifmerge:                                          ; preds = %else, %then
+  %and_tmp.0 = phi i1 [ %any50, %then ], [ false, %else ]
+  br i1 %and_tmp.0, label %then51, label %else55
+processing basic block then51
+
+then51:                                           ; preds = %ifmerge
+  %48 = fcmp ogt <4 x float> %41, %41
+  %any53 = call i1 @llvm.gla.any.v4i1(<4 x i1> %48)
+  br label %ifmerge56
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then51
+
+then51:                                           ; preds = %ifmerge
+  %48 = fcmp ogt <4 x float> %41, %41
+  %any53 = call i1 @llvm.gla.any.v4i1(<4 x i1> %48)
+  br label %ifmerge56
+processing basic block else55
+
+else55:                                           ; preds = %ifmerge
+  br label %ifmerge56
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block else55
+
+else55:                                           ; preds = %ifmerge
+  br label %ifmerge56
+processing basic block ifmerge56
+
+ifmerge56:                                        ; preds = %else55, %then51
+  %and_tmp54.0 = phi i1 [ %any53, %then51 ], [ false, %else55 ]
+  br i1 %and_tmp54.0, label %then57, label %else61
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge56
+
+ifmerge56:                                        ; preds = %else55, %then51
+  %and_tmp54.0 = phi i1 [ %any53, %then51 ], [ false, %else55 ]
+  br i1 %and_tmp54.0, label %then57, label %else61
+processing basic block then57
+
+then57:                                           ; preds = %ifmerge56
+  %49 = fcmp oge <4 x float> %41, %41
+  %any59 = call i1 @llvm.gla.any.v4i1(<4 x i1> %49)
+  br label %ifmerge62
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then57
+
+then57:                                           ; preds = %ifmerge56
+  %49 = fcmp oge <4 x float> %41, %41
+  %any59 = call i1 @llvm.gla.any.v4i1(<4 x i1> %49)
+  br label %ifmerge62
+processing basic block else61
+
+else61:                                           ; preds = %ifmerge56
+  br label %ifmerge62
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block else61
+
+else61:                                           ; preds = %ifmerge56
+  br label %ifmerge62
+processing basic block ifmerge62
+
+ifmerge62:                                        ; preds = %else61, %then57
+  %and_tmp60.0 = phi i1 [ %any59, %then57 ], [ false, %else61 ]
+  br i1 %and_tmp60.0, label %then63, label %else67
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge62
+
+ifmerge62:                                        ; preds = %else61, %then57
+  %and_tmp60.0 = phi i1 [ %any59, %then57 ], [ false, %else61 ]
+  br i1 %and_tmp60.0, label %then63, label %else67
+processing basic block then63
+
+then63:                                           ; preds = %ifmerge62
+  %50 = load <4 x i1> addrspace(1)* @ub41
+  %51 = load <4 x i1> addrspace(1)* @ub42
+  %52 = icmp eq <4 x i1> %50, %51
+  %any65 = call i1 @llvm.gla.any.v4i1(<4 x i1> %52)
+  br label %ifmerge68
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then63
+
+then63:                                           ; preds = %ifmerge62
+  %50 = load <4 x i1> addrspace(1)* @ub41
+  %51 = load <4 x i1> addrspace(1)* @ub42
+  %52 = icmp eq <4 x i1> %50, %51
+  %any65 = call i1 @llvm.gla.any.v4i1(<4 x i1> %52)
+  br label %ifmerge68
+processing basic block else67
+
+else67:                                           ; preds = %ifmerge62
+  br label %ifmerge68
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block else67
+
+else67:                                           ; preds = %ifmerge62
+  br label %ifmerge68
+processing basic block ifmerge68
+
+ifmerge68:                                        ; preds = %else67, %then63
+  %and_tmp66.0 = phi i1 [ %any65, %then63 ], [ false, %else67 ]
+  br i1 %and_tmp66.0, label %then69, label %else73
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge68
+
+ifmerge68:                                        ; preds = %else67, %then63
+  %and_tmp66.0 = phi i1 [ %any65, %then63 ], [ false, %else67 ]
+  br i1 %and_tmp66.0, label %then69, label %else73
+processing basic block then69
+
+then69:                                           ; preds = %ifmerge68
+  %53 = load <4 x i1> addrspace(1)* @ub41
+  %54 = load <4 x i1> addrspace(1)* @ub42
+  %55 = icmp ne <4 x i1> %53, %54
+  %any71 = call i1 @llvm.gla.any.v4i1(<4 x i1> %55)
+  br label %ifmerge74
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then69
+
+then69:                                           ; preds = %ifmerge68
+  %53 = load <4 x i1> addrspace(1)* @ub41
+  %54 = load <4 x i1> addrspace(1)* @ub42
+  %55 = icmp ne <4 x i1> %53, %54
+  %any71 = call i1 @llvm.gla.any.v4i1(<4 x i1> %55)
+  br label %ifmerge74
+processing basic block else73
+
+else73:                                           ; preds = %ifmerge68
+  br label %ifmerge74
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block else73
+
+else73:                                           ; preds = %ifmerge68
+  br label %ifmerge74
+processing basic block ifmerge74
+
+ifmerge74:                                        ; preds = %else73, %then69
+  %and_tmp72.0 = phi i1 [ %any71, %then69 ], [ false, %else73 ]
+  br i1 %and_tmp72.0, label %then75, label %else79
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge74
+
+ifmerge74:                                        ; preds = %else73, %then69
+  %and_tmp72.0 = phi i1 [ %any71, %then69 ], [ false, %else73 ]
+  br i1 %and_tmp72.0, label %then75, label %else79
+processing basic block then75
+
+then75:                                           ; preds = %ifmerge74
+  %56 = load <4 x i1> addrspace(1)* @ub41
+  %any77 = call i1 @llvm.gla.any.v4i1(<4 x i1> %56)
+  br label %ifmerge80
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then75
+
+then75:                                           ; preds = %ifmerge74
+  %56 = load <4 x i1> addrspace(1)* @ub41
+  %any77 = call i1 @llvm.gla.any.v4i1(<4 x i1> %56)
+  br label %ifmerge80
+processing basic block else79
+
+else79:                                           ; preds = %ifmerge74
+  br label %ifmerge80
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block else79
+
+else79:                                           ; preds = %ifmerge74
+  br label %ifmerge80
+processing basic block ifmerge80
+
+ifmerge80:                                        ; preds = %else79, %then75
+  %and_tmp78.0 = phi i1 [ %any77, %then75 ], [ false, %else79 ]
+  br i1 %and_tmp78.0, label %then81, label %else83
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge80
+
+ifmerge80:                                        ; preds = %else79, %then75
+  %and_tmp78.0 = phi i1 [ %any77, %then75 ], [ false, %else79 ]
+  br i1 %and_tmp78.0, label %then81, label %else83
+processing basic block then81
+
+then81:                                           ; preds = %ifmerge80
+  %57 = load <4 x i1> addrspace(1)* @ub41
+  %all = call i1 @llvm.gla.all.v4i1(<4 x i1> %57)
+  br label %ifmerge84
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then81
+
+then81:                                           ; preds = %ifmerge80
+  %57 = load <4 x i1> addrspace(1)* @ub41
+  %all = call i1 @llvm.gla.all.v4i1(<4 x i1> %57)
+  br label %ifmerge84
+processing basic block else83
+
+else83:                                           ; preds = %ifmerge80
+  br label %ifmerge84
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block else83
+
+else83:                                           ; preds = %ifmerge80
+  br label %ifmerge84
+processing basic block ifmerge84
+
+ifmerge84:                                        ; preds = %else83, %then81
+  %and_tmp82.0 = phi i1 [ %all, %then81 ], [ false, %else83 ]
+  br i1 %and_tmp82.0, label %then85, label %else89
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge84
+
+ifmerge84:                                        ; preds = %else83, %then81
+  %and_tmp82.0 = phi i1 [ %all, %then81 ], [ false, %else83 ]
+  br i1 %and_tmp82.0, label %then85, label %else89
+processing basic block then85
+
+then85:                                           ; preds = %ifmerge84
+  %58 = load <4 x i1> addrspace(1)* @ub41
+  %59 = xor <4 x i1> %58, <i1 true, i1 true, i1 true, i1 true>
+  %any87 = call i1 @llvm.gla.any.v4i1(<4 x i1> %59)
+  br label %ifmerge90
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then85
+
+then85:                                           ; preds = %ifmerge84
+  %58 = load <4 x i1> addrspace(1)* @ub41
+  %59 = xor <4 x i1> %58, <i1 true, i1 true, i1 true, i1 true>
+  %any87 = call i1 @llvm.gla.any.v4i1(<4 x i1> %59)
+  br label %ifmerge90
+processing basic block else89
+
+else89:                                           ; preds = %ifmerge84
+  br label %ifmerge90
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block else89
+
+else89:                                           ; preds = %ifmerge84
+  br label %ifmerge90
+processing basic block ifmerge90
+
+ifmerge90:                                        ; preds = %else89, %then85
+  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %else89 ]
+  %60 = add i32 %42, %45
+  %61 = mul i32 %60, %45
+  %62 = sub i32 %61, %42
+  %63 = sdiv i32 %62, %45
+  %64 = srem i32 %63, %42
+  %65 = icmp eq i32 %64, %42
+  br i1 %65, label %then92, label %else93
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge90
+
+ifmerge90:                                        ; preds = %else89, %then85
+  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %else89 ]
+  %60 = add i32 %42, %45
+  %61 = mul i32 %60, %45
+  %62 = sub i32 %61, %42
+  %63 = sdiv i32 %62, %45
+  %64 = srem i32 %63, %42
+  %65 = icmp eq i32 %64, %42
+  br i1 %65, label %then92, label %else93
+processing basic block then92
+
+then92:                                           ; preds = %ifmerge90
+  br label %ifmerge98
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then92
+
+then92:                                           ; preds = %ifmerge90
+  br label %ifmerge98
+processing basic block else93
+
+else93:                                           ; preds = %ifmerge90
+  %66 = icmp ne i32 %64, %42
+  br i1 %66, label %then94, label %else96
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block else93
+
+else93:                                           ; preds = %ifmerge90
+  %66 = icmp ne i32 %64, %42
+  br i1 %66, label %then94, label %else96
+processing basic block then94
+
+then94:                                           ; preds = %else93
+  br label %ifmerge97
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then94
+
+then94:                                           ; preds = %else93
+  br label %ifmerge97
+processing basic block else96
+
+else96:                                           ; preds = %else93
+  br label %ifmerge97
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block else96
+
+else96:                                           ; preds = %else93
+  br label %ifmerge97
+processing basic block ifmerge97
+
+ifmerge97:                                        ; preds = %else96, %then94
+  %67 = icmp ne i32 %64, 2
+  %68 = xor i1 false, %67
+  br label %ifmerge98
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge97
+
+ifmerge97:                                        ; preds = %else96, %then94
+  %67 = icmp ne i32 %64, 2
+  %68 = xor i1 false, %67
+  br label %ifmerge98
+processing basic block ifmerge98
+
+ifmerge98:                                        ; preds = %ifmerge97, %then92
+  %or_tmp.0 = phi i1 [ true, %then92 ], [ %68, %ifmerge97 ]
+  br i1 %or_tmp.0, label %then99, label %ifmerge100
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge98
+
+ifmerge98:                                        ; preds = %ifmerge97, %then92
+  %or_tmp.0 = phi i1 [ true, %then92 ], [ %68, %ifmerge97 ]
+  br i1 %or_tmp.0, label %then99, label %ifmerge100
+processing basic block then99
+
+then99:                                           ; preds = %ifmerge98
+  %69 = add i32 %64, 1
+  br label %ifmerge100
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then99
+
+then99:                                           ; preds = %ifmerge98
+  %69 = add i32 %64, 1
+  br label %ifmerge100
+processing basic block ifmerge100
+
+ifmerge100:                                       ; preds = %then99, %ifmerge98
+  %i.0 = phi i32 [ %69, %then99 ], [ %64, %ifmerge98 ]
+  %70 = fadd float %37, %37
+  %71 = fmul float %70, %37
+  %72 = fsub float %71, %37
+  %73 = fdiv float %72, %37
+  %length = call float @llvm.gla.fLength.v4f32(<4 x float> %41)
+  %74 = fadd float %73, %length
+  %distance = call float @llvm.gla.fDistance.v4f32.v4f32(<4 x float> %41, <4 x float> %41)
+  %75 = fadd float %74, %distance
+  %dot = call float @llvm.gla.fDot.v4f32.v4f32(<4 x float> %41, <4 x float> %41)
+  %76 = fadd float %75, %dot
+  %swizzleTmp = call <3 x float> @llvm.gla.fSwizzle.v3f32.v4f32(<4 x float> %41, i32 36)
+  %cross = call <3 x float> @llvm.gla.fCross.v3f32.v3f32.v3f32(<3 x float> %swizzleTmp, <3 x float> %swizzleTmp)
+  %swizzleTmp103 = call float @llvm.gla.fSwizzle.f32.v3f32(<3 x float> %cross, i32 0)
+  %77 = fadd float %76, %swizzleTmp103
+  %78 = fcmp oeq float %77, %37
+  br i1 %78, label %then104, label %else106
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge100
+
+ifmerge100:                                       ; preds = %then99, %ifmerge98
+  %i.0 = phi i32 [ %69, %then99 ], [ %64, %ifmerge98 ]
+  %70 = fadd float %37, %37
+  %71 = fmul float %70, %37
+  %72 = fsub float %71, %37
+  %73 = fdiv float %72, %37
+  %length = call float @llvm.gla.fLength.v4f32(<4 x float> %41)
+  %74 = fadd float %73, %length
+  %distance = call float @llvm.gla.fDistance.v4f32.v4f32(<4 x float> %41, <4 x float> %41)
+  %75 = fadd float %74, %distance
+  %dot = call float @llvm.gla.fDot.v4f32.v4f32(<4 x float> %41, <4 x float> %41)
+  %76 = fadd float %75, %dot
+  %swizzleTmp = call <3 x float> @llvm.gla.fSwizzle.v3f32.v4f32(<4 x float> %41, i32 36)
+  %cross = call <3 x float> @llvm.gla.fCross.v3f32.v3f32.v3f32(<3 x float> %swizzleTmp, <3 x float> %swizzleTmp)
+  %swizzleTmp103 = call float @llvm.gla.fSwizzle.f32.v3f32(<3 x float> %cross, i32 0)
+  %77 = fadd float %76, %swizzleTmp103
+  %78 = fcmp oeq float %77, %37
+  br i1 %78, label %then104, label %else106
+processing basic block then104
+
+then104:                                          ; preds = %ifmerge100
+  br label %ifmerge111
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then104
+
+then104:                                          ; preds = %ifmerge100
+  br label %ifmerge111
+processing basic block else106
+
+else106:                                          ; preds = %ifmerge100
+  %79 = fcmp one float %77, %37
+  br i1 %79, label %then107, label %else109
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block else106
+
+else106:                                          ; preds = %ifmerge100
+  %79 = fcmp one float %77, %37
+  br i1 %79, label %then107, label %else109
+processing basic block then107
+
+then107:                                          ; preds = %else106
+  %80 = fcmp one float %77, 2.000000e+00
+  br label %ifmerge110
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then107
+
+then107:                                          ; preds = %else106
+  %80 = fcmp one float %77, 2.000000e+00
+  br label %ifmerge110
+processing basic block else109
+
+else109:                                          ; preds = %else106
+  br label %ifmerge110
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block else109
+
+else109:                                          ; preds = %else106
+  br label %ifmerge110
+processing basic block ifmerge110
+
+ifmerge110:                                       ; preds = %else109, %then107
+  %and_tmp108.0 = phi i1 [ %80, %then107 ], [ false, %else109 ]
+  br label %ifmerge111
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge110
+
+ifmerge110:                                       ; preds = %else109, %then107
+  %and_tmp108.0 = phi i1 [ %80, %then107 ], [ false, %else109 ]
+  br label %ifmerge111
+processing basic block ifmerge111
+
+ifmerge111:                                       ; preds = %ifmerge110, %then104
+  %or_tmp105.0 = phi i1 [ true, %then104 ], [ %and_tmp108.0, %ifmerge110 ]
+  br i1 %or_tmp105.0, label %then112, label %ifmerge113
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge111
+
+ifmerge111:                                       ; preds = %ifmerge110, %then104
+  %or_tmp105.0 = phi i1 [ true, %then104 ], [ %and_tmp108.0, %ifmerge110 ]
+  br i1 %or_tmp105.0, label %then112, label %ifmerge113
+processing basic block then112
+
+then112:                                          ; preds = %ifmerge111
+  %81 = fadd float %77, 1.000000e+00
+  br label %ifmerge113
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then112
+
+then112:                                          ; preds = %ifmerge111
+  %81 = fadd float %77, 1.000000e+00
+  br label %ifmerge113
+processing basic block ifmerge113
+
+ifmerge113:                                       ; preds = %then112, %ifmerge111
+  %f.0 = phi float [ %81, %then112 ], [ %77, %ifmerge111 ]
+  br i1 %and_tmp88.0, label %then114, label %else117
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge113
+
+ifmerge113:                                       ; preds = %then112, %ifmerge111
+  %f.0 = phi float [ %81, %then112 ], [ %77, %ifmerge111 ]
+  br i1 %and_tmp88.0, label %then114, label %else117
+processing basic block then114
+
+then114:                                          ; preds = %ifmerge113
+  %82 = sitofp i32 %i.0 to float
+  %swizzleTmp115 = call <4 x float> @llvm.gla.fSwizzle.v4f32.f32(float %82, i32 0)
+  %swizzleTmp116 = call <4 x float> @llvm.gla.fSwizzle.v4f32.f32(float %f.0, i32 0)
+  %83 = fadd <4 x float> %swizzleTmp115, %swizzleTmp116
+  %84 = fadd <4 x float> %83, %41
+  br label %ifmerge118
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block then114
+
+then114:                                          ; preds = %ifmerge113
+  %82 = sitofp i32 %i.0 to float
+  %swizzleTmp115 = call <4 x float> @llvm.gla.fSwizzle.v4f32.f32(float %82, i32 0)
+  %swizzleTmp116 = call <4 x float> @llvm.gla.fSwizzle.v4f32.f32(float %f.0, i32 0)
+  %83 = fadd <4 x float> %swizzleTmp115, %swizzleTmp116
+  %84 = fadd <4 x float> %83, %41
+  br label %ifmerge118
+processing basic block else117
+
+else117:                                          ; preds = %ifmerge113
+  br label %ifmerge118
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block else117
+
+else117:                                          ; preds = %ifmerge113
+  br label %ifmerge118
+processing basic block ifmerge118
+
+ifmerge118:                                       ; preds = %else117, %then114
+  %conditional_tmp.0 = phi <4 x float> [ %84, %then114 ], [ %41, %else117 ]
+  store <4 x float> %conditional_tmp.0, <4 x float>* @gl_FragColor
+  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %conditional_tmp.0)
+  ret void
+
+This block's candidates for intrinsic substitution: 
+
+This block's groups: 
+processing basic block ifmerge118
+
+ifmerge118:                                       ; preds = %else117, %then114
+  %conditional_tmp.0 = phi <4 x float> [ %84, %then114 ], [ %41, %else117 ]
+  store <4 x float> %conditional_tmp.0, <4 x float>* @gl_FragColor
+  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %conditional_tmp.0)
+  ret void
 ; ModuleID = 'Top'
 
 @uv4 = external addrspace(1) constant <4 x float>
@@ -1237,7 +2083,7 @@ else106:                                          ; preds = %ifmerge100
   br i1 %79, label %then107, label %else109
 
 then107:                                          ; preds = %else106
-  %80 = fcmp one float %77, 2.000000e+000
+  %80 = fcmp one float %77, 2.000000e+00
   br label %ifmerge110
 
 else109:                                          ; preds = %else106
@@ -1252,7 +2098,7 @@ ifmerge111:                                       ; preds = %ifmerge110, %then10
   br i1 %or_tmp105.0, label %then112, label %ifmerge113
 
 then112:                                          ; preds = %ifmerge111
-  %81 = fadd float %77, 1.000000e+000
+  %81 = fadd float %77, 1.000000e+00
   br label %ifmerge113
 
 ifmerge113:                                       ; preds = %then112, %ifmerge111

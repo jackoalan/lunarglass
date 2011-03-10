@@ -47,7 +47,7 @@ void GlslToTop(struct gl_shader* glShader, llvm::Module* module)
 }
 
 GlslToTopVisitor::GlslToTopVisitor(struct gl_shader* s, llvm::Module* m)
-    : context(llvm::getGlobalContext()), builder(context), module(m), glShader(s), interpIndex(0)
+    : context(llvm::getGlobalContext()), builder(context), module(m), glShader(s), interpIndex(0), shaderEntry(0)
 {
 }
 
@@ -107,7 +107,6 @@ llvm::Value* GlslToTopVisitor::createLLVMConstant(ir_constant* constant)
         case GLSL_TYPE_SAMPLER:
         case GLSL_TYPE_ARRAY:
         case GLSL_TYPE_STRUCT:
-        case GLSL_TYPE_FUNCTION:
         case GLSL_TYPE_VOID:
         case GLSL_TYPE_ERROR:
         default:
@@ -135,7 +134,6 @@ llvm::Value* GlslToTopVisitor::createLLVMConstant(ir_constant* constant)
         case GLSL_TYPE_SAMPLER:
         case GLSL_TYPE_ARRAY:
         case GLSL_TYPE_STRUCT:
-        case GLSL_TYPE_FUNCTION:
         case GLSL_TYPE_VOID:
         case GLSL_TYPE_ERROR:
         default:
@@ -277,11 +275,15 @@ ir_visitor_status
     GlslToTopVisitor::visit_enter(ir_function *f)
 {
     if (f->has_user_signature()) {
-        //?? still need to use correct signature, using only "void fun(void)"
-        llvm::FunctionType *functionType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), false);
-        llvm::Function *function = llvm::Function::Create(functionType, llvm::Function::ExternalLinkage, f->name, module);
-        llvm::BasicBlock *entryBlock = llvm::BasicBlock::Create(context, "entry", function);
-        builder.SetInsertPoint(entryBlock);
+        if (strcmp(f->name, "main") == 0)
+            builder.SetInsertPoint(getShaderEntry());
+        else {
+            //?? still need to use correct signature
+            llvm::FunctionType *functionType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), false);
+            llvm::Function *function = llvm::Function::Create(functionType, llvm::Function::ExternalLinkage, f->name, module);
+            llvm::BasicBlock *entryBlock = llvm::BasicBlock::Create(context, "entry", function);
+            builder.SetInsertPoint(entryBlock);
+        }
     }
 
     return visit_continue;
@@ -291,7 +293,7 @@ ir_visitor_status
     GlslToTopVisitor::visit_leave(ir_function *f)
 {
     if (f->has_user_signature()) {
-        if(!strcmp(f->name, "main")) {
+        if(strcmp(f->name, "main") == 0) {
             llvm::Intrinsic::ID intrinsicID;
                 
             //Call writeData intrinsic on our outs
@@ -978,7 +980,11 @@ llvm::Value* GlslToTopVisitor::createLLVMVariable(ir_variable* var)
     // var->constant_value;
 
     if (local) {
-        llvm::BasicBlock* entryBlock = &builder.GetInsertBlock()->getParent()->getEntryBlock();
+        //?? if global scope
+            llvm::BasicBlock* entryBlock = getShaderEntry();
+        //?? else.
+            //llvm::BasicBlock* entryBlock = &builder.GetInsertBlock()->getParent()->getEntryBlock();
+        
         llvm::IRBuilder<> entryBuilder(entryBlock, entryBlock->begin());
         value = entryBuilder.CreateAlloca(llvmVarType, 0, var->name);
     } else {
@@ -1158,7 +1164,6 @@ llvm::Value* GlslToTopVisitor::expandGLSLOp(ir_expression_operation glslOp, llvm
     case ir_binop_max:
     case ir_binop_pow:
     case ir_binop_dot:
-    case ir_binop_cross:
     case ir_binop_bit_and:
     case ir_binop_bit_xor:
     case ir_binop_bit_or:
@@ -1234,7 +1239,6 @@ llvm::Type* GlslToTopVisitor::convertGLSLToLLVMType(const glsl_type* type)
         break;
     case GLSL_TYPE_ARRAY:     gla::UnsupportedFunctionality("arrays");
     case GLSL_TYPE_STRUCT:    gla::UnsupportedFunctionality("structures");
-    case GLSL_TYPE_FUNCTION:  gla::UnsupportedFunctionality("function calls");
     case GLSL_TYPE_VOID:      gla::UnsupportedFunctionality("void type");
     case GLSL_TYPE_ERROR:     assert(! "type error");
     default:
@@ -1368,8 +1372,8 @@ llvm::Type::TypeID GlslToTopVisitor::getLLVMBaseType(llvm::Type* type)
         return type->getTypeID();
 }
 
-void GlslToTopVisitor::findAndSmearScalars(llvm::Value** operands, int numOperands) {
-    
+void GlslToTopVisitor::findAndSmearScalars(llvm::Value** operands, int numOperands) 
+{    
     assert(numOperands == 2);
 
     int vectorSize = 0;
@@ -1396,7 +1400,11 @@ void GlslToTopVisitor::findAndSmearScalars(llvm::Value** operands, int numOperan
         return;
 
     // Create a new, same size vector
-    llvm::BasicBlock* entryBlock = &builder.GetInsertBlock()->getParent()->getEntryBlock();
+    //?? if local scope
+        llvm::BasicBlock* entryBlock = &builder.GetInsertBlock()->getParent()->getEntryBlock();
+    //?? else
+        //llvm::BasicBlock* entryBlock = getShaderEntry();
+        
     llvm::IRBuilder<> entryBuilder(entryBlock, entryBlock->begin());
     operands[scalarIndex] = builder.CreateLoad(entryBuilder.CreateAlloca(vectorType[vectorIndex], 0));
 
@@ -1419,4 +1427,17 @@ void GlslToTopVisitor::findAndSmearScalars(llvm::Value** operands, int numOperan
 
     operands[scalarIndex] = callInst;
 
+}
+
+llvm::BasicBlock* GlslToTopVisitor::getShaderEntry()
+{
+    if (shaderEntry)
+        return shaderEntry;
+
+    llvm::FunctionType *functionType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), false);
+    llvm::Function *function = llvm::Function::Create(functionType, llvm::Function::ExternalLinkage, "main", module);
+    shaderEntry = llvm::BasicBlock::Create(context, "entry", function);
+    builder.SetInsertPoint(shaderEntry);
+
+    return shaderEntry;
 }

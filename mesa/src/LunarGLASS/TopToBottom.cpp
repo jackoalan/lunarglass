@@ -79,7 +79,6 @@ void gla::PrivateManager::runLLVMOptimizations1()
     passManager.add(llvm::createVerifierPass());
     passManager.add(llvm::createPromoteMemoryToRegisterPass());
     passManager.add(llvm::createReassociatePass());
-    passManager.add(llvm::createAggressiveDCEPass());
     passManager.add(llvm::createGVNPass());
     passManager.add(llvm::createConstructSwizzlesPass());
     passManager.add(llvm::createAggressiveDCEPass());

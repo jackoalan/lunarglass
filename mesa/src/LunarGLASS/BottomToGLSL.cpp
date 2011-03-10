@@ -404,17 +404,17 @@ protected:
             globalDeclarations << " ";
             mapGlaType(globalDeclarations, type);
             globalDeclarations << " " << varString << " = ";
-            
+
             switch(constant->getType()->getTypeID()) {
             case llvm::Type::IntegerTyID:
-            case llvm::Type::FloatTyID:  
+            case llvm::Type::FloatTyID:
                 emitScalarConstant(globalDeclarations, constant);
                 break;
 
             case llvm::Type::VectorTyID:
                 emitVectorConstant(globalDeclarations, constant);
                 break;
-            
+
             default:
                 UnsupportedFunctionality("constant type in Bottom IR", EATContinue);
                 globalDeclarations << 0;
@@ -486,7 +486,7 @@ protected:
 
         shader << valueMap[value]->c_str();
     }
-    
+
     void emitScalarConstant(std::ostringstream& out, const llvm::Constant* constant)
     {
         assert(constant);
@@ -504,11 +504,11 @@ protected:
                     out << GetConstantInt(constant);
             }
             break;
-            
-        case llvm::Type::FloatTyID:  
-            out << GetConstantFloat(constant);   
+
+        case llvm::Type::FloatTyID:
+            out << GetConstantFloat(constant);
             break;
-            
+
         default:
             UnsupportedFunctionality("constant type in Bottom IR", EATContinue);
             out << 0;
@@ -530,14 +530,14 @@ protected:
             out << ")";
             return;
         }
-            
+
         const llvm::ConstantAggregateZero* aggregate = llvm::dyn_cast<llvm::ConstantAggregateZero>(constant);
         if (aggregate) {
             mapGlaType(out, constant->getType());
             out << "(0)";
             return;
         }
-        
+
         UnsupportedFunctionality("Vector Constant");
     }
 
@@ -581,24 +581,24 @@ protected:
             shader << ", ";
         }
 
+        mapGlaDestination(inst->getOperand(operand));
+
         // If it's a vector, extract the value
         if (inst->getOperand(operand)->getType()->getTypeID() == llvm::Type::VectorTyID) {
-            mapGlaDestination(inst->getOperand(operand));
+
             shader << ".";
-            switch (GetConstantValue(inst->getOperand(operand+1))) {
+            switch (GetConstantInt(inst->getOperand(operand+1))) {
             case 0: shader << "x"; break;
             case 1: shader << "y"; break;
             case 2: shader << "z"; break;
             case 3: shader << "w"; break;
             }
-        } else {
-            shader << " !!! constants not handled yet !!! ";
         }
     }
 
     void mapGlaWriteMask(const llvm::IntrinsicInst *inst)
     {
-        int wmask = GetConstantValue(inst->getOperand(1));
+        int wmask = GetConstantInt(inst->getOperand(1));
         int argCount = 0;
         bool x,y,z,w;
         x = y = z = w = 0;
@@ -653,11 +653,8 @@ protected:
         // If they're all from the same source just get it. Otherwise construct a new vector
         if (sameSource) {
             mapGlaDestination(source);
-            newLine();
-            shader << "// Same source";
-
         } else {
-            shader << " vec" << argCount << "(";
+            shader << "vec" << argCount << "(";
 
             bool firstArg = true;
             if (x) {
@@ -1086,9 +1083,6 @@ void gla::GlslTarget::mapGlaIntrinsic(const llvm::IntrinsicInst* llvmInstruction
     switch (llvmInstruction->getIntrinsicID()) {
     case llvm::Intrinsic::gla_fWriteMask:
     case llvm::Intrinsic::gla_writeMask:
-        newLine();
-        newLine();
-        shader << "//WRITEMASK:";
         newLine();
         mapGlaDestination(llvmInstruction);
         mapGlaWriteMask(llvmInstruction);

@@ -1,7 +1,7 @@
 //===- GlslToTopVisitor.cpp - Help Translate GLSL IR to LunarGLASS Top IR -===//
 //
 // LunarGLASS: An Open Modular Shader Compiler Architecture
-// Copyright © 2011, LunarG, Inc.
+// Copyright ï¿½ 2011, LunarG, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -47,7 +47,7 @@ void GlslToTop(struct gl_shader* glShader, llvm::Module* module)
 }
 
 GlslToTopVisitor::GlslToTopVisitor(struct gl_shader* s, llvm::Module* m)
-    : context(llvm::getGlobalContext()), builder(context), module(m), glShader(s)
+    : context(llvm::getGlobalContext()), builder(context), module(m), glShader(s), interpIndex(0)
 {
 }
 
@@ -155,6 +155,19 @@ ir_visitor_status
     return visit_continue;
 }
 
+int GlslToTopVisitor::getNextInterpIndex(ir_variable* var)
+{
+    // Get the index for this interpolant, or create a new unique one
+    std::map<ir_variable*, int>::iterator iter;
+    iter = interpMap.find(var);
+
+    if (interpMap.end() == iter) {
+        interpMap[var] = interpIndex++;
+    }
+
+    return interpMap[var];
+}
+
 ir_visitor_status
     GlslToTopVisitor::visit(ir_dereference_variable *derefVariable)
 {
@@ -201,9 +214,10 @@ ir_visitor_status
             llvm::Function *intrinsicName = 0;
             const char *name = NULL;
 
-            // TODO:  We're hard coding our output location to 0 for bringup
+            // Give each interpolant a temporary unique index
             int paramCount = 0;
-            llvm::Constant *llvmConstant = llvm::ConstantInt::get(context, llvm::APInt(32, 0, true));
+            llvm::Constant *interpLoc    = llvm::ConstantInt::get(context, llvm::APInt(32, getNextInterpIndex(var), true));
+            llvm::Constant *interpOffset = llvm::ConstantInt::get(context, llvm::APInt(32, 0, true));
 
             // Select intrinsic based on target stage
             if(glShader->Type == GL_FRAGMENT_SHADER) {
@@ -221,8 +235,8 @@ ir_visitor_status
 
             // Call the selected intrinsic
             switch(paramCount) {
-            case 2:  lastValue = builder.CreateCall2 (intrinsicName, llvmConstant, llvmConstant, name); break;
-            case 1:  lastValue = builder.CreateCall  (intrinsicName, llvmConstant, name);               break;
+            case 2:  lastValue = builder.CreateCall2 (intrinsicName, interpLoc, interpOffset, name); break;
+            case 1:  lastValue = builder.CreateCall  (intrinsicName, interpLoc, name);               break;
             }
         } else {
             lastValue = builder.CreateLoad(lastValue);
@@ -905,9 +919,12 @@ llvm::Value* GlslToTopVisitor::createLLVMVariable(ir_variable* var)
     bool local = false;
     llvm::Constant* initializer = 0;
     llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalVariable::InternalLinkage;
-    llvm::Type *llvmVarType = convertGLSLToLLVMType(var->type);
-
+    llvm::Type *llvmVarType = convertGLSLToLLVMType(var->type);    
     llvm::Value* value = 0;
+
+    const char* typePrefix = 0;
+    if (var->type->base_type == GLSL_TYPE_SAMPLER)
+        typePrefix = getSamplerDeclaration(var);
 
     switch (var->mode) {
     case ir_var_auto:
@@ -971,13 +988,48 @@ llvm::Value* GlslToTopVisitor::createLLVMVariable(ir_variable* var)
         if (strcmp(var->name, "gl_FragData") == 0)
             gla::UnsupportedFunctionality("gl_FragData");
 
+        std::string name = var->name;
+        if (gla::Options.backend == gla::GLSL && typePrefix) {
+            name = typePrefix;
+            name.append(" ");
+            name.append(var->name);
+        } else
+            name = var->name;
+
         llvm::GlobalVariable* globalValue = new llvm::GlobalVariable(llvmVarType, constant, linkage,
-                                         initializer, var->name, false /* ThreadLocal */, addressSpace);
+                                         initializer, name, false /* ThreadLocal */, addressSpace);
         module->getGlobalList().push_back(globalValue);
         value = globalValue;
     }
 
     return value;
+}
+
+const char* GlslToTopVisitor::getSamplerDeclaration(ir_variable* var)
+{
+    if (var->type->sampler_shadow) {
+        switch (var->type->sampler_dimensionality) {
+        case GLSL_SAMPLER_DIM_1D:   return "sampler1DShadow";
+        case GLSL_SAMPLER_DIM_2D:   return "sampler2DShadow";
+        case GLSL_SAMPLER_DIM_3D:   return "sampler3DShadow";
+        case GLSL_SAMPLER_DIM_CUBE: return "samplerCubeShadow";
+        case GLSL_SAMPLER_DIM_RECT: return "sampler2DRectShadow";
+        default:
+            gla::UnsupportedFunctionality("shadow sampler type");
+        }
+    } else {
+        switch (var->type->sampler_dimensionality) {
+        case GLSL_SAMPLER_DIM_1D:   return "sampler1D";
+        case GLSL_SAMPLER_DIM_2D:   return "sampler2D";
+        case GLSL_SAMPLER_DIM_3D:   return "sampler3D";
+        case GLSL_SAMPLER_DIM_CUBE: return "samplerCube";
+        case GLSL_SAMPLER_DIM_RECT: return "sampler2DRect";
+        default:
+            gla::UnsupportedFunctionality("sampler type");
+        }
+    }
+
+    return 0;
 }
 
 llvm::Value* GlslToTopVisitor::expandGLSLOp(ir_expression_operation glslOp, llvm::Value** operands)
@@ -1347,12 +1399,24 @@ void GlslToTopVisitor::findAndSmearScalars(llvm::Value** operands, int numOperan
     llvm::BasicBlock* entryBlock = &builder.GetInsertBlock()->getParent()->getEntryBlock();
     llvm::IRBuilder<> entryBuilder(entryBlock, entryBlock->begin());
     operands[scalarIndex] = builder.CreateLoad(entryBuilder.CreateAlloca(vectorType[vectorIndex], 0));
-        
-    // Fill it with the scalar value
-    for (int i = 0; i < vectorSize; ++i) {
-        operands[scalarIndex] = builder.CreateInsertElement(operands[scalarIndex], 
-                                        scalarVal,
-                                        llvm::ConstantInt::get(context, llvm::APInt(32, i, false)));
+
+    // Use a swizzle to expand the scalar to a vector
+    llvm::Intrinsic::ID intrinsicID;
+    llvm::Type::TypeID scalarType = getLLVMBaseType(scalarVal);
+    switch(scalarType) {
+    case llvm::Type::IntegerTyID:   intrinsicID = llvm::Intrinsic::gla_swizzle;     break;
+    case llvm::Type::FloatTyID:     intrinsicID = llvm::Intrinsic::gla_fSwizzle;    break;
     }
+    
+    llvm::Function *intrinsicName = getLLVMIntrinsicFunction2(intrinsicID, operands[vectorIndex]->getType(), scalarVal->getType());
+
+    // Broadcast x
+    int swizVal = 0;
+
+    llvm::CallInst *callInst = builder.CreateCall2 (intrinsicName,
+                                                    scalarVal,
+                                                    llvm::ConstantInt::get(context, llvm::APInt(32, swizVal, true)));
+
+    operands[scalarIndex] = callInst;
 
 }

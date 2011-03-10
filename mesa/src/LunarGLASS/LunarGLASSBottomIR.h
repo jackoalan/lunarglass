@@ -40,12 +40,13 @@ namespace gla {
     const int BiasLocAOS    = 4;
     const int DdxLocAOS     = 6;
     const int DdyLocAOS     = 7;
-
-    int GetConstantValue(const llvm::Value*);
+    
+    int GetConstantInt(const llvm::Value*);
+    float GetConstantFloat(const llvm::Value*);
     int IsGradientTexInst(const llvm::IntrinsicInst*);
     int GetComponentCount(const llvm::Type*);
     int GetComponentCount(const llvm::Value*);
-
+    bool IsConsecutiveSwizzle(int glaSwizzle, int width);
 };
 
 #endif /* LunarGLASSBottomIR_H */

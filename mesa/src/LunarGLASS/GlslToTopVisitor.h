@@ -96,6 +96,7 @@ public:
 
     // help functions to build LLVM
     llvm::Value* createLLVMVariable(ir_variable*);
+    const char* getSamplerDeclaration(ir_variable*);
     llvm::Value* expandGLSLOp(ir_expression_operation, llvm::Value**);
     llvm::Value* expandGLSLSwizzle(ir_swizzle*);
     llvm::Value* createLLVMIntrinsic(ir_call*, llvm::Value**, int);
@@ -112,6 +113,7 @@ public:
     llvm::Type::TypeID getLLVMBaseType(llvm::Value*);
     llvm::Type::TypeID getLLVMBaseType(llvm::Type*);
 
+    int getNextInterpIndex(ir_variable*);
 protected:
     llvm::LLVMContext &context;
     llvm::IRBuilder<> builder;
@@ -120,8 +122,11 @@ protected:
     struct gl_shader* glShader;
 
     std::map<ir_variable*, llvm::Value*> namedValues;
+    std::map<ir_variable*, int> interpMap;
     std::list<llvm::Value*> glslOuts;
 
     llvm::Value *lastValue;
     llvm::Value *lValue;
+
+    int interpIndex;
 };

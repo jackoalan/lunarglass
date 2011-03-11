@@ -31,9 +31,13 @@
 //===----------------------------------------------------------------------===//
 
 
+#ifndef COALESCE_INSERTS_H
+#define COALESCE_INSERTS_H
+
 #include "llvm/Pass.h"
 
 namespace llvm {
     FunctionPass* createCoalesceInsertsPass();
 } // End llvm namespace
 
+#endif // COALESCE_INSERTS_H

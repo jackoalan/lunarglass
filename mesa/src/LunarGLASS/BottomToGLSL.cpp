@@ -304,6 +304,13 @@ protected:
         shader << mapComponentToSwizzleChar(component);
     }
 
+    void mapMaskToSwizzle(int mask)
+    {
+        for (int component = 0; component < 4; ++component)
+            if (mask & (1 << component))
+                shader << mapComponentToSwizzleChar(component);
+    }
+
     char* mapComponentToSwizzleChar(int component)
     {
         switch (component) {
@@ -449,8 +456,9 @@ protected:
         }
     }
 
-    void mapGlaType(std::ostringstream& out, const llvm::Type* type)
+    void mapGlaType(std::ostringstream& out, const llvm::Type* type, int count = -1)
     {
+        // if it's a vector, output a vector type
         const llvm::VectorType *vectorType = llvm::dyn_cast<llvm::VectorType>(type);
         if (vectorType) {
             if (type->getContainedType(0) == type->getFloatTy(type->getContext()))
@@ -461,8 +469,14 @@ protected:
                 out << "ivec";
             else
                 UnsupportedFunctionality("Basic Type in Bottom IR");
-            out << GetComponentCount(type);
+
+            // output the size of the vecto
+            if (count == -1)
+                out << GetComponentCount(type);
+            else
+                out << count;
         } else {
+            // just output a scalar
             if (type == type->getFloatTy(type->getContext()))
                 out << "float";
             else if (type == type->getInt1Ty(type->getContext()))
@@ -591,24 +605,17 @@ protected:
     // Writes out the vector arguments for the RHS of a
     // multiInsert. Sets its first argument to false upon first execution
     void writeVecArgs(bool &firstArg, const llvm::IntrinsicInst *inst, int operand) {
-        if (firstArg) {
+        if (firstArg)
             firstArg = false;
-        } else {
+        else
             shader << ", ";
-        }
 
         mapGlaDestination(inst->getOperand(operand));
 
         // If it's a vector, extract the value
         if (inst->getOperand(operand)->getType()->getTypeID() == llvm::Type::VectorTyID) {
-
             shader << ".";
-            switch (GetConstantInt(inst->getOperand(operand+1))) {
-            case 0: shader << "x"; break;
-            case 1: shader << "y"; break;
-            case 2: shader << "z"; break;
-            case 3: shader << "w"; break;
-            }
+            mapComponentToSwizzle(GetConstantInt(inst->getOperand(operand+1)));
         }
     }
 
@@ -616,52 +623,23 @@ protected:
     {
         int wmask = GetConstantInt(inst->getOperand(1));
         int argCount = 0;
-        bool x,y,z,w;
-        x = y = z = w = false;
+
         llvm::Value *source = NULL;
         bool sameSource = true;
 
         // Output LHS, set up what bits are set, and see if we have the same source
         shader << ".";
-        if (wmask >= 8) { // todo, bitwise and it with a shift to see
-            shader << "x";
-            x = 1;
-            ++argCount;
-            if (source)
-                sameSource = sameSource && isSameSource(source, inst, 2);
-            else
-                source = inst->getOperand(2);
-            wmask -= 8;
-        }
-        if (wmask >= 4) {
-            shader << "y";
-            y = 1;
-            ++argCount;
-            if (source)
-                sameSource = sameSource && isSameSource(source, inst, 4);
-            else
-                source = inst->getOperand(4);
-            wmask -= 4;
-        }
-        if (wmask >= 2) {
-            shader << "z";
-            z = 1;
-            ++argCount;
-            if (source)
-                sameSource = sameSource && isSameSource(source, inst, 6);
-            else
-                source = inst->getOperand(6);
-            wmask -= 2;
-        }
-        if (wmask >= 1) {
-            shader << "w";
-            w = 1;
-            ++argCount;
-            if (source)
-                sameSource = sameSource && isSameSource(source, inst, 8);
-            else
-                source = inst->getOperand(8);
+        mapMaskToSwizzle(wmask);
 
+        for (int i = 0; i < 4; ++i) {
+            if (wmask & (1 << i)) {
+                int operandIndex = (i+1) * 2;
+                ++argCount;
+                if (source)
+                    sameSource = sameSource && isSameSource(source, inst, operandIndex);
+                else
+                    source = inst->getOperand(operandIndex);
+            }
         }
 
         shader << " = ";
@@ -670,21 +648,17 @@ protected:
         if (sameSource) {
             mapGlaDestination(source);
         } else {
-            shader << "vec" << argCount << "(";
-
+            mapGlaType(shader, inst->getType(), argCount);
+            shader << "(";
             bool firstArg = true;
-            if (x) {
-                writeVecArgs(firstArg, inst, 2);
+
+            for (int i = 0; i < 4; ++i) {
+                if (wmask & (1 << i)) {
+                    int operandIndex = (i+1) * 2;
+                    writeVecArgs(firstArg, inst, operandIndex);
+                }
             }
-            if (y) {
-                writeVecArgs(firstArg, inst, 4);
-            }
-            if (z) {
-                writeVecArgs(firstArg, inst, 6);
-            }
-            if (w) {
-                writeVecArgs(firstArg, inst, 8);
-            }
+
             shader << ");";
         }
 
@@ -736,8 +710,7 @@ void gla::GlslTarget::add(const llvm::Instruction* llvmInstruction)
     case llvm::Instruction::SDiv:
     case llvm::Instruction::FDiv:           charOp = "/";  break;
     case llvm::Instruction::URem:
-    case llvm::Instruction::SRem:
-    case llvm::Instruction::FRem:           charOp = "%";  break;
+    case llvm::Instruction::SRem:           charOp = "%";  break;
     case llvm::Instruction::Shl:            charOp = "<<"; break;
     case llvm::Instruction::LShr:           charOp = ">>"; break;
     case llvm::Instruction::AShr:           charOp = ">>"; break;
@@ -876,6 +849,16 @@ void gla::GlslTarget::add(const llvm::Instruction* llvmInstruction)
         } else {
             UnsupportedFunctionality("Function Call in Bottom IR");
         }
+        return;
+
+    case llvm::Instruction::FRem:
+        newLine();
+        mapGlaDestination(llvmInstruction);
+        shader << " = mod(";
+        mapGlaOperand(llvmInstruction->getOperand(0));
+        shader << ", ";
+        mapGlaOperand(llvmInstruction->getOperand(1));
+        shader << ");";
         return;
 
     case llvm::Instruction::ICmp:

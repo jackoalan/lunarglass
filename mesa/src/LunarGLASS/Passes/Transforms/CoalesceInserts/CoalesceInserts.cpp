@@ -231,28 +231,34 @@ namespace  {
         // Set up types array
         const llvm::Type* intrinsicTypes[6] = {0};
 
+        // Default type to choose
+        const llvm::Type* defaultType;
+
         // Determine if it's a fWriteMask or writeMask, and set types accordingly
         Intrinsic::ID intrinsicID;
         unsigned vecCount = 4;
         switch (sop.inst->getType()->getContainedType(0)->getTypeID()) {
         case Type::FloatTyID:
+            defaultType = Type::getFloatTy(C);
             intrinsicID = Intrinsic::gla_fMultiInsert;
-            intrinsicTypes[0] = VectorType::get(Type::getFloatTy(C), vecCount);
+            intrinsicTypes[0] = VectorType::get(defaultType, vecCount);
+
             break;
         case Type::IntegerTyID:
+            defaultType = Type::getInt32Ty(C);
             intrinsicID = Intrinsic::gla_multiInsert;
-            intrinsicTypes[0] = VectorType::get(Type::getInt32Ty(C), vecCount);
+            intrinsicTypes[0] = VectorType::get(defaultType, vecCount);
             break;
         default:
             assert(!"Unknown multiInsert intrinsic type");
         }
 
         // Set up each of the operand types
-        intrinsicTypes[1] = sop.original ? sop.original->getType() : Type::getFloatTy(C);
-        intrinsicTypes[2] = sop.xV       ? sop.xV->getType()       : Type::getFloatTy(C);
-        intrinsicTypes[3] = sop.yV       ? sop.yV->getType()       : Type::getFloatTy(C);
-        intrinsicTypes[4] = sop.zV       ? sop.zV->getType()       : Type::getFloatTy(C);
-        intrinsicTypes[5] = sop.wV       ? sop.wV->getType()       : Type::getFloatTy(C);
+        intrinsicTypes[1] = sop.original ? sop.original->getType() : defaultType;
+        intrinsicTypes[2] = sop.xV       ? sop.xV->getType()       : defaultType;
+        intrinsicTypes[3] = sop.yV       ? sop.yV->getType()       : defaultType;
+        intrinsicTypes[4] = sop.zV       ? sop.zV->getType()       : defaultType;
+        intrinsicTypes[5] = sop.wV       ? sop.wV->getType()       : defaultType;
 
         int typesCount = 6;
 
@@ -265,10 +271,10 @@ namespace  {
         Value* zOffset = ConstantInt::get(Type::getInt32Ty(C), sop.zOffset);
         Value* wOffset = ConstantInt::get(Type::getInt32Ty(C), sop.wOffset);
 
-        Value* xV = sop.xV ? sop.xV : Constant::getNullValue(Type::getFloatTy(C));
-        Value* yV = sop.yV ? sop.yV : Constant::getNullValue(Type::getFloatTy(C));
-        Value* zV = sop.zV ? sop.zV : Constant::getNullValue(Type::getFloatTy(C));
-        Value* wV = sop.wV ? sop.wV : Constant::getNullValue(Type::getFloatTy(C));
+        Value* xV = sop.xV ? sop.xV : Constant::getNullValue(defaultType);
+        Value* yV = sop.yV ? sop.yV : Constant::getNullValue(defaultType);
+        Value* zV = sop.zV ? sop.zV : Constant::getNullValue(defaultType);
+        Value* wV = sop.wV ? sop.wV : Constant::getNullValue(defaultType);
 
         Value* args[] = { sop.original, mask, xV, xOffset, yV, yOffset, zV, zOffset, wV, wOffset };
 

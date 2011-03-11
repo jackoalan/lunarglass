@@ -50,7 +50,7 @@ using namespace llvm;
 
 namespace {
     // Whether we should print out verbose stuff as the pass runs
-    const bool VerboseP = false;
+    const bool VerboseP = true;
 
     // Initial sizes for our data structures
     const int NumTypicalInserts = 32;
@@ -245,7 +245,11 @@ namespace  {
 
             break;
         case Type::IntegerTyID:
-            defaultType = Type::getInt32Ty(C);
+            if (sop.inst->getType()->getContainedType(0)->isIntegerTy(1))
+                defaultType = Type::getInt1Ty(C);
+            else
+                defaultType = Type::getInt32Ty(C);
+
             intrinsicID = Intrinsic::gla_multiInsert;
             intrinsicTypes[0] = VectorType::get(defaultType, vecCount);
             break;

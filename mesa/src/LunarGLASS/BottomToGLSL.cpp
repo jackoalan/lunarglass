@@ -621,6 +621,19 @@ protected:
 
     void mapGlaMultiInsert(const llvm::IntrinsicInst *inst)
     {
+        // If the origin of the insert is defined, then initialize to it, otherwise just proceed
+        llvm::Value* op = inst->getOperand(0);
+        if (!llvm::isa<llvm::UndefValue>(op)) {
+            newLine();
+            mapGlaDestination(inst);
+            shader << " = ";
+            mapGlaDestination(op);
+            shader << ";";
+        }
+
+        newLine();
+
+
         int wmask = GetConstantInt(inst->getOperand(1));
         int argCount = 0;
 
@@ -628,6 +641,7 @@ protected:
         bool sameSource = true;
 
         // Output LHS, set up what bits are set, and see if we have the same source
+        mapGlaDestination(inst);
         shader << ".";
         mapMaskToSwizzle(wmask);
 
@@ -1082,8 +1096,6 @@ void gla::GlslTarget::mapGlaIntrinsic(const llvm::IntrinsicInst* llvmInstruction
     switch (llvmInstruction->getIntrinsicID()) {
     case llvm::Intrinsic::gla_fMultiInsert:
     case llvm::Intrinsic::gla_multiInsert:
-        newLine();
-        mapGlaDestination(llvmInstruction);
         mapGlaMultiInsert(llvmInstruction);
         return;
     }

@@ -29,9 +29,6 @@ void main()
     else
         w4.xz = w.yz;
 
-//    w5.xy = t;
-//    w5.zw = w2.xz;
-
     mix(w2, w3, w4);
     gl_FragColor = mix(w * w2, w3, w4 * w5);
 }

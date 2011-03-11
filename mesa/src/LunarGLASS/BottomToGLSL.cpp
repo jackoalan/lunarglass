@@ -626,18 +626,21 @@ protected:
         llvm::Value *source = NULL;
         bool sameSource = true;
 
+        newLine();
+        mapGlaDestination(inst);
+
         // If the origin of the insert is defined and the write mask
         // is not all 1s, then initialize to it, otherwise just
         // proceed
         llvm::Value* op = inst->getOperand(0);
+
+
         if ((!llvm::isa<llvm::UndefValue>(op)) && (wmask != 15)) {
-            newLine();
-            mapGlaDestination(inst);
             shader << " = ";
             mapGlaDestination(op);
-            shader << ";";
         }
 
+        shader << ";";
         newLine();
 
         // Output LHS, set up what bits are set, and see if we have the same source

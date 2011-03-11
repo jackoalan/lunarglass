@@ -72,7 +72,7 @@ namespace {
 
     // Struct representing the eventual intrinsic
     struct MultiInsertOp {
-        int x;
+        int x;  // todo condense them all into a mask
         int y;
         int z;
         int w;
@@ -81,7 +81,7 @@ namespace {
         Value *yV;
         Value *zV;
         Value *wV;
-        int xO;
+        int xO; // todo: make this more verbose
         int yO;
         int zO;
         int wO;
@@ -90,7 +90,7 @@ namespace {
     };
 
     // Predicate for whether the instruction is an insert
-    bool IsInsert(Instruction &i)
+    bool IsInsertElement(Instruction &i)
     {
         return strcmp(i.getOpcodeName(), "insertelement") == 0;
     }
@@ -104,22 +104,25 @@ namespace {
     // If the Value is a constant int, return it as an unsigned char. Otherwise return -1
     unsigned char GetChar(Value *val)
     {
-        if (ConstantInt *c = dyn_cast<ConstantInt>(val))
-            return c->getLimitedValue(255);
-        return -1;
+        ConstantInt *c = dyn_cast<ConstantInt>(val);
+        assert(c);
+
+        return c->getSExtValue();
     }
 
     // Given a value, if it's an extract return its offset
     // Return -1 if not an extract
     int GetOffset(Value *v)
     {
-        // If the operand is an extract instruction, then get the offset
         int offset = -1;
+
+        // If the operand is an extract instruction, then get the offset
         if (Instruction *inst = dyn_cast<Instruction>(v)) {
             if (IsExtract(*inst)) {
                 offset = GetChar(inst->getOperand(1));
             }
         }
+
         return offset;
     }
 
@@ -145,7 +148,6 @@ namespace {
         sop.mask = -1;
         sop.inst = *(vec.begin());
         sop.original = NULL;
-        return;
     }
 
     // Build up the struct representing a multiInsert
@@ -161,8 +163,7 @@ namespace {
         // For each member of the group, set the relevant fields.
         for (InstVec::iterator instI = vec.begin(), instE = vec.end(); instI != instE; ++instI) {
             // Only operate on inserts at the top
-            if (!IsInsert(**instI))
-                continue;
+            assert(IsInsertElement(**instI));
 
             // The source operand
             Value *src = (*instI)->getOperand(1);
@@ -178,7 +179,7 @@ namespace {
             // the insert
             switch (GetChar((*instI)->getOperand(2))) {
             case 0:
-                sop.x = 1;
+                sop.x = 1; // todo, extract from switch
                 sop.xO = offset;
                 sop.xV = extractFrom;
                 break;
@@ -201,15 +202,15 @@ namespace {
                 assert(!" Unknown access mask found");
             }
         }
+        // todo: swap it around
+        // todo: use shifts and |
         sop.mask = sop.x*8 + sop.y*4 + sop.z*2 + sop.w;
-        return;
     }
 
     // Print the block
     void PrintBlock(BasicBlock &bb)
     {
         errs() << "processing basic block " << bb.getName() << "\n" << bb;
-        return;
     }
 
     // Print the candidates
@@ -219,7 +220,6 @@ namespace {
         for (InstVec::iterator i = v.begin(), e = v.end(); i != e; ++i) {
             errs() << **i << "\n";
         }
-        return;
     }
 
     // Print the groups
@@ -280,7 +280,7 @@ namespace {
     Instruction* MakeMultiInsertIntrinsic(MultiInsertOp &sop, Module *M, LLVMContext &C)
     {
         // Set up types array
-        const llvm::Type* intrinsicTypes[6] = {0};
+        const llvm::Type *intrinsicTypes[6] = {0};
 
         // Determine if it's a fWriteMask or writeMask, and set types accordingly
         Intrinsic::ID intrinsicID;
@@ -308,18 +308,18 @@ namespace {
         int typesCount = 6;
 
         // Get the function declaration for this intrinsic
-        Value* callee = llvm::Intrinsic::getDeclaration(M, intrinsicID, intrinsicTypes, typesCount);
+        Value *callee = llvm::Intrinsic::getDeclaration(M, intrinsicID, intrinsicTypes, typesCount);
 
-        Value* mask = ConstantInt::get(Type::getInt32Ty(C), sop.mask);
-        Value* xO   = ConstantInt::get(Type::getInt32Ty(C), sop.xO);
-        Value* yO   = ConstantInt::get(Type::getInt32Ty(C), sop.yO);
-        Value* zO   = ConstantInt::get(Type::getInt32Ty(C), sop.zO);
-        Value* wO   = ConstantInt::get(Type::getInt32Ty(C), sop.wO);
+        Value *mask = ConstantInt::get(Type::getInt32Ty(C), sop.mask);
+        Value *xO   = ConstantInt::get(Type::getInt32Ty(C), sop.xO);
+        Value *yO   = ConstantInt::get(Type::getInt32Ty(C), sop.yO);
+        Value *zO   = ConstantInt::get(Type::getInt32Ty(C), sop.zO);
+        Value *wO   = ConstantInt::get(Type::getInt32Ty(C), sop.wO);
 
-        Value* xV   = sop.xV ? sop.xV : Constant::getNullValue(Type::getFloatTy(C));
-        Value* yV   = sop.yV ? sop.yV : Constant::getNullValue(Type::getFloatTy(C));
-        Value* zV   = sop.zV ? sop.zV : Constant::getNullValue(Type::getFloatTy(C));
-        Value* wV   = sop.wV ? sop.wV : Constant::getNullValue(Type::getFloatTy(C));
+        Value *xV   = sop.xV ? sop.xV : Constant::getNullValue(Type::getFloatTy(C));
+        Value *yV   = sop.yV ? sop.yV : Constant::getNullValue(Type::getFloatTy(C));
+        Value *zV   = sop.zV ? sop.zV : Constant::getNullValue(Type::getFloatTy(C));
+        Value *wV   = sop.wV ? sop.wV : Constant::getNullValue(Type::getFloatTy(C));
 
         Value *args[] = { sop.original, mask, xV, xO, yV, yO, zV, zO, wV, wO };
         Instruction *inst = CallInst::Create(callee, args, args+10);
@@ -332,7 +332,8 @@ namespace {
         BasicBlock::InstListType &instList = bb.getInstList();
         for (BasicBlock::InstListType::iterator instI = instList.begin(), instE = instList.end(); instI != instE; ++instI) {
             if (instI->isIdenticalTo(*vec.begin())) {
-                assert(IsInsert(*instI) && "Internal error: group starting with a non-insert");
+                assert(IsInsertElement(*instI));
+
                 instList.insertAfter(instI, newInst);
                 instI->replaceAllUsesWith(newInst);
             }
@@ -342,36 +343,29 @@ namespace {
     // Gather all candidate instructions together, putting them into result
     void Gather(BasicBlock::InstListType &instList, InstVec &result)
     {
-        for (reverse_iterator i = instList.rbegin(), e = instList.rend(); i != e; ++i){
-            for (/*blank*/; (i != e) && IsInsert(*i); ++i) {
+        for (reverse_iterator i = instList.rbegin(), e = instList.rend(); i != e; ++i) {
+            if (IsInsertElement(*i)) {
                 result.push_back(&*i);
             }
-            // Check if the above loop incremented i past e
-            if (i == e)
-                break;
         }
     }
 
     // Add the value to the provided set and vector if it's an insert
-    // instruction. Recursively add its operands. This effectively
-    // constructs a depth-first traversal, starting with the insertion destinations
+    // instruction. Recursively traverse the chain
     void AddInstructionRec(Value* v, InstSet &s, InstVec &vec)
     {
         // If it's an instruction and an insert, put it and all it's
         // operands that are inserts recursively into s and vec
         if (Instruction* inst = dyn_cast<Instruction>(v)) {
-            if (IsInsert(*inst)) {
+            if (IsInsertElement(*inst)) {
                 s.insert(inst);
                 vec.push_back(inst);
 
-                for (User::op_iterator oi = inst->op_begin(), oe = inst->op_end(); oi != oe; ++oi) {
-                    AddInstructionRec(*oi, s, vec);
-                }
+                AddInstructionRec(inst->getOperand(0), s vec);
             }
         }
 
         // Base case: not a candidate instruction
-        return;
     }
 
     // Group instructions into the individual multiInserts, placing them in result
@@ -382,9 +376,7 @@ namespace {
 
             // Convert to an instruction (should not fail)
             Instruction *inst = dyn_cast<Instruction>(&**i);
-            if (!inst) {
-                assert(!"attempting to gather non-instructions");
-            }
+            assert(inst);
 
             // If we've already seen it, continue
             if (instSet.count(inst)) {
@@ -393,7 +385,7 @@ namespace {
 
             // Else this is a new group
 
-            // TODO: find a more RAII handleing of this
+            // TODO: find a more RAII handling of this
             InstVec *newGroup = new InstVec();
 
             AddInstructionRec(inst, instSet, *newGroup);
@@ -410,19 +402,20 @@ bool CoalesceInserts::runOnFunction(Function &F)
 
     bool wasModified = false;
 
+    // For each Basic Block
     for (Function::iterator bb = F.begin(), ebb = F.end(); bb != ebb; ++bb) {
 
-        VERBOSE(PrintBlock(*bb));
+        // VERBOSE(PrintBlock(*bb));
 
         // Gather the candidate instructions
         InstVec v;
         Gather(bb->getInstList(), v);
-        VERBOSE(PrintCandidates(v));
+        // VERBOSE(PrintCandidates(v));
 
         // Group them
         GroupVec groupVec;
         Group(v, groupVec);
-        VERBOSE(PrintGroups(groupVec));
+        // VERBOSE(PrintGroups(groupVec));
 
         // For each group, make a MultiInsertOp
         for (GroupVec::iterator gI = groupVec.begin(), gE = groupVec.end(); gI != gE; ++gI) {
@@ -430,7 +423,7 @@ bool CoalesceInserts::runOnFunction(Function &F)
 
             BuildMultiInsertOp(**gI, sop);
 
-            VERBOSE(PrintMultiInsertOp(sop));
+            // VERBOSE(PrintMultiInsertOp(sop));
 
             Instruction *inst = MakeMultiInsertIntrinsic(sop, M, C);
 
@@ -438,15 +431,16 @@ bool CoalesceInserts::runOnFunction(Function &F)
 
             wasModified = true;
 
-            VERBOSE(PrintMultiInsertIntrinsic(*inst));
+            // VERBOSE(PrintMultiInsertIntrinsic(*inst));
 
             // We're done with the group, so delete it
-            // TODO: find a more RAII handleing of this
+            // TODO: find a more RAII handling of this
             delete *gI;
         }
 
-        VERBOSE(PrintBlock(*bb));
+        // VERBOSE(PrintBlock(*bb));
     }
+
     return wasModified;
 }
 

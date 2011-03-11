@@ -617,13 +617,13 @@ protected:
         int wmask = GetConstantInt(inst->getOperand(1));
         int argCount = 0;
         bool x,y,z,w;
-        x = y = z = w = 0;
+        x = y = z = w = false;
         llvm::Value *source = NULL;
         bool sameSource = true;
 
         // Output LHS, set up what bits are set, and see if we have the same source
         shader << ".";
-        if (wmask >= 8) {
+        if (wmask >= 8) { // todo, bitwise and it with a shift to see
             shader << "x";
             x = 1;
             ++argCount;
@@ -1102,7 +1102,6 @@ void gla::GlslTarget::mapGlaIntrinsic(const llvm::IntrinsicInst* llvmInstruction
         newLine();
         mapGlaDestination(llvmInstruction);
         mapGlaMultiInsert(llvmInstruction);
-        newLine();
         return;
     }
 

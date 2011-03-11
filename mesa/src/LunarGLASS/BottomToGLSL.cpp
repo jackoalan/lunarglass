@@ -621,9 +621,16 @@ protected:
 
     void mapGlaMultiInsert(const llvm::IntrinsicInst *inst)
     {
-        // If the origin of the insert is defined, then initialize to it, otherwise just proceed
+        int wmask = GetConstantInt(inst->getOperand(1));
+        int argCount = 0;
+        llvm::Value *source = NULL;
+        bool sameSource = true;
+
+        // If the origin of the insert is defined and the write mask
+        // is not all 1s, then initialize to it, otherwise just
+        // proceed
         llvm::Value* op = inst->getOperand(0);
-        if (!llvm::isa<llvm::UndefValue>(op)) {
+        if ((!llvm::isa<llvm::UndefValue>(op)) && (wmask != 15)) {
             newLine();
             mapGlaDestination(inst);
             shader << " = ";
@@ -633,17 +640,14 @@ protected:
 
         newLine();
 
-
-        int wmask = GetConstantInt(inst->getOperand(1));
-        int argCount = 0;
-
-        llvm::Value *source = NULL;
-        bool sameSource = true;
-
         // Output LHS, set up what bits are set, and see if we have the same source
         mapGlaDestination(inst);
-        shader << ".";
-        mapMaskToSwizzle(wmask);
+
+        // If wmask is all 1s, then don't both with a lhs swizzle
+        if (wmask != 15) {
+            shader << ".";
+            mapMaskToSwizzle(wmask);
+        }
 
         for (int i = 0; i < 4; ++i) {
             if (wmask & (1 << i)) {

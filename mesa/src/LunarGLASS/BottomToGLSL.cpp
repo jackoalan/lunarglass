@@ -604,7 +604,8 @@ protected:
 
     // Writes out the vector arguments for the RHS of a
     // multiInsert. Sets its first argument to false upon first execution
-    void writeVecArgs(bool &firstArg, const llvm::IntrinsicInst *inst, int operand) {
+    void writeVecArgs(bool &firstArg, const llvm::IntrinsicInst *inst, int operand)
+    {
         if (firstArg)
             firstArg = false;
         else
@@ -631,11 +632,10 @@ protected:
 
         // If the origin of the insert is defined and the write mask
         // is not all 1s, then initialize to it, otherwise just
-        // proceed
+        // declare it
         llvm::Value* op = inst->getOperand(0);
 
-
-        if ((!llvm::isa<llvm::UndefValue>(op)) && (wmask != 15)) {
+        if ((false == llvm::isa<llvm::UndefValue>(op)) && (wmask != 0xF)) {
             shader << " = ";
             mapGlaDestination(op);
         }
@@ -647,7 +647,7 @@ protected:
         mapGlaDestination(inst);
 
         // If wmask is all 1s, then don't both with a lhs swizzle
-        if (wmask != 15) {
+        if (wmask != 0xF) {
             shader << ".";
             mapMaskToSwizzle(wmask);
         }

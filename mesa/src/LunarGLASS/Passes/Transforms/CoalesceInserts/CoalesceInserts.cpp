@@ -50,7 +50,7 @@ using namespace llvm;
 
 namespace {
     // Whether we should print out verbose stuff as the pass runs
-    const bool VerboseP = true;
+    const bool VerboseP = false;
 
     // Initial sizes for our data structures
     const int NumTypicalInserts = 32;

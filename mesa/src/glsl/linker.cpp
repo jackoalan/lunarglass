@@ -879,38 +879,46 @@ link_intrastage_shaders(void *mem_ctx,
 
    assert(idx == num_linking_shaders);
 
-   if (!link_function_calls(prog, linked, linking_shaders,
-			    num_linking_shaders)) {
-      ctx->Driver.DeleteShader(ctx, linked);
-      linked = NULL;
-   }
+  // LunarG: Begin
+   link_function_calls(prog, linked, linking_shaders, num_linking_shaders);
 
    free(linking_shaders);
 
-   /* Make a pass over all variable declarations to ensure that arrays with
-    * unspecified sizes have a size specified.  The size is inferred from the
-    * max_array_access field.
-    */
-   if (linked != NULL) {
-      class array_sizing_visitor : public ir_hierarchical_visitor {
-      public:
-	 virtual ir_visitor_status visit(ir_variable *var)
-	 {
-	    if (var->type->is_array() && (var->type->length == 0)) {
-	       const glsl_type *type =
-		  glsl_type::get_array_instance(var->type->fields.array,
-						var->max_array_access + 1);
+  // LunarG commented out
+  // if (!link_function_calls(prog, linked, linking_shaders,
+		//	    num_linking_shaders)) {
+  //    ctx->Driver.DeleteShader(ctx, linked);
+  //    linked = NULL;
+  // }
 
-	       assert(type != NULL);
-	       var->type = type;
-	    }
+  // free(linking_shaders);
 
-	    return visit_continue;
-	 }
-      } v;
+  // /* Make a pass over all variable declarations to ensure that arrays with
+  //  * unspecified sizes have a size specified.  The size is inferred from the
+  //  * max_array_access field.
+  //  */
+  // if (linked != NULL) {
+  //    class array_sizing_visitor : public ir_hierarchical_visitor {
+  //    public:
+	 //virtual ir_visitor_status visit(ir_variable *var)
+	 //{
+	 //   if (var->type->is_array() && (var->type->length == 0)) {
+	 //      const glsl_type *type =
+		//  glsl_type::get_array_instance(var->type->fields.array,
+		//				var->max_array_access + 1);
 
-      v.run(linked->ir);
-   }
+	 //      assert(type != NULL);
+	 //      var->type = type;
+	 //   }
+
+	 //   return visit_continue;
+	 //}
+  //    } v;
+
+  //    v.run(linked->ir);
+  // }
+
+   //LunarG: End
 
    return linked;
 }

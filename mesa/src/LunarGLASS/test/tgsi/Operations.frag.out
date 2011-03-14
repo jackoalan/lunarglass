@@ -1,0 +1,1922 @@
+; ModuleID = 'Top'
+
+@uv4 = external addrspace(1) constant <4 x float>
+@ub = external addrspace(1) constant i1
+@uf = external addrspace(1) constant float
+@ui = external addrspace(1) constant i32
+@ub41 = external addrspace(1) constant <4 x i1>
+@ub42 = external addrspace(1) constant <4 x i1>
+@gl_FragColor = internal global <4 x float> zeroinitializer
+
+define void @main() {
+entry:
+  %conditional_tmp = alloca <4 x float>
+  %and_tmp108 = alloca i1
+  %or_tmp105 = alloca i1
+  %assignment_tmp102 = alloca float
+  %cross_retval = alloca <3 x float>
+  %dot_retval = alloca float
+  %distance_retval = alloca float
+  %length_retval = alloca float
+  %f = alloca float
+  %and_tmp95 = alloca i1
+  %or_tmp = alloca i1
+  %assignment_tmp91 = alloca i32
+  %and_tmp88 = alloca i1
+  %any_retval86 = alloca i1
+  %not_retval = alloca <4 x i1>
+  %and_tmp82 = alloca i1
+  %all_retval = alloca i1
+  %and_tmp78 = alloca i1
+  %any_retval76 = alloca i1
+  %and_tmp72 = alloca i1
+  %any_retval70 = alloca i1
+  %notEqual_retval = alloca <4 x i1>
+  %and_tmp66 = alloca i1
+  %any_retval64 = alloca i1
+  %equal_retval = alloca <4 x i1>
+  %and_tmp60 = alloca i1
+  %any_retval58 = alloca i1
+  %greaterThanEqual_retval = alloca <4 x i1>
+  %and_tmp54 = alloca i1
+  %any_retval52 = alloca i1
+  %greaterThan_retval = alloca <4 x i1>
+  %and_tmp = alloca i1
+  %any_retval49 = alloca i1
+  %lessThanEqual_retval = alloca <4 x i1>
+  %b = alloca i1
+  %any_retval = alloca i1
+  %lessThan_retval = alloca <4 x i1>
+  %clamp_retval47 = alloca i32
+  %assignment_tmp46 = alloca i32
+  %max_retval44 = alloca i32
+  %assignment_tmp43 = alloca i32
+  %min_retval41 = alloca i32
+  %assignment_tmp40 = alloca i32
+  %abs_retval38 = alloca i32
+  %i = alloca i32
+  %fwidth_retval = alloca <4 x float>
+  %assignment_tmp37 = alloca <4 x float>
+  %dFdy_retval = alloca <4 x float>
+  %assignment_tmp36 = alloca <4 x float>
+  %dFdx_retval = alloca <4 x float>
+  %assignment_tmp35 = alloca <4 x float>
+  %refract_retval = alloca <4 x float>
+  %assignment_tmp34 = alloca <4 x float>
+  %reflect_retval = alloca <4 x float>
+  %assignment_tmp33 = alloca <4 x float>
+  %faceforward_retval = alloca <4 x float>
+  %assignment_tmp32 = alloca <4 x float>
+  %normalize_retval = alloca <4 x float>
+  %assignment_tmp31 = alloca <4 x float>
+  %smoothstep_retval = alloca <4 x float>
+  %assignment_tmp30 = alloca <4 x float>
+  %step_retval = alloca <4 x float>
+  %assignment_tmp29 = alloca <4 x float>
+  %mix_retval27 = alloca <4 x float>
+  %assignment_tmp26 = alloca <4 x float>
+  %mix_retval = alloca <4 x float>
+  %assignment_tmp25 = alloca <4 x float>
+  %clamp_retval = alloca <4 x float>
+  %assignment_tmp24 = alloca <4 x float>
+  %max_retval = alloca <4 x float>
+  %assignment_tmp23 = alloca <4 x float>
+  %min_retval = alloca <4 x float>
+  %assignment_tmp22 = alloca <4 x float>
+  %mod_retval = alloca <4 x float>
+  %assignment_tmp21 = alloca <4 x float>
+  %fract_retval = alloca <4 x float>
+  %assignment_tmp20 = alloca <4 x float>
+  %ceil_retval = alloca <4 x float>
+  %assignment_tmp19 = alloca <4 x float>
+  %floor_retval = alloca <4 x float>
+  %assignment_tmp18 = alloca <4 x float>
+  %sign_retval = alloca <4 x float>
+  %assignment_tmp17 = alloca <4 x float>
+  %abs_retval = alloca <4 x float>
+  %assignment_tmp16 = alloca <4 x float>
+  %inversesqrt_retval = alloca <4 x float>
+  %assignment_tmp15 = alloca <4 x float>
+  %sqrt_retval = alloca <4 x float>
+  %assignment_tmp14 = alloca <4 x float>
+  %log2_retval = alloca <4 x float>
+  %assignment_tmp13 = alloca <4 x float>
+  %exp2_retval = alloca <4 x float>
+  %assignment_tmp12 = alloca <4 x float>
+  %log_retval = alloca <4 x float>
+  %assignment_tmp11 = alloca <4 x float>
+  %exp_retval = alloca <4 x float>
+  %assignment_tmp10 = alloca <4 x float>
+  %pow_retval = alloca <4 x float>
+  %assignment_tmp9 = alloca <4 x float>
+  %tanh_retval = alloca <4 x float>
+  %assignment_tmp8 = alloca <4 x float>
+  %cosh_retval = alloca <4 x float>
+  %assignment_tmp7 = alloca <4 x float>
+  %sinh_retval = alloca <4 x float>
+  %assignment_tmp6 = alloca <4 x float>
+  %atan_retval = alloca <4 x float>
+  %assignment_tmp5 = alloca <4 x float>
+  %acos_retval = alloca <4 x float>
+  %assignment_tmp4 = alloca <4 x float>
+  %asin_retval = alloca <4 x float>
+  %assignment_tmp3 = alloca <4 x float>
+  %tan_retval = alloca <4 x float>
+  %assignment_tmp2 = alloca <4 x float>
+  %cos_retval = alloca <4 x float>
+  %assignment_tmp1 = alloca <4 x float>
+  %sin_retval = alloca <4 x float>
+  %assignment_tmp = alloca <4 x float>
+  %degrees_retval = alloca <4 x float>
+  %v = alloca <4 x float>
+  %radians_retval = alloca <4 x float>
+  %0 = load <4 x float> addrspace(1)* @uv4
+  %radians = call <4 x float> @llvm.gla.fRadians.v4f32.v4f32(<4 x float> %0)
+  store <4 x float> %radians, <4 x float>* %radians_retval
+  %1 = load <4 x float>* %radians_retval
+  store <4 x float> %1, <4 x float>* %v
+  %2 = load <4 x float>* %radians_retval
+  %degrees = call <4 x float> @llvm.gla.fDegrees.v4f32.v4f32(<4 x float> %2)
+  store <4 x float> %degrees, <4 x float>* %degrees_retval
+  %3 = load <4 x float>* %v
+  %4 = load <4 x float>* %degrees_retval
+  %5 = fadd <4 x float> %3, %4
+  store <4 x float> %5, <4 x float>* %assignment_tmp
+  %6 = load <4 x float>* %assignment_tmp
+  store <4 x float> %6, <4 x float>* %v
+  %7 = load <4 x float>* %assignment_tmp
+  %sin = call <4 x float> @llvm.gla.fSin.v4f32.v4f32(<4 x float> %7)
+  store <4 x float> %sin, <4 x float>* %sin_retval
+  %8 = load <4 x float>* %v
+  %9 = load <4 x float>* %sin_retval
+  %10 = fadd <4 x float> %8, %9
+  store <4 x float> %10, <4 x float>* %assignment_tmp1
+  %11 = load <4 x float>* %assignment_tmp1
+  store <4 x float> %11, <4 x float>* %v
+  %12 = load <4 x float>* %assignment_tmp1
+  %cos = call <4 x float> @llvm.gla.fCos.v4f32.v4f32(<4 x float> %12)
+  store <4 x float> %cos, <4 x float>* %cos_retval
+  %13 = load <4 x float>* %v
+  %14 = load <4 x float>* %cos_retval
+  %15 = fadd <4 x float> %13, %14
+  store <4 x float> %15, <4 x float>* %assignment_tmp2
+  %16 = load <4 x float>* %assignment_tmp2
+  store <4 x float> %16, <4 x float>* %v
+  %17 = load <4 x float>* %assignment_tmp2
+  %tan = call <4 x float> @llvm.gla.fTan.v4f32.v4f32(<4 x float> %17)
+  store <4 x float> %tan, <4 x float>* %tan_retval
+  %18 = load <4 x float>* %v
+  %19 = load <4 x float>* %tan_retval
+  %20 = fadd <4 x float> %18, %19
+  store <4 x float> %20, <4 x float>* %assignment_tmp3
+  %21 = load <4 x float>* %assignment_tmp3
+  store <4 x float> %21, <4 x float>* %v
+  %22 = load <4 x float>* %assignment_tmp3
+  %asin = call <4 x float> @llvm.gla.fAsin.v4f32.v4f32(<4 x float> %22)
+  store <4 x float> %asin, <4 x float>* %asin_retval
+  %23 = load <4 x float>* %v
+  %24 = load <4 x float>* %asin_retval
+  %25 = fadd <4 x float> %23, %24
+  store <4 x float> %25, <4 x float>* %assignment_tmp4
+  %26 = load <4 x float>* %assignment_tmp4
+  store <4 x float> %26, <4 x float>* %v
+  %27 = load <4 x float>* %assignment_tmp4
+  %acos = call <4 x float> @llvm.gla.fAcos.v4f32.v4f32(<4 x float> %27)
+  store <4 x float> %acos, <4 x float>* %acos_retval
+  %28 = load <4 x float>* %v
+  %29 = load <4 x float>* %acos_retval
+  %30 = fadd <4 x float> %28, %29
+  store <4 x float> %30, <4 x float>* %assignment_tmp5
+  %31 = load <4 x float>* %assignment_tmp5
+  store <4 x float> %31, <4 x float>* %v
+  %32 = load <4 x float>* %assignment_tmp5
+  %atan = call <4 x float> @llvm.gla.fAtan.v4f32.v4f32(<4 x float> %32)
+  store <4 x float> %atan, <4 x float>* %atan_retval
+  %33 = load <4 x float>* %v
+  %34 = load <4 x float>* %atan_retval
+  %35 = fadd <4 x float> %33, %34
+  store <4 x float> %35, <4 x float>* %assignment_tmp6
+  %36 = load <4 x float>* %assignment_tmp6
+  store <4 x float> %36, <4 x float>* %v
+  %37 = load <4 x float>* %assignment_tmp6
+  %sinh = call <4 x float> @llvm.gla.fSinh.v4f32.v4f32(<4 x float> %37)
+  store <4 x float> %sinh, <4 x float>* %sinh_retval
+  %38 = load <4 x float>* %v
+  %39 = load <4 x float>* %sinh_retval
+  %40 = fadd <4 x float> %38, %39
+  store <4 x float> %40, <4 x float>* %assignment_tmp7
+  %41 = load <4 x float>* %assignment_tmp7
+  store <4 x float> %41, <4 x float>* %v
+  %42 = load <4 x float>* %assignment_tmp7
+  %cosh = call <4 x float> @llvm.gla.fCosh.v4f32.v4f32(<4 x float> %42)
+  store <4 x float> %cosh, <4 x float>* %cosh_retval
+  %43 = load <4 x float>* %v
+  %44 = load <4 x float>* %cosh_retval
+  %45 = fadd <4 x float> %43, %44
+  store <4 x float> %45, <4 x float>* %assignment_tmp8
+  %46 = load <4 x float>* %assignment_tmp8
+  store <4 x float> %46, <4 x float>* %v
+  %47 = load <4 x float>* %assignment_tmp8
+  %tanh = call <4 x float> @llvm.gla.fTanh.v4f32.v4f32(<4 x float> %47)
+  store <4 x float> %tanh, <4 x float>* %tanh_retval
+  %48 = load <4 x float>* %v
+  %49 = load <4 x float>* %tanh_retval
+  %50 = fadd <4 x float> %48, %49
+  store <4 x float> %50, <4 x float>* %assignment_tmp9
+  %51 = load <4 x float>* %assignment_tmp9
+  store <4 x float> %51, <4 x float>* %v
+  %52 = load <4 x float>* %assignment_tmp9
+  %53 = load <4 x float>* %assignment_tmp9
+  %pow = call <4 x float> @llvm.gla.fPow.v4f32.v4f32.v4f32(<4 x float> %52, <4 x float> %53)
+  store <4 x float> %pow, <4 x float>* %pow_retval
+  %54 = load <4 x float>* %v
+  %55 = load <4 x float>* %pow_retval
+  %56 = fadd <4 x float> %54, %55
+  store <4 x float> %56, <4 x float>* %assignment_tmp10
+  %57 = load <4 x float>* %assignment_tmp10
+  store <4 x float> %57, <4 x float>* %v
+  %58 = load <4 x float>* %assignment_tmp10
+  %exp = call <4 x float> @llvm.gla.fExp.v4f32.v4f32(<4 x float> %58)
+  store <4 x float> %exp, <4 x float>* %exp_retval
+  %59 = load <4 x float>* %v
+  %60 = load <4 x float>* %exp_retval
+  %61 = fadd <4 x float> %59, %60
+  store <4 x float> %61, <4 x float>* %assignment_tmp11
+  %62 = load <4 x float>* %assignment_tmp11
+  store <4 x float> %62, <4 x float>* %v
+  %63 = load <4 x float>* %assignment_tmp11
+  %log = call <4 x float> @llvm.gla.fLog.v4f32.v4f32(<4 x float> %63)
+  store <4 x float> %log, <4 x float>* %log_retval
+  %64 = load <4 x float>* %v
+  %65 = load <4 x float>* %log_retval
+  %66 = fadd <4 x float> %64, %65
+  store <4 x float> %66, <4 x float>* %assignment_tmp12
+  %67 = load <4 x float>* %assignment_tmp12
+  store <4 x float> %67, <4 x float>* %v
+  %68 = load <4 x float>* %assignment_tmp12
+  %exp2 = call <4 x float> @llvm.gla.fExp2.v4f32.v4f32(<4 x float> %68)
+  store <4 x float> %exp2, <4 x float>* %exp2_retval
+  %69 = load <4 x float>* %v
+  %70 = load <4 x float>* %exp2_retval
+  %71 = fadd <4 x float> %69, %70
+  store <4 x float> %71, <4 x float>* %assignment_tmp13
+  %72 = load <4 x float>* %assignment_tmp13
+  store <4 x float> %72, <4 x float>* %v
+  %73 = load <4 x float>* %assignment_tmp13
+  %log2 = call <4 x float> @llvm.gla.fLog2.v4f32.v4f32(<4 x float> %73)
+  store <4 x float> %log2, <4 x float>* %log2_retval
+  %74 = load <4 x float>* %v
+  %75 = load <4 x float>* %log2_retval
+  %76 = fadd <4 x float> %74, %75
+  store <4 x float> %76, <4 x float>* %assignment_tmp14
+  %77 = load <4 x float>* %assignment_tmp14
+  store <4 x float> %77, <4 x float>* %v
+  %78 = load <4 x float>* %assignment_tmp14
+  %sqrt = call <4 x float> @llvm.gla.fSqrt.v4f32.v4f32(<4 x float> %78)
+  store <4 x float> %sqrt, <4 x float>* %sqrt_retval
+  %79 = load <4 x float>* %v
+  %80 = load <4 x float>* %sqrt_retval
+  %81 = fadd <4 x float> %79, %80
+  store <4 x float> %81, <4 x float>* %assignment_tmp15
+  %82 = load <4 x float>* %assignment_tmp15
+  store <4 x float> %82, <4 x float>* %v
+  %83 = load <4 x float>* %assignment_tmp15
+  %inversesqrt = call <4 x float> @llvm.gla.fInverseSqrt.v4f32.v4f32(<4 x float> %83)
+  store <4 x float> %inversesqrt, <4 x float>* %inversesqrt_retval
+  %84 = load <4 x float>* %v
+  %85 = load <4 x float>* %inversesqrt_retval
+  %86 = fadd <4 x float> %84, %85
+  store <4 x float> %86, <4 x float>* %assignment_tmp16
+  %87 = load <4 x float>* %assignment_tmp16
+  store <4 x float> %87, <4 x float>* %v
+  %88 = load <4 x float>* %assignment_tmp16
+  %abs = call <4 x float> @llvm.gla.fAbs.v4f32.v4f32(<4 x float> %88)
+  store <4 x float> %abs, <4 x float>* %abs_retval
+  %89 = load <4 x float>* %v
+  %90 = load <4 x float>* %abs_retval
+  %91 = fadd <4 x float> %89, %90
+  store <4 x float> %91, <4 x float>* %assignment_tmp17
+  %92 = load <4 x float>* %assignment_tmp17
+  store <4 x float> %92, <4 x float>* %v
+  %93 = load <4 x float>* %assignment_tmp17
+  %sign = call <4 x float> @llvm.gla.fSign.v4f32.v4f32(<4 x float> %93)
+  store <4 x float> %sign, <4 x float>* %sign_retval
+  %94 = load <4 x float>* %v
+  %95 = load <4 x float>* %sign_retval
+  %96 = fadd <4 x float> %94, %95
+  store <4 x float> %96, <4 x float>* %assignment_tmp18
+  %97 = load <4 x float>* %assignment_tmp18
+  store <4 x float> %97, <4 x float>* %v
+  %98 = load <4 x float>* %assignment_tmp18
+  %floor = call <4 x float> @llvm.gla.fFloor.v4f32.v4f32(<4 x float> %98)
+  store <4 x float> %floor, <4 x float>* %floor_retval
+  %99 = load <4 x float>* %v
+  %100 = load <4 x float>* %floor_retval
+  %101 = fadd <4 x float> %99, %100
+  store <4 x float> %101, <4 x float>* %assignment_tmp19
+  %102 = load <4 x float>* %assignment_tmp19
+  store <4 x float> %102, <4 x float>* %v
+  %103 = load <4 x float>* %assignment_tmp19
+  %ceil = call <4 x float> @llvm.gla.fCeiling.v4f32.v4f32(<4 x float> %103)
+  store <4 x float> %ceil, <4 x float>* %ceil_retval
+  %104 = load <4 x float>* %v
+  %105 = load <4 x float>* %ceil_retval
+  %106 = fadd <4 x float> %104, %105
+  store <4 x float> %106, <4 x float>* %assignment_tmp20
+  %107 = load <4 x float>* %assignment_tmp20
+  store <4 x float> %107, <4 x float>* %v
+  %108 = load <4 x float>* %assignment_tmp20
+  %fract = call <4 x float> @llvm.gla.fFraction.v4f32.v4f32(<4 x float> %108)
+  store <4 x float> %fract, <4 x float>* %fract_retval
+  %109 = load <4 x float>* %v
+  %110 = load <4 x float>* %fract_retval
+  %111 = fadd <4 x float> %109, %110
+  store <4 x float> %111, <4 x float>* %assignment_tmp21
+  %112 = load <4 x float>* %assignment_tmp21
+  store <4 x float> %112, <4 x float>* %v
+  %113 = load <4 x float>* %assignment_tmp21
+  %114 = load <4 x float>* %assignment_tmp21
+  %115 = frem <4 x float> %113, %114
+  store <4 x float> %115, <4 x float>* %mod_retval
+  %116 = load <4 x float>* %v
+  %117 = load <4 x float>* %mod_retval
+  %118 = fadd <4 x float> %116, %117
+  store <4 x float> %118, <4 x float>* %assignment_tmp22
+  %119 = load <4 x float>* %assignment_tmp22
+  store <4 x float> %119, <4 x float>* %v
+  %120 = load <4 x float>* %assignment_tmp22
+  %121 = load <4 x float> addrspace(1)* @uv4
+  %min = call <4 x float> @llvm.gla.fMin.v4f32.v4f32.v4f32(<4 x float> %120, <4 x float> %121)
+  store <4 x float> %min, <4 x float>* %min_retval
+  %122 = load <4 x float>* %v
+  %123 = load <4 x float>* %min_retval
+  %124 = fadd <4 x float> %122, %123
+  store <4 x float> %124, <4 x float>* %assignment_tmp23
+  %125 = load <4 x float>* %assignment_tmp23
+  store <4 x float> %125, <4 x float>* %v
+  %126 = load <4 x float>* %assignment_tmp23
+  %127 = load <4 x float> addrspace(1)* @uv4
+  %max = call <4 x float> @llvm.gla.fMax.v4f32.v4f32.v4f32(<4 x float> %126, <4 x float> %127)
+  store <4 x float> %max, <4 x float>* %max_retval
+  %128 = load <4 x float>* %v
+  %129 = load <4 x float>* %max_retval
+  %130 = fadd <4 x float> %128, %129
+  store <4 x float> %130, <4 x float>* %assignment_tmp24
+  %131 = load <4 x float>* %assignment_tmp24
+  store <4 x float> %131, <4 x float>* %v
+  %132 = load <4 x float>* %assignment_tmp24
+  %133 = load <4 x float> addrspace(1)* @uv4
+  %134 = load <4 x float> addrspace(1)* @uv4
+  %clamp = call <4 x float> @llvm.gla.fClamp.v4f32.v4f32.v4f32.v4f32(<4 x float> %132, <4 x float> %133, <4 x float> %134)
+  store <4 x float> %clamp, <4 x float>* %clamp_retval
+  %135 = load <4 x float>* %v
+  %136 = load <4 x float>* %clamp_retval
+  %137 = fadd <4 x float> %135, %136
+  store <4 x float> %137, <4 x float>* %assignment_tmp25
+  %138 = load <4 x float>* %assignment_tmp25
+  store <4 x float> %138, <4 x float>* %v
+  %139 = load <4 x float>* %assignment_tmp25
+  %140 = load <4 x float>* %assignment_tmp25
+  %141 = load <4 x float>* %assignment_tmp25
+  %mix = call <4 x float> @llvm.gla.fMix.v4f32.v4f32.v4f32.v4f32(<4 x float> %139, <4 x float> %140, <4 x float> %141)
+  store <4 x float> %mix, <4 x float>* %mix_retval
+  %142 = load <4 x float>* %v
+  %143 = load <4 x float>* %mix_retval
+  %144 = fadd <4 x float> %142, %143
+  store <4 x float> %144, <4 x float>* %assignment_tmp26
+  %145 = load <4 x float>* %assignment_tmp26
+  store <4 x float> %145, <4 x float>* %v
+  %146 = load <4 x float>* %assignment_tmp26
+  %147 = load <4 x float>* %assignment_tmp26
+  %148 = load i1 addrspace(1)* @ub
+  %149 = uitofp i1 %148 to float
+  %mix28 = call <4 x float> @llvm.gla.fMix.v4f32.v4f32.v4f32.f32(<4 x float> %146, <4 x float> %147, float %149)
+  store <4 x float> %mix28, <4 x float>* %mix_retval27
+  %150 = load <4 x float>* %v
+  %151 = load <4 x float>* %mix_retval27
+  %152 = fadd <4 x float> %150, %151
+  store <4 x float> %152, <4 x float>* %assignment_tmp29
+  %153 = load <4 x float>* %assignment_tmp29
+  store <4 x float> %153, <4 x float>* %v
+  %154 = load <4 x float>* %assignment_tmp29
+  %155 = load <4 x float>* %assignment_tmp29
+  %step = call <4 x float> @llvm.gla.fStep.v4f32.v4f32.v4f32(<4 x float> %154, <4 x float> %155)
+  store <4 x float> %step, <4 x float>* %step_retval
+  %156 = load <4 x float>* %v
+  %157 = load <4 x float>* %step_retval
+  %158 = fadd <4 x float> %156, %157
+  store <4 x float> %158, <4 x float>* %assignment_tmp30
+  %159 = load <4 x float>* %assignment_tmp30
+  store <4 x float> %159, <4 x float>* %v
+  %160 = load <4 x float>* %assignment_tmp30
+  %161 = load <4 x float>* %assignment_tmp30
+  %162 = load <4 x float>* %assignment_tmp30
+  %smoothstep = call <4 x float> @llvm.gla.fSmoothStep.v4f32.v4f32.v4f32.v4f32(<4 x float> %160, <4 x float> %161, <4 x float> %162)
+  store <4 x float> %smoothstep, <4 x float>* %smoothstep_retval
+  %163 = load <4 x float>* %v
+  %164 = load <4 x float>* %smoothstep_retval
+  %165 = fadd <4 x float> %163, %164
+  store <4 x float> %165, <4 x float>* %assignment_tmp31
+  %166 = load <4 x float>* %assignment_tmp31
+  store <4 x float> %166, <4 x float>* %v
+  %167 = load <4 x float>* %assignment_tmp31
+  %normalize = call <4 x float> @llvm.gla.fNormalize.v4f32.v4f32(<4 x float> %167)
+  store <4 x float> %normalize, <4 x float>* %normalize_retval
+  %168 = load <4 x float>* %v
+  %169 = load <4 x float>* %normalize_retval
+  %170 = fadd <4 x float> %168, %169
+  store <4 x float> %170, <4 x float>* %assignment_tmp32
+  %171 = load <4 x float>* %assignment_tmp32
+  store <4 x float> %171, <4 x float>* %v
+  %172 = load <4 x float>* %assignment_tmp32
+  %173 = load <4 x float>* %assignment_tmp32
+  %174 = load <4 x float>* %assignment_tmp32
+  %faceforward = call <4 x float> @llvm.gla.fFaceForward.v4f32.v4f32.v4f32.v4f32(<4 x float> %172, <4 x float> %173, <4 x float> %174)
+  store <4 x float> %faceforward, <4 x float>* %faceforward_retval
+  %175 = load <4 x float>* %v
+  %176 = load <4 x float>* %faceforward_retval
+  %177 = fadd <4 x float> %175, %176
+  store <4 x float> %177, <4 x float>* %assignment_tmp33
+  %178 = load <4 x float>* %assignment_tmp33
+  store <4 x float> %178, <4 x float>* %v
+  %179 = load <4 x float>* %assignment_tmp33
+  %180 = load <4 x float>* %assignment_tmp33
+  %reflect = call <4 x float> @llvm.gla.fReflect.v4f32.v4f32.v4f32(<4 x float> %179, <4 x float> %180)
+  store <4 x float> %reflect, <4 x float>* %reflect_retval
+  %181 = load <4 x float>* %v
+  %182 = load <4 x float>* %reflect_retval
+  %183 = fadd <4 x float> %181, %182
+  store <4 x float> %183, <4 x float>* %assignment_tmp34
+  %184 = load <4 x float>* %assignment_tmp34
+  store <4 x float> %184, <4 x float>* %v
+  %185 = load <4 x float>* %assignment_tmp34
+  %186 = load <4 x float>* %assignment_tmp34
+  %187 = load float addrspace(1)* @uf
+  %refract = call <4 x float> @llvm.gla.fRefract.v4f32.v4f32.v4f32.f32(<4 x float> %185, <4 x float> %186, float %187)
+  store <4 x float> %refract, <4 x float>* %refract_retval
+  %188 = load <4 x float>* %v
+  %189 = load <4 x float>* %refract_retval
+  %190 = fadd <4 x float> %188, %189
+  store <4 x float> %190, <4 x float>* %assignment_tmp35
+  %191 = load <4 x float>* %assignment_tmp35
+  store <4 x float> %191, <4 x float>* %v
+  %192 = load <4 x float>* %assignment_tmp35
+  %dFdx = call <4 x float> @llvm.gla.fDFdx.v4f32.v4f32(<4 x float> %192)
+  store <4 x float> %dFdx, <4 x float>* %dFdx_retval
+  %193 = load <4 x float>* %v
+  %194 = load <4 x float>* %dFdx_retval
+  %195 = fadd <4 x float> %193, %194
+  store <4 x float> %195, <4 x float>* %assignment_tmp36
+  %196 = load <4 x float>* %assignment_tmp36
+  store <4 x float> %196, <4 x float>* %v
+  %197 = load <4 x float>* %assignment_tmp36
+  %dFdy = call <4 x float> @llvm.gla.fDFdy.v4f32.v4f32(<4 x float> %197)
+  store <4 x float> %dFdy, <4 x float>* %dFdy_retval
+  %198 = load <4 x float>* %v
+  %199 = load <4 x float>* %dFdy_retval
+  %200 = fadd <4 x float> %198, %199
+  store <4 x float> %200, <4 x float>* %assignment_tmp37
+  %201 = load <4 x float>* %assignment_tmp37
+  store <4 x float> %201, <4 x float>* %v
+  %202 = load <4 x float>* %assignment_tmp37
+  %fwidth = call <4 x float> @llvm.gla.fFilterWidth.v4f32.v4f32(<4 x float> %202)
+  store <4 x float> %fwidth, <4 x float>* %fwidth_retval
+  %203 = load <4 x float>* %v
+  %204 = load <4 x float>* %fwidth_retval
+  %205 = fadd <4 x float> %203, %204
+  store <4 x float> %205, <4 x float>* %v
+  store i32 0, i32* %i
+  %206 = load i32 addrspace(1)* @ui
+  %abs39 = call i32 @llvm.gla.abs.i32.i32(i32 %206)
+  store i32 %abs39, i32* %abs_retval38
+  %207 = load i32* %i
+  %208 = load i32* %abs_retval38
+  %209 = add i32 %207, %208
+  store i32 %209, i32* %assignment_tmp40
+  %210 = load i32* %assignment_tmp40
+  store i32 %210, i32* %i
+  %211 = load i32* %assignment_tmp40
+  %212 = load i32 addrspace(1)* @ui
+  %min42 = call i32 @llvm.gla.sMin.i32.i32.i32(i32 %211, i32 %212)
+  store i32 %min42, i32* %min_retval41
+  %213 = load i32* %i
+  %214 = load i32* %min_retval41
+  %215 = add i32 %213, %214
+  store i32 %215, i32* %assignment_tmp43
+  %216 = load i32* %assignment_tmp43
+  store i32 %216, i32* %i
+  %217 = load i32* %assignment_tmp43
+  %218 = load i32 addrspace(1)* @ui
+  %max45 = call i32 @llvm.gla.sMax.i32.i32.i32(i32 %217, i32 %218)
+  store i32 %max45, i32* %max_retval44
+  %219 = load i32* %i
+  %220 = load i32* %max_retval44
+  %221 = add i32 %219, %220
+  store i32 %221, i32* %assignment_tmp46
+  %222 = load i32* %assignment_tmp46
+  store i32 %222, i32* %i
+  %223 = load i32* %assignment_tmp46
+  %224 = load i32 addrspace(1)* @ui
+  %225 = load i32 addrspace(1)* @ui
+  %clamp48 = call i32 @llvm.gla.sClamp.i32.i32.i32.i32(i32 %223, i32 %224, i32 %225)
+  store i32 %clamp48, i32* %clamp_retval47
+  %226 = load i32* %i
+  %227 = load i32* %clamp_retval47
+  %228 = add i32 %226, %227
+  store i32 %228, i32* %i
+  %229 = load <4 x float>* %v
+  %230 = load <4 x float>* %v
+  %231 = fcmp olt <4 x float> %229, %230
+  store <4 x i1> %231, <4 x i1>* %lessThan_retval
+  %232 = load <4 x i1>* %lessThan_retval
+  %any = call i1 @llvm.gla.any.v4i1(<4 x i1> %232)
+  store i1 %any, i1* %any_retval
+  %233 = load i1* %any_retval
+  store i1 %233, i1* %b
+  %234 = load i1* %any_retval
+  br i1 %234, label %then, label %else
+
+then:                                             ; preds = %entry
+  %235 = load <4 x float>* %v
+  %236 = load <4 x float>* %v
+  %237 = fcmp ole <4 x float> %235, %236
+  store <4 x i1> %237, <4 x i1>* %lessThanEqual_retval
+  %238 = load <4 x i1>* %lessThanEqual_retval
+  %any50 = call i1 @llvm.gla.any.v4i1(<4 x i1> %238)
+  store i1 %any50, i1* %any_retval49
+  %239 = load i1* %any_retval49
+  store i1 %239, i1* %and_tmp
+  br label %ifmerge
+
+else:                                             ; preds = %entry
+  store i1 false, i1* %and_tmp
+  br label %ifmerge
+
+ifmerge:                                          ; preds = %else, %then
+  %240 = load i1* %and_tmp
+  store i1 %240, i1* %b
+  %241 = load i1* %and_tmp
+  br i1 %241, label %then51, label %else55
+
+then51:                                           ; preds = %ifmerge
+  %242 = load <4 x float>* %v
+  %243 = load <4 x float>* %v
+  %244 = fcmp ogt <4 x float> %242, %243
+  store <4 x i1> %244, <4 x i1>* %greaterThan_retval
+  %245 = load <4 x i1>* %greaterThan_retval
+  %any53 = call i1 @llvm.gla.any.v4i1(<4 x i1> %245)
+  store i1 %any53, i1* %any_retval52
+  %246 = load i1* %any_retval52
+  store i1 %246, i1* %and_tmp54
+  br label %ifmerge56
+
+else55:                                           ; preds = %ifmerge
+  store i1 false, i1* %and_tmp54
+  br label %ifmerge56
+
+ifmerge56:                                        ; preds = %else55, %then51
+  %247 = load i1* %and_tmp54
+  store i1 %247, i1* %b
+  %248 = load i1* %and_tmp54
+  br i1 %248, label %then57, label %else61
+
+then57:                                           ; preds = %ifmerge56
+  %249 = load <4 x float>* %v
+  %250 = load <4 x float>* %v
+  %251 = fcmp oge <4 x float> %249, %250
+  store <4 x i1> %251, <4 x i1>* %greaterThanEqual_retval
+  %252 = load <4 x i1>* %greaterThanEqual_retval
+  %any59 = call i1 @llvm.gla.any.v4i1(<4 x i1> %252)
+  store i1 %any59, i1* %any_retval58
+  %253 = load i1* %any_retval58
+  store i1 %253, i1* %and_tmp60
+  br label %ifmerge62
+
+else61:                                           ; preds = %ifmerge56
+  store i1 false, i1* %and_tmp60
+  br label %ifmerge62
+
+ifmerge62:                                        ; preds = %else61, %then57
+  %254 = load i1* %and_tmp60
+  store i1 %254, i1* %b
+  %255 = load i1* %and_tmp60
+  br i1 %255, label %then63, label %else67
+
+then63:                                           ; preds = %ifmerge62
+  %256 = load <4 x i1> addrspace(1)* @ub41
+  %257 = load <4 x i1> addrspace(1)* @ub42
+  %258 = icmp eq <4 x i1> %256, %257
+  store <4 x i1> %258, <4 x i1>* %equal_retval
+  %259 = load <4 x i1>* %equal_retval
+  %any65 = call i1 @llvm.gla.any.v4i1(<4 x i1> %259)
+  store i1 %any65, i1* %any_retval64
+  %260 = load i1* %any_retval64
+  store i1 %260, i1* %and_tmp66
+  br label %ifmerge68
+
+else67:                                           ; preds = %ifmerge62
+  store i1 false, i1* %and_tmp66
+  br label %ifmerge68
+
+ifmerge68:                                        ; preds = %else67, %then63
+  %261 = load i1* %and_tmp66
+  store i1 %261, i1* %b
+  %262 = load i1* %and_tmp66
+  br i1 %262, label %then69, label %else73
+
+then69:                                           ; preds = %ifmerge68
+  %263 = load <4 x i1> addrspace(1)* @ub41
+  %264 = load <4 x i1> addrspace(1)* @ub42
+  %265 = icmp ne <4 x i1> %263, %264
+  store <4 x i1> %265, <4 x i1>* %notEqual_retval
+  %266 = load <4 x i1>* %notEqual_retval
+  %any71 = call i1 @llvm.gla.any.v4i1(<4 x i1> %266)
+  store i1 %any71, i1* %any_retval70
+  %267 = load i1* %any_retval70
+  store i1 %267, i1* %and_tmp72
+  br label %ifmerge74
+
+else73:                                           ; preds = %ifmerge68
+  store i1 false, i1* %and_tmp72
+  br label %ifmerge74
+
+ifmerge74:                                        ; preds = %else73, %then69
+  %268 = load i1* %and_tmp72
+  store i1 %268, i1* %b
+  %269 = load i1* %and_tmp72
+  br i1 %269, label %then75, label %else79
+
+then75:                                           ; preds = %ifmerge74
+  %270 = load <4 x i1> addrspace(1)* @ub41
+  %any77 = call i1 @llvm.gla.any.v4i1(<4 x i1> %270)
+  store i1 %any77, i1* %any_retval76
+  %271 = load i1* %any_retval76
+  store i1 %271, i1* %and_tmp78
+  br label %ifmerge80
+
+else79:                                           ; preds = %ifmerge74
+  store i1 false, i1* %and_tmp78
+  br label %ifmerge80
+
+ifmerge80:                                        ; preds = %else79, %then75
+  %272 = load i1* %and_tmp78
+  store i1 %272, i1* %b
+  %273 = load i1* %and_tmp78
+  br i1 %273, label %then81, label %else83
+
+then81:                                           ; preds = %ifmerge80
+  %274 = load <4 x i1> addrspace(1)* @ub41
+  %all = call i1 @llvm.gla.all.v4i1(<4 x i1> %274)
+  store i1 %all, i1* %all_retval
+  %275 = load i1* %all_retval
+  store i1 %275, i1* %and_tmp82
+  br label %ifmerge84
+
+else83:                                           ; preds = %ifmerge80
+  store i1 false, i1* %and_tmp82
+  br label %ifmerge84
+
+ifmerge84:                                        ; preds = %else83, %then81
+  %276 = load i1* %and_tmp82
+  store i1 %276, i1* %b
+  %277 = load i1* %and_tmp82
+  br i1 %277, label %then85, label %else89
+
+then85:                                           ; preds = %ifmerge84
+  %278 = load <4 x i1> addrspace(1)* @ub41
+  %279 = xor <4 x i1> %278, <i1 true, i1 true, i1 true, i1 true>
+  store <4 x i1> %279, <4 x i1>* %not_retval
+  %280 = load <4 x i1>* %not_retval
+  %any87 = call i1 @llvm.gla.any.v4i1(<4 x i1> %280)
+  store i1 %any87, i1* %any_retval86
+  %281 = load i1* %any_retval86
+  store i1 %281, i1* %and_tmp88
+  br label %ifmerge90
+
+else89:                                           ; preds = %ifmerge84
+  store i1 false, i1* %and_tmp88
+  br label %ifmerge90
+
+ifmerge90:                                        ; preds = %else89, %then85
+  %282 = load i1* %and_tmp88
+  store i1 %282, i1* %b
+  %283 = load i32* %i
+  %284 = load i32 addrspace(1)* @ui
+  %285 = add i32 %283, %284
+  %286 = load i32* %i
+  %287 = mul i32 %285, %286
+  %288 = load i32 addrspace(1)* @ui
+  %289 = sub i32 %287, %288
+  %290 = load i32* %i
+  %291 = sdiv i32 %289, %290
+  %292 = load i32 addrspace(1)* @ui
+  %293 = srem i32 %291, %292
+  store i32 %293, i32* %assignment_tmp91
+  %294 = load i32* %assignment_tmp91
+  store i32 %294, i32* %i
+  %295 = load i32* %assignment_tmp91
+  %296 = load i32 addrspace(1)* @ui
+  %297 = icmp eq i32 %295, %296
+  br i1 %297, label %then92, label %else93
+
+then92:                                           ; preds = %ifmerge90
+  store i1 true, i1* %or_tmp
+  br label %ifmerge98
+
+else93:                                           ; preds = %ifmerge90
+  %298 = load i32* %assignment_tmp91
+  %299 = load i32 addrspace(1)* @ui
+  %300 = icmp ne i32 %298, %299
+  br i1 %300, label %then94, label %else96
+
+then94:                                           ; preds = %else93
+  %301 = load i32* %assignment_tmp91
+  %302 = load i32 addrspace(1)* @ui
+  %303 = icmp eq i32 %301, %302
+  store i1 %303, i1* %and_tmp95
+  br label %ifmerge97
+
+else96:                                           ; preds = %else93
+  store i1 false, i1* %and_tmp95
+  br label %ifmerge97
+
+ifmerge97:                                        ; preds = %else96, %then94
+  %304 = load i1* %and_tmp95
+  %305 = load i32* %assignment_tmp91
+  %306 = icmp ne i32 %305, 2
+  %307 = xor i1 %304, %306
+  store i1 %307, i1* %or_tmp
+  br label %ifmerge98
+
+ifmerge98:                                        ; preds = %ifmerge97, %then92
+  %308 = load i1* %or_tmp
+  br i1 %308, label %then99, label %ifmerge100
+
+then99:                                           ; preds = %ifmerge98
+  %309 = load i32* %assignment_tmp91
+  %310 = add i32 %309, 1
+  store i32 %310, i32* %i
+  br label %ifmerge100
+
+ifmerge100:                                       ; preds = %then99, %ifmerge98
+  %311 = load float addrspace(1)* @uf
+  %312 = load float addrspace(1)* @uf
+  %313 = fadd float %311, %312
+  %314 = load float addrspace(1)* @uf
+  %315 = fmul float %313, %314
+  %316 = load float addrspace(1)* @uf
+  %317 = fsub float %315, %316
+  %318 = load float addrspace(1)* @uf
+  %319 = fdiv float %317, %318
+  store float %319, float* %f
+  %320 = load <4 x float>* %v
+  %length = call float @llvm.gla.fLength.v4f32(<4 x float> %320)
+  store float %length, float* %length_retval
+  %321 = load float* %f
+  %322 = load float* %length_retval
+  %323 = fadd float %321, %322
+  store float %323, float* %f
+  %324 = load <4 x float>* %v
+  %325 = load <4 x float>* %v
+  %distance = call float @llvm.gla.fDistance.v4f32.v4f32(<4 x float> %324, <4 x float> %325)
+  store float %distance, float* %distance_retval
+  %326 = load float* %f
+  %327 = load float* %distance_retval
+  %328 = fadd float %326, %327
+  store float %328, float* %f
+  %329 = load <4 x float>* %v
+  %330 = load <4 x float>* %v
+  %dot = call float @llvm.gla.fDot.v4f32.v4f32(<4 x float> %329, <4 x float> %330)
+  store float %dot, float* %dot_retval
+  %331 = load float* %f
+  %332 = load float* %dot_retval
+  %333 = fadd float %331, %332
+  store float %333, float* %f
+  %334 = load <4 x float>* %v
+  %swizzleTmp = call <3 x float> @llvm.gla.fSwizzle.v3f32.v4f32(<4 x float> %334, i32 36)
+  %335 = load <4 x float>* %v
+  %swizzleTmp101 = call <3 x float> @llvm.gla.fSwizzle.v3f32.v4f32(<4 x float> %335, i32 36)
+  %cross = call <3 x float> @llvm.gla.fCross.v3f32.v3f32.v3f32(<3 x float> %swizzleTmp, <3 x float> %swizzleTmp101)
+  store <3 x float> %cross, <3 x float>* %cross_retval
+  %336 = load float* %f
+  %337 = load <3 x float>* %cross_retval
+  %swizzleTmp103 = call float @llvm.gla.fSwizzle.f32.v3f32(<3 x float> %337, i32 0)
+  %338 = fadd float %336, %swizzleTmp103
+  store float %338, float* %assignment_tmp102
+  %339 = load float* %assignment_tmp102
+  store float %339, float* %f
+  %340 = load float* %assignment_tmp102
+  %341 = load float addrspace(1)* @uf
+  %342 = fcmp oeq float %340, %341
+  br i1 %342, label %then104, label %else106
+
+then104:                                          ; preds = %ifmerge100
+  store i1 true, i1* %or_tmp105
+  br label %ifmerge111
+
+else106:                                          ; preds = %ifmerge100
+  %343 = load float* %assignment_tmp102
+  %344 = load float addrspace(1)* @uf
+  %345 = fcmp one float %343, %344
+  br i1 %345, label %then107, label %else109
+
+then107:                                          ; preds = %else106
+  %346 = load float* %assignment_tmp102
+  %347 = fcmp one float %346, 2.000000e+00
+  store i1 %347, i1* %and_tmp108
+  br label %ifmerge110
+
+else109:                                          ; preds = %else106
+  store i1 false, i1* %and_tmp108
+  br label %ifmerge110
+
+ifmerge110:                                       ; preds = %else109, %then107
+  %348 = load i1* %and_tmp108
+  store i1 %348, i1* %or_tmp105
+  br label %ifmerge111
+
+ifmerge111:                                       ; preds = %ifmerge110, %then104
+  %349 = load i1* %or_tmp105
+  br i1 %349, label %then112, label %ifmerge113
+
+then112:                                          ; preds = %ifmerge111
+  %350 = load float* %assignment_tmp102
+  %351 = fadd float %350, 1.000000e+00
+  store float %351, float* %f
+  br label %ifmerge113
+
+ifmerge113:                                       ; preds = %then112, %ifmerge111
+  %352 = load i1* %b
+  br i1 %352, label %then114, label %else117
+
+then114:                                          ; preds = %ifmerge113
+  %353 = load i32* %i
+  %354 = sitofp i32 %353 to float
+  %swizzleTmp115 = call <4 x float> @llvm.gla.fSwizzle.v4f32.f32(float %354, i32 0)
+  %355 = load float* %f
+  %swizzleTmp116 = call <4 x float> @llvm.gla.fSwizzle.v4f32.f32(float %355, i32 0)
+  %356 = fadd <4 x float> %swizzleTmp115, %swizzleTmp116
+  %357 = load <4 x float>* %v
+  %358 = fadd <4 x float> %356, %357
+  store <4 x float> %358, <4 x float>* %conditional_tmp
+  br label %ifmerge118
+
+else117:                                          ; preds = %ifmerge113
+  %359 = load <4 x float>* %v
+  store <4 x float> %359, <4 x float>* %conditional_tmp
+  br label %ifmerge118
+
+ifmerge118:                                       ; preds = %else117, %then114
+  %360 = load <4 x float>* %conditional_tmp
+  store <4 x float> %360, <4 x float>* @gl_FragColor
+  %361 = load <4 x float>* @gl_FragColor
+  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %361)
+  ret void
+}
+
+declare <4 x float> @llvm.gla.fRadians.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fDegrees.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fSin.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fCos.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fTan.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fAsin.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fAcos.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fAtan.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fSinh.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fCosh.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fTanh.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fPow.v4f32.v4f32.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fExp.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fLog.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fExp2.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fLog2.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fSqrt.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fInverseSqrt.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fAbs.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fSign.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fFloor.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fCeiling.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fFraction.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fMin.v4f32.v4f32.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fMax.v4f32.v4f32.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fClamp.v4f32.v4f32.v4f32.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fMix.v4f32.v4f32.v4f32.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fMix.v4f32.v4f32.v4f32.f32(<4 x float>, <4 x float>, float) nounwind readnone
+
+declare <4 x float> @llvm.gla.fStep.v4f32.v4f32.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fSmoothStep.v4f32.v4f32.v4f32.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fNormalize.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fFaceForward.v4f32.v4f32.v4f32.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fReflect.v4f32.v4f32.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fRefract.v4f32.v4f32.v4f32.f32(<4 x float>, <4 x float>, float) nounwind readnone
+
+declare <4 x float> @llvm.gla.fDFdx.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fDFdy.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fFilterWidth.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare i32 @llvm.gla.abs.i32.i32(i32) nounwind readnone
+
+declare i32 @llvm.gla.sMin.i32.i32.i32(i32, i32) nounwind readnone
+
+declare i32 @llvm.gla.sMax.i32.i32.i32(i32, i32) nounwind readnone
+
+declare i32 @llvm.gla.sClamp.i32.i32.i32.i32(i32, i32, i32) nounwind readnone
+
+declare i1 @llvm.gla.any.v4i1(<4 x i1>) nounwind readnone
+
+declare i1 @llvm.gla.all.v4i1(<4 x i1>) nounwind readnone
+
+declare float @llvm.gla.fLength.v4f32(<4 x float>) nounwind readnone
+
+declare float @llvm.gla.fDistance.v4f32.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare float @llvm.gla.fDot.v4f32.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare <3 x float> @llvm.gla.fSwizzle.v3f32.v4f32(<4 x float>, i32) nounwind readnone
+
+declare <3 x float> @llvm.gla.fCross.v3f32.v3f32.v3f32(<3 x float>, <3 x float>) nounwind readnone
+
+declare float @llvm.gla.fSwizzle.f32.v3f32(<3 x float>, i32) nounwind readnone
+
+declare <4 x float> @llvm.gla.fSwizzle.v4f32.f32(float, i32) nounwind readnone
+
+declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
+; ModuleID = 'Top'
+
+@uv4 = external addrspace(1) constant <4 x float>
+@ub = external addrspace(1) constant i1
+@uf = external addrspace(1) constant float
+@ui = external addrspace(1) constant i32
+@ub41 = external addrspace(1) constant <4 x i1>
+@ub42 = external addrspace(1) constant <4 x i1>
+
+define void @main() {
+entry:
+  %0 = load <4 x float> addrspace(1)* @uv4
+  %radians = call <4 x float> @llvm.gla.fRadians.v4f32.v4f32(<4 x float> %0)
+  %degrees = call <4 x float> @llvm.gla.fDegrees.v4f32.v4f32(<4 x float> %radians)
+  %1 = fadd <4 x float> %radians, %degrees
+  %sin = call <4 x float> @llvm.gla.fSin.v4f32.v4f32(<4 x float> %1)
+  %2 = fadd <4 x float> %1, %sin
+  %cos = call <4 x float> @llvm.gla.fCos.v4f32.v4f32(<4 x float> %2)
+  %3 = fadd <4 x float> %2, %cos
+  %tan = call <4 x float> @llvm.gla.fTan.v4f32.v4f32(<4 x float> %3)
+  %4 = fadd <4 x float> %3, %tan
+  %asin = call <4 x float> @llvm.gla.fAsin.v4f32.v4f32(<4 x float> %4)
+  %5 = fadd <4 x float> %4, %asin
+  %acos = call <4 x float> @llvm.gla.fAcos.v4f32.v4f32(<4 x float> %5)
+  %6 = fadd <4 x float> %5, %acos
+  %atan = call <4 x float> @llvm.gla.fAtan.v4f32.v4f32(<4 x float> %6)
+  %7 = fadd <4 x float> %6, %atan
+  %sinh = call <4 x float> @llvm.gla.fSinh.v4f32.v4f32(<4 x float> %7)
+  %8 = fadd <4 x float> %7, %sinh
+  %cosh = call <4 x float> @llvm.gla.fCosh.v4f32.v4f32(<4 x float> %8)
+  %9 = fadd <4 x float> %8, %cosh
+  %tanh = call <4 x float> @llvm.gla.fTanh.v4f32.v4f32(<4 x float> %9)
+  %10 = fadd <4 x float> %9, %tanh
+  %pow = call <4 x float> @llvm.gla.fPow.v4f32.v4f32.v4f32(<4 x float> %10, <4 x float> %10)
+  %11 = fadd <4 x float> %10, %pow
+  %exp = call <4 x float> @llvm.gla.fExp.v4f32.v4f32(<4 x float> %11)
+  %12 = fadd <4 x float> %11, %exp
+  %log = call <4 x float> @llvm.gla.fLog.v4f32.v4f32(<4 x float> %12)
+  %13 = fadd <4 x float> %12, %log
+  %exp2 = call <4 x float> @llvm.gla.fExp2.v4f32.v4f32(<4 x float> %13)
+  %14 = fadd <4 x float> %13, %exp2
+  %log2 = call <4 x float> @llvm.gla.fLog2.v4f32.v4f32(<4 x float> %14)
+  %15 = fadd <4 x float> %14, %log2
+  %sqrt = call <4 x float> @llvm.gla.fSqrt.v4f32.v4f32(<4 x float> %15)
+  %16 = fadd <4 x float> %15, %sqrt
+  %inversesqrt = call <4 x float> @llvm.gla.fInverseSqrt.v4f32.v4f32(<4 x float> %16)
+  %17 = fadd <4 x float> %16, %inversesqrt
+  %abs = call <4 x float> @llvm.gla.fAbs.v4f32.v4f32(<4 x float> %17)
+  %18 = fadd <4 x float> %17, %abs
+  %sign = call <4 x float> @llvm.gla.fSign.v4f32.v4f32(<4 x float> %18)
+  %19 = fadd <4 x float> %18, %sign
+  %floor = call <4 x float> @llvm.gla.fFloor.v4f32.v4f32(<4 x float> %19)
+  %20 = fadd <4 x float> %19, %floor
+  %ceil = call <4 x float> @llvm.gla.fCeiling.v4f32.v4f32(<4 x float> %20)
+  %21 = fadd <4 x float> %20, %ceil
+  %fract = call <4 x float> @llvm.gla.fFraction.v4f32.v4f32(<4 x float> %21)
+  %22 = fadd <4 x float> %21, %fract
+  %23 = frem <4 x float> %22, %22
+  %24 = fadd <4 x float> %22, %23
+  %min = call <4 x float> @llvm.gla.fMin.v4f32.v4f32.v4f32(<4 x float> %24, <4 x float> %0)
+  %25 = fadd <4 x float> %24, %min
+  %max = call <4 x float> @llvm.gla.fMax.v4f32.v4f32.v4f32(<4 x float> %25, <4 x float> %0)
+  %26 = fadd <4 x float> %25, %max
+  %clamp = call <4 x float> @llvm.gla.fClamp.v4f32.v4f32.v4f32.v4f32(<4 x float> %26, <4 x float> %0, <4 x float> %0)
+  %27 = fadd <4 x float> %26, %clamp
+  %mix = call <4 x float> @llvm.gla.fMix.v4f32.v4f32.v4f32.v4f32(<4 x float> %27, <4 x float> %27, <4 x float> %27)
+  %28 = fadd <4 x float> %27, %mix
+  %29 = load i1 addrspace(1)* @ub
+  %30 = uitofp i1 %29 to float
+  %mix28 = call <4 x float> @llvm.gla.fMix.v4f32.v4f32.v4f32.f32(<4 x float> %28, <4 x float> %28, float %30)
+  %31 = fadd <4 x float> %28, %mix28
+  %step = call <4 x float> @llvm.gla.fStep.v4f32.v4f32.v4f32(<4 x float> %31, <4 x float> %31)
+  %32 = fadd <4 x float> %31, %step
+  %smoothstep = call <4 x float> @llvm.gla.fSmoothStep.v4f32.v4f32.v4f32.v4f32(<4 x float> %32, <4 x float> %32, <4 x float> %32)
+  %33 = fadd <4 x float> %32, %smoothstep
+  %normalize = call <4 x float> @llvm.gla.fNormalize.v4f32.v4f32(<4 x float> %33)
+  %34 = fadd <4 x float> %33, %normalize
+  %faceforward = call <4 x float> @llvm.gla.fFaceForward.v4f32.v4f32.v4f32.v4f32(<4 x float> %34, <4 x float> %34, <4 x float> %34)
+  %35 = fadd <4 x float> %34, %faceforward
+  %reflect = call <4 x float> @llvm.gla.fReflect.v4f32.v4f32.v4f32(<4 x float> %35, <4 x float> %35)
+  %36 = fadd <4 x float> %35, %reflect
+  %37 = load float addrspace(1)* @uf
+  %refract = call <4 x float> @llvm.gla.fRefract.v4f32.v4f32.v4f32.f32(<4 x float> %36, <4 x float> %36, float %37)
+  %38 = fadd <4 x float> %36, %refract
+  %dFdx = call <4 x float> @llvm.gla.fDFdx.v4f32.v4f32(<4 x float> %38)
+  %39 = fadd <4 x float> %38, %dFdx
+  %dFdy = call <4 x float> @llvm.gla.fDFdy.v4f32.v4f32(<4 x float> %39)
+  %40 = fadd <4 x float> %39, %dFdy
+  %fwidth = call <4 x float> @llvm.gla.fFilterWidth.v4f32.v4f32(<4 x float> %40)
+  %41 = fadd <4 x float> %40, %fwidth
+  %42 = load i32 addrspace(1)* @ui
+  %abs39 = call i32 @llvm.gla.abs.i32.i32(i32 %42)
+  %min42 = call i32 @llvm.gla.sMin.i32.i32.i32(i32 %abs39, i32 %42)
+  %43 = add i32 %min42, %abs39
+  %max45 = call i32 @llvm.gla.sMax.i32.i32.i32(i32 %43, i32 %42)
+  %44 = add i32 %max45, %43
+  %clamp48 = call i32 @llvm.gla.sClamp.i32.i32.i32.i32(i32 %44, i32 %42, i32 %42)
+  %45 = add i32 %clamp48, %44
+  %46 = fcmp olt <4 x float> %41, %41
+  %any = call i1 @llvm.gla.any.v4i1(<4 x i1> %46)
+  br i1 %any, label %then, label %else
+
+then:                                             ; preds = %entry
+  %47 = fcmp ole <4 x float> %41, %41
+  %any50 = call i1 @llvm.gla.any.v4i1(<4 x i1> %47)
+  br label %ifmerge
+
+else:                                             ; preds = %entry
+  br label %ifmerge
+
+ifmerge:                                          ; preds = %else, %then
+  %and_tmp.0 = phi i1 [ %any50, %then ], [ false, %else ]
+  br i1 %and_tmp.0, label %then51, label %else55
+
+then51:                                           ; preds = %ifmerge
+  %48 = fcmp ogt <4 x float> %41, %41
+  %any53 = call i1 @llvm.gla.any.v4i1(<4 x i1> %48)
+  br label %ifmerge56
+
+else55:                                           ; preds = %ifmerge
+  br label %ifmerge56
+
+ifmerge56:                                        ; preds = %else55, %then51
+  %and_tmp54.0 = phi i1 [ %any53, %then51 ], [ false, %else55 ]
+  br i1 %and_tmp54.0, label %then57, label %else61
+
+then57:                                           ; preds = %ifmerge56
+  %49 = fcmp oge <4 x float> %41, %41
+  %any59 = call i1 @llvm.gla.any.v4i1(<4 x i1> %49)
+  br label %ifmerge62
+
+else61:                                           ; preds = %ifmerge56
+  br label %ifmerge62
+
+ifmerge62:                                        ; preds = %else61, %then57
+  %and_tmp60.0 = phi i1 [ %any59, %then57 ], [ false, %else61 ]
+  br i1 %and_tmp60.0, label %then63, label %else67
+
+then63:                                           ; preds = %ifmerge62
+  %50 = load <4 x i1> addrspace(1)* @ub41
+  %51 = load <4 x i1> addrspace(1)* @ub42
+  %52 = icmp eq <4 x i1> %50, %51
+  %any65 = call i1 @llvm.gla.any.v4i1(<4 x i1> %52)
+  br label %ifmerge68
+
+else67:                                           ; preds = %ifmerge62
+  br label %ifmerge68
+
+ifmerge68:                                        ; preds = %else67, %then63
+  %and_tmp66.0 = phi i1 [ %any65, %then63 ], [ false, %else67 ]
+  br i1 %and_tmp66.0, label %then69, label %else73
+
+then69:                                           ; preds = %ifmerge68
+  %53 = load <4 x i1> addrspace(1)* @ub41
+  %54 = load <4 x i1> addrspace(1)* @ub42
+  %55 = icmp ne <4 x i1> %53, %54
+  %any71 = call i1 @llvm.gla.any.v4i1(<4 x i1> %55)
+  br label %ifmerge74
+
+else73:                                           ; preds = %ifmerge68
+  br label %ifmerge74
+
+ifmerge74:                                        ; preds = %else73, %then69
+  %and_tmp72.0 = phi i1 [ %any71, %then69 ], [ false, %else73 ]
+  br i1 %and_tmp72.0, label %then75, label %else79
+
+then75:                                           ; preds = %ifmerge74
+  %56 = load <4 x i1> addrspace(1)* @ub41
+  %any77 = call i1 @llvm.gla.any.v4i1(<4 x i1> %56)
+  br label %ifmerge80
+
+else79:                                           ; preds = %ifmerge74
+  br label %ifmerge80
+
+ifmerge80:                                        ; preds = %else79, %then75
+  %and_tmp78.0 = phi i1 [ %any77, %then75 ], [ false, %else79 ]
+  br i1 %and_tmp78.0, label %then81, label %else83
+
+then81:                                           ; preds = %ifmerge80
+  %57 = load <4 x i1> addrspace(1)* @ub41
+  %all = call i1 @llvm.gla.all.v4i1(<4 x i1> %57)
+  br label %ifmerge84
+
+else83:                                           ; preds = %ifmerge80
+  br label %ifmerge84
+
+ifmerge84:                                        ; preds = %else83, %then81
+  %and_tmp82.0 = phi i1 [ %all, %then81 ], [ false, %else83 ]
+  br i1 %and_tmp82.0, label %then85, label %else89
+
+then85:                                           ; preds = %ifmerge84
+  %58 = load <4 x i1> addrspace(1)* @ub41
+  %59 = xor <4 x i1> %58, <i1 true, i1 true, i1 true, i1 true>
+  %any87 = call i1 @llvm.gla.any.v4i1(<4 x i1> %59)
+  br label %ifmerge90
+
+else89:                                           ; preds = %ifmerge84
+  br label %ifmerge90
+
+ifmerge90:                                        ; preds = %else89, %then85
+  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %else89 ]
+  %60 = add i32 %42, %45
+  %61 = mul i32 %60, %45
+  %62 = sub i32 %61, %42
+  %63 = sdiv i32 %62, %45
+  %64 = srem i32 %63, %42
+  %65 = icmp eq i32 %64, %42
+  br i1 %65, label %then92, label %else93
+
+then92:                                           ; preds = %ifmerge90
+  br label %ifmerge98
+
+else93:                                           ; preds = %ifmerge90
+  %66 = icmp ne i32 %64, %42
+  br i1 %66, label %then94, label %else96
+
+then94:                                           ; preds = %else93
+  br label %ifmerge97
+
+else96:                                           ; preds = %else93
+  br label %ifmerge97
+
+ifmerge97:                                        ; preds = %else96, %then94
+  %67 = icmp ne i32 %64, 2
+  %68 = xor i1 false, %67
+  br label %ifmerge98
+
+ifmerge98:                                        ; preds = %ifmerge97, %then92
+  %or_tmp.0 = phi i1 [ true, %then92 ], [ %68, %ifmerge97 ]
+  br i1 %or_tmp.0, label %then99, label %ifmerge100
+
+then99:                                           ; preds = %ifmerge98
+  %69 = add i32 %64, 1
+  br label %ifmerge100
+
+ifmerge100:                                       ; preds = %then99, %ifmerge98
+  %i.0 = phi i32 [ %69, %then99 ], [ %64, %ifmerge98 ]
+  %70 = fadd float %37, %37
+  %71 = fmul float %70, %37
+  %72 = fsub float %71, %37
+  %73 = fdiv float %72, %37
+  %length = call float @llvm.gla.fLength.v4f32(<4 x float> %41)
+  %74 = fadd float %73, %length
+  %distance = call float @llvm.gla.fDistance.v4f32.v4f32(<4 x float> %41, <4 x float> %41)
+  %75 = fadd float %74, %distance
+  %dot = call float @llvm.gla.fDot.v4f32.v4f32(<4 x float> %41, <4 x float> %41)
+  %76 = fadd float %75, %dot
+  %swizzleTmp = call <3 x float> @llvm.gla.fSwizzle.v3f32.v4f32(<4 x float> %41, i32 36)
+  %cross = call <3 x float> @llvm.gla.fCross.v3f32.v3f32.v3f32(<3 x float> %swizzleTmp, <3 x float> %swizzleTmp)
+  %swizzleTmp103 = call float @llvm.gla.fSwizzle.f32.v3f32(<3 x float> %cross, i32 0)
+  %77 = fadd float %76, %swizzleTmp103
+  %78 = fcmp oeq float %77, %37
+  br i1 %78, label %then104, label %else106
+
+then104:                                          ; preds = %ifmerge100
+  br label %ifmerge111
+
+else106:                                          ; preds = %ifmerge100
+  %79 = fcmp one float %77, %37
+  br i1 %79, label %then107, label %else109
+
+then107:                                          ; preds = %else106
+  %80 = fcmp one float %77, 2.000000e+00
+  br label %ifmerge110
+
+else109:                                          ; preds = %else106
+  br label %ifmerge110
+
+ifmerge110:                                       ; preds = %else109, %then107
+  %and_tmp108.0 = phi i1 [ %80, %then107 ], [ false, %else109 ]
+  br label %ifmerge111
+
+ifmerge111:                                       ; preds = %ifmerge110, %then104
+  %or_tmp105.0 = phi i1 [ true, %then104 ], [ %and_tmp108.0, %ifmerge110 ]
+  br i1 %or_tmp105.0, label %then112, label %ifmerge113
+
+then112:                                          ; preds = %ifmerge111
+  %81 = fadd float %77, 1.000000e+00
+  br label %ifmerge113
+
+ifmerge113:                                       ; preds = %then112, %ifmerge111
+  %f.0 = phi float [ %81, %then112 ], [ %77, %ifmerge111 ]
+  br i1 %and_tmp88.0, label %then114, label %else117
+
+then114:                                          ; preds = %ifmerge113
+  %82 = sitofp i32 %i.0 to float
+  %swizzleTmp115 = call <4 x float> @llvm.gla.fSwizzle.v4f32.f32(float %82, i32 0)
+  %swizzleTmp116 = call <4 x float> @llvm.gla.fSwizzle.v4f32.f32(float %f.0, i32 0)
+  %83 = fadd <4 x float> %swizzleTmp115, %swizzleTmp116
+  %84 = fadd <4 x float> %83, %41
+  br label %ifmerge118
+
+else117:                                          ; preds = %ifmerge113
+  br label %ifmerge118
+
+ifmerge118:                                       ; preds = %else117, %then114
+  %conditional_tmp.0 = phi <4 x float> [ %84, %then114 ], [ %41, %else117 ]
+  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %conditional_tmp.0)
+  ret void
+}
+
+declare <4 x float> @llvm.gla.fRadians.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fDegrees.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fSin.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fCos.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fTan.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fAsin.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fAcos.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fAtan.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fSinh.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fCosh.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fTanh.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fPow.v4f32.v4f32.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fExp.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fLog.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fExp2.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fLog2.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fSqrt.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fInverseSqrt.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fAbs.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fSign.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fFloor.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fCeiling.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fFraction.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fMin.v4f32.v4f32.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fMax.v4f32.v4f32.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fClamp.v4f32.v4f32.v4f32.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fMix.v4f32.v4f32.v4f32.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fMix.v4f32.v4f32.v4f32.f32(<4 x float>, <4 x float>, float) nounwind readnone
+
+declare <4 x float> @llvm.gla.fStep.v4f32.v4f32.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fSmoothStep.v4f32.v4f32.v4f32.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fNormalize.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fFaceForward.v4f32.v4f32.v4f32.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fReflect.v4f32.v4f32.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fRefract.v4f32.v4f32.v4f32.f32(<4 x float>, <4 x float>, float) nounwind readnone
+
+declare <4 x float> @llvm.gla.fDFdx.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fDFdy.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare <4 x float> @llvm.gla.fFilterWidth.v4f32.v4f32(<4 x float>) nounwind readnone
+
+declare i32 @llvm.gla.abs.i32.i32(i32) nounwind readnone
+
+declare i32 @llvm.gla.sMin.i32.i32.i32(i32, i32) nounwind readnone
+
+declare i32 @llvm.gla.sMax.i32.i32.i32(i32, i32) nounwind readnone
+
+declare i32 @llvm.gla.sClamp.i32.i32.i32.i32(i32, i32, i32) nounwind readnone
+
+declare i1 @llvm.gla.any.v4i1(<4 x i1>) nounwind readnone
+
+declare i1 @llvm.gla.all.v4i1(<4 x i1>) nounwind readnone
+
+declare float @llvm.gla.fLength.v4f32(<4 x float>) nounwind readnone
+
+declare float @llvm.gla.fDistance.v4f32.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare float @llvm.gla.fDot.v4f32.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare <3 x float> @llvm.gla.fSwizzle.v3f32.v4f32(<4 x float>, i32) nounwind readnone
+
+declare <3 x float> @llvm.gla.fCross.v3f32.v3f32.v3f32(<3 x float>, <3 x float>) nounwind readnone
+
+declare float @llvm.gla.fSwizzle.f32.v3f32(<3 x float>, i32) nounwind readnone
+
+declare <4 x float> @llvm.gla.fSwizzle.v4f32.f32(float, i32) nounwind readnone
+
+declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
+
+***Unsupported functionality: intrinsic in Bottom IR
+compiling Operations.frag...
+uniform ivec4 uiv4 ; 
+uniform vec4 uv4 ; 
+uniform bool ub ; 
+uniform bvec4 ub41 , ub42 ; 
+uniform float uf ; 
+uniform int ui ; 
+void  main (){
+vec4 v ; float f ; bool b ; bvec4 bv4 ; int i ; v = radians ( uv4 ) ; v += degrees ( v ) ; v += sin ( v ) ; v += cos ( v ) ; v += tan ( v ) ; v += asin ( v ) ; v += acos ( v ) ; v += atan ( v ) ; v += sinh ( v ) ; v += cosh ( v ) ; v += tanh ( v ) ; v += pow ( v , v ) ; v += exp ( v ) ; v += log ( v ) ; v += exp2 ( v ) ; v += log2 ( v ) ; v += sqrt ( v ) ; v += inversesqrt ( v ) ; v += abs ( v ) ; v += sign ( v ) ; v += floor ( v ) ; v += ceil ( v ) ; v += fract ( v ) ; v += mod ( v , v ) ; v += min ( v , uv4 ) ; v += max ( v , uv4 ) ; v += clamp ( v , uv4 , uv4 ) ; v += mix ( v , v , v ) ; v += mix ( v , v , ub ) ; v += step ( v , v ) ; v += smoothstep ( v , v , v ) ; v += normalize ( v ) ; v += faceforward ( v , v , v ) ; v += reflect ( v , v ) ; v += refract ( v , v , uf ) ; v += dFdx ( v ) ; v += dFdy ( v ) ; v += fwidth ( v ) ; i = 0 ; i += abs ( ui ) ; i += min ( i , ui ) ; i += max ( i , ui ) ; i += clamp ( i , ui , ui ) ; b = any ( lessThan ( v , v ) ) ; b = b && any ( lessThanEqual ( v , v ) ) ; b = b && any ( greaterThan ( v , v ) ) ; b = b && any ( greaterThanEqual ( v , v ) ) ; b = b && any ( equal ( ub41 , ub42 ) ) ; b = b && any ( notEqual ( ub41 , ub42 ) ) ; b = b && any ( ub41 ) ; b = b && all ( ub41 ) ; b = b && any ( not ( ub41 ) ) ; i = i + ui * i - ui / i ; i = i % ui ; if ( i == ui || i != ui && i == ui ^^ i != 2 ) ++ i ; f = uf + uf * uf - uf / uf ; f += length ( v ) ; f += distance ( v , v ) ; f += dot ( v , v ) ; f += cross ( v . xyz , v . xyz ) . x ; if ( f == uf || f != uf && f != 2.000000 ) ++ f ; gl_FragColor = b ? vec4 ( i ) + vec4 ( f ) + v : vec4 ( i ) + vec4 ( f ) + v ; }
+
+
+
+Info log for linking:
+error: unresolved reference to function `abs'
+
+(
+(declare (uniform ) int ui)
+(declare (uniform ) float uf)
+(declare (uniform ) bvec4 ub42)
+(declare (uniform ) bvec4 ub41)
+(declare (uniform ) bool ub)
+(declare (uniform ) vec4 uv4)
+(declare (uniform ) ivec4 uiv4)
+(declare (in ) vec4 gl_FragCoord)
+(declare (in ) bool gl_FrontFacing)
+(declare (out ) vec4 gl_FragColor)
+(declare (out ) float gl_FragDepth)
+(declare (in ) vec4 gl_Color)
+(declare (in ) vec4 gl_SecondaryColor)
+(declare (in ) float gl_FogFragCoord)
+(declare (uniform ) mat4 gl_ModelViewMatrix)
+(declare (uniform ) mat4 gl_ProjectionMatrix)
+(declare (uniform ) mat4 gl_ModelViewProjectionMatrix)
+(declare (uniform ) mat3 gl_NormalMatrix)
+(declare (uniform ) mat4 gl_ModelViewMatrixInverse)
+(declare (uniform ) mat4 gl_ProjectionMatrixInverse)
+(declare (uniform ) mat4 gl_ModelViewProjectionMatrixInverse)
+(declare (uniform ) mat4 gl_ModelViewMatrixTranspose)
+(declare (uniform ) mat4 gl_ProjectionMatrixTranspose)
+(declare (uniform ) mat4 gl_ModelViewProjectionMatrixTranspose)
+(declare (uniform ) mat4 gl_ModelViewMatrixInverseTranspose)
+(declare (uniform ) mat4 gl_ProjectionMatrixInverseTranspose)
+(declare (uniform ) mat4 gl_ModelViewProjectionMatrixInverseTranspose)
+(declare (uniform ) float gl_NormalScale)
+(declare (uniform ) gl_LightModelParameters gl_LightModel)
+(declare () int gl_MaxLights)
+(declare () int gl_MaxClipPlanes)
+(declare () int gl_MaxTextureUnits)
+(declare () int gl_MaxTextureCoords)
+(declare () int gl_MaxVertexAttribs)
+(declare () int gl_MaxVertexUniformComponents)
+(declare () int gl_MaxVaryingFloats)
+(declare () int gl_MaxVertexTextureImageUnits)
+(declare () int gl_MaxCombinedTextureImageUnits)
+(declare () int gl_MaxTextureImageUnits)
+(declare () int gl_MaxFragmentUniformComponents)
+(declare (uniform ) (array mat4 4) gl_TextureMatrix)
+(declare (uniform ) (array mat4 4) gl_TextureMatrixInverse)
+(declare (uniform ) (array mat4 4) gl_TextureMatrixTranspose)
+(declare (uniform ) (array mat4 4) gl_TextureMatrixInverseTranspose)
+(declare (uniform ) gl_DepthRangeParameters gl_DepthRange)
+(declare (uniform ) (array vec4 8) gl_ClipPlane)
+(declare (uniform ) gl_PointParameters gl_Point)
+(declare (uniform ) gl_MaterialParameters gl_FrontMaterial)
+(declare (uniform ) gl_MaterialParameters gl_BackMaterial)
+(declare (uniform ) (array gl_LightSourceParameters 8) gl_LightSource)
+(declare (uniform ) gl_LightModelProducts gl_FrontLightModelProduct)
+(declare (uniform ) gl_LightModelProducts gl_BackLightModelProduct)
+(declare (uniform ) (array gl_LightProducts 8) gl_FrontLightProduct)
+(declare (uniform ) (array gl_LightProducts 8) gl_BackLightProduct)
+(declare (uniform ) (array vec4 2) gl_TextureEnvColor)
+(declare (uniform ) (array vec4 4) gl_EyePlaneS)
+(declare (uniform ) (array vec4 4) gl_EyePlaneT)
+(declare (uniform ) (array vec4 4) gl_EyePlaneR)
+(declare (uniform ) (array vec4 4) gl_EyePlaneQ)
+(declare (uniform ) (array vec4 4) gl_ObjectPlaneS)
+(declare (uniform ) (array vec4 4) gl_ObjectPlaneT)
+(declare (uniform ) (array vec4 4) gl_ObjectPlaneR)
+(declare (uniform ) (array vec4 4) gl_ObjectPlaneQ)
+(declare (uniform ) gl_FogParameters gl_Fog)
+(declare (in ) (array vec4 0) gl_TexCoord)
+(declare () int gl_MaxDrawBuffers)
+(declare (out ) (array vec4 2) gl_FragData)
+(declare (in ) vec2 gl_PointCoord)
+(declare (in ) (array float 8) gl_ClipDistance)
+(function main
+  (signature void
+    (parameters
+    )
+    (
+      (declare () int i)
+      (declare () bool b)
+      (declare () float f)
+      (declare () vec4 v)
+      (declare (temporary ) vec4 radians_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref radians_retval)  (call radians ((var_ref uv4) ))
+) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref radians_retval) ) 
+      (declare (temporary ) vec4 degrees_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref degrees_retval)  (call degrees ((var_ref radians_retval) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref degrees_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 sin_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref sin_retval)  (call sin ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref sin_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 cos_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref cos_retval)  (call cos ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref cos_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 tan_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref tan_retval)  (call tan ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref tan_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 asin_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref asin_retval)  (call asin ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref asin_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 acos_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref acos_retval)  (call acos ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref acos_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 atan_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref atan_retval)  (call atan ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref atan_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 sinh_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref sinh_retval)  (call sinh ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref sinh_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 cosh_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref cosh_retval)  (call cosh ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref cosh_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 tanh_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref tanh_retval)  (call tanh ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref tanh_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 pow_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref pow_retval)  (call pow ((var_ref assignment_tmp) (var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref pow_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 exp_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref exp_retval)  (call exp ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref exp_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 log_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref log_retval)  (call log ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref log_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 exp2_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref exp2_retval)  (call exp2 ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref exp2_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 log2_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref log2_retval)  (call log2 ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref log2_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 sqrt_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref sqrt_retval)  (call sqrt ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref sqrt_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 inversesqrt_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref inversesqrt_retval)  (call inversesqrt ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref inversesqrt_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 abs_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref abs_retval)  (call abs ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref abs_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 sign_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref sign_retval)  (call sign ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref sign_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 floor_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref floor_retval)  (call floor ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref floor_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 ceil_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref ceil_retval)  (call ceil ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref ceil_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 fract_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref fract_retval)  (call fract ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref fract_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 mod_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref mod_retval)  (call mod ((var_ref assignment_tmp) (var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref mod_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 min_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref min_retval)  (call min ((var_ref assignment_tmp) (var_ref uv4) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref min_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 max_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref max_retval)  (call max ((var_ref assignment_tmp) (var_ref uv4) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref max_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 clamp_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref clamp_retval)  (call clamp ((var_ref assignment_tmp) (var_ref uv4) (var_ref uv4) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref clamp_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 mix_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref mix_retval)  (call mix ((var_ref assignment_tmp) (var_ref assignment_tmp) (var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref mix_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 mix_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref mix_retval)  (call mix ((var_ref assignment_tmp) (var_ref assignment_tmp) (expression float b2f (var_ref ub) ) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref mix_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 step_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref step_retval)  (call step ((var_ref assignment_tmp) (var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref step_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 smoothstep_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref smoothstep_retval)  (call smoothstep ((var_ref assignment_tmp) (var_ref assignment_tmp) (var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref smoothstep_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 normalize_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref normalize_retval)  (call normalize ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref normalize_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 faceforward_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref faceforward_retval)  (call faceforward ((var_ref assignment_tmp) (var_ref assignment_tmp) (var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref faceforward_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 reflect_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref reflect_retval)  (call reflect ((var_ref assignment_tmp) (var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref reflect_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 refract_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref refract_retval)  (call refract ((var_ref assignment_tmp) (var_ref assignment_tmp) (var_ref uf) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref refract_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 dFdx_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref dFdx_retval)  (call dFdx ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref dFdx_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 dFdy_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref dFdy_retval)  (call dFdy ((var_ref assignment_tmp) ))
+) 
+      (declare (temporary ) vec4 assignment_tmp)
+      (assign (constant bool (1)) (xyzw) (var_ref assignment_tmp)  (expression vec4 + (var_ref v) (var_ref dFdy_retval) ) ) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) vec4 fwidth_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref fwidth_retval)  (call fwidth ((var_ref assignment_tmp) ))
+) 
+      (assign (constant bool (1)) (xyzw) (var_ref v)  (expression vec4 + (var_ref v) (var_ref fwidth_retval) ) ) 
+      (assign (constant bool (1)) (x) (var_ref i)  (constant int (0)) ) 
+      (declare (temporary ) int abs_retval)
+      (assign (constant bool (1)) (x) (var_ref abs_retval)  (call abs ((var_ref ui) ))
+) 
+      (declare (temporary ) int assignment_tmp)
+      (assign (constant bool (1)) (x) (var_ref assignment_tmp)  (expression int + (var_ref i) (var_ref abs_retval) ) ) 
+      (assign (constant bool (1)) (x) (var_ref i)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) int min_retval)
+      (assign (constant bool (1)) (x) (var_ref min_retval)  (call min ((var_ref assignment_tmp) (var_ref ui) ))
+) 
+      (declare (temporary ) int assignment_tmp)
+      (assign (constant bool (1)) (x) (var_ref assignment_tmp)  (expression int + (var_ref i) (var_ref min_retval) ) ) 
+      (assign (constant bool (1)) (x) (var_ref i)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) int max_retval)
+      (assign (constant bool (1)) (x) (var_ref max_retval)  (call max ((var_ref assignment_tmp) (var_ref ui) ))
+) 
+      (declare (temporary ) int assignment_tmp)
+      (assign (constant bool (1)) (x) (var_ref assignment_tmp)  (expression int + (var_ref i) (var_ref max_retval) ) ) 
+      (assign (constant bool (1)) (x) (var_ref i)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) int clamp_retval)
+      (assign (constant bool (1)) (x) (var_ref clamp_retval)  (call clamp ((var_ref assignment_tmp) (var_ref ui) (var_ref ui) ))
+) 
+      (assign (constant bool (1)) (x) (var_ref i)  (expression int + (var_ref i) (var_ref clamp_retval) ) ) 
+      (declare (temporary ) bvec4 lessThan_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref lessThan_retval)  (call lessThan ((var_ref v) (var_ref v) ))
+) 
+      (declare (temporary ) bool any_retval)
+      (assign (constant bool (1)) (x) (var_ref any_retval)  (call any ((var_ref lessThan_retval) ))
+) 
+      (assign (constant bool (1)) (x) (var_ref b)  (var_ref any_retval) ) 
+      (declare (temporary ) bool and_tmp)
+      (if (var_ref any_retval) (
+        (declare (temporary ) bvec4 lessThanEqual_retval)
+        (assign (constant bool (1)) (xyzw) (var_ref lessThanEqual_retval)  (call lessThanEqual ((var_ref v) (var_ref v) ))
+) 
+        (declare (temporary ) bool any_retval)
+        (assign (constant bool (1)) (x) (var_ref any_retval)  (call any ((var_ref lessThanEqual_retval) ))
+) 
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (var_ref any_retval) ) 
+      )
+      (
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (constant bool (0)) ) 
+      ))
+
+      (assign (constant bool (1)) (x) (var_ref b)  (var_ref and_tmp) ) 
+      (declare (temporary ) bool and_tmp)
+      (if (var_ref and_tmp) (
+        (declare (temporary ) bvec4 greaterThan_retval)
+        (assign (constant bool (1)) (xyzw) (var_ref greaterThan_retval)  (call greaterThan ((var_ref v) (var_ref v) ))
+) 
+        (declare (temporary ) bool any_retval)
+        (assign (constant bool (1)) (x) (var_ref any_retval)  (call any ((var_ref greaterThan_retval) ))
+) 
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (var_ref any_retval) ) 
+      )
+      (
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (constant bool (0)) ) 
+      ))
+
+      (assign (constant bool (1)) (x) (var_ref b)  (var_ref and_tmp) ) 
+      (declare (temporary ) bool and_tmp)
+      (if (var_ref and_tmp) (
+        (declare (temporary ) bvec4 greaterThanEqual_retval)
+        (assign (constant bool (1)) (xyzw) (var_ref greaterThanEqual_retval)  (call greaterThanEqual ((var_ref v) (var_ref v) ))
+) 
+        (declare (temporary ) bool any_retval)
+        (assign (constant bool (1)) (x) (var_ref any_retval)  (call any ((var_ref greaterThanEqual_retval) ))
+) 
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (var_ref any_retval) ) 
+      )
+      (
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (constant bool (0)) ) 
+      ))
+
+      (assign (constant bool (1)) (x) (var_ref b)  (var_ref and_tmp) ) 
+      (declare (temporary ) bool and_tmp)
+      (if (var_ref and_tmp) (
+        (declare (temporary ) bvec4 equal_retval)
+        (assign (constant bool (1)) (xyzw) (var_ref equal_retval)  (call equal ((var_ref ub41) (var_ref ub42) ))
+) 
+        (declare (temporary ) bool any_retval)
+        (assign (constant bool (1)) (x) (var_ref any_retval)  (call any ((var_ref equal_retval) ))
+) 
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (var_ref any_retval) ) 
+      )
+      (
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (constant bool (0)) ) 
+      ))
+
+      (assign (constant bool (1)) (x) (var_ref b)  (var_ref and_tmp) ) 
+      (declare (temporary ) bool and_tmp)
+      (if (var_ref and_tmp) (
+        (declare (temporary ) bvec4 notEqual_retval)
+        (assign (constant bool (1)) (xyzw) (var_ref notEqual_retval)  (call notEqual ((var_ref ub41) (var_ref ub42) ))
+) 
+        (declare (temporary ) bool any_retval)
+        (assign (constant bool (1)) (x) (var_ref any_retval)  (call any ((var_ref notEqual_retval) ))
+) 
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (var_ref any_retval) ) 
+      )
+      (
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (constant bool (0)) ) 
+      ))
+
+      (assign (constant bool (1)) (x) (var_ref b)  (var_ref and_tmp) ) 
+      (declare (temporary ) bool and_tmp)
+      (if (var_ref and_tmp) (
+        (declare (temporary ) bool any_retval)
+        (assign (constant bool (1)) (x) (var_ref any_retval)  (call any ((var_ref ub41) ))
+) 
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (var_ref any_retval) ) 
+      )
+      (
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (constant bool (0)) ) 
+      ))
+
+      (assign (constant bool (1)) (x) (var_ref b)  (var_ref and_tmp) ) 
+      (declare (temporary ) bool and_tmp)
+      (if (var_ref and_tmp) (
+        (declare (temporary ) bool all_retval)
+        (assign (constant bool (1)) (x) (var_ref all_retval)  (call all ((var_ref ub41) ))
+) 
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (var_ref all_retval) ) 
+      )
+      (
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (constant bool (0)) ) 
+      ))
+
+      (assign (constant bool (1)) (x) (var_ref b)  (var_ref and_tmp) ) 
+      (declare (temporary ) bool and_tmp)
+      (if (var_ref and_tmp) (
+        (declare (temporary ) bvec4 not_retval)
+        (assign (constant bool (1)) (xyzw) (var_ref not_retval)  (call not ((var_ref ub41) ))
+) 
+        (declare (temporary ) bool any_retval)
+        (assign (constant bool (1)) (x) (var_ref any_retval)  (call any ((var_ref not_retval) ))
+) 
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (var_ref any_retval) ) 
+      )
+      (
+        (assign (constant bool (1)) (x) (var_ref and_tmp)  (constant bool (0)) ) 
+      ))
+
+      (assign (constant bool (1)) (x) (var_ref b)  (var_ref and_tmp) ) 
+      (declare (temporary ) int assignment_tmp)
+      (assign (constant bool (1)) (x) (var_ref assignment_tmp)  (expression int % (expression int / (expression int - (expression int * (expression int + (var_ref i) (var_ref ui) ) (var_ref i) ) (var_ref ui) ) (var_ref i) ) (var_ref ui) ) ) 
+      (assign (constant bool (1)) (x) (var_ref i)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) bool or_tmp)
+      (if (expression bool all_equal (var_ref assignment_tmp) (var_ref ui) ) (
+        (assign (constant bool (1)) (x) (var_ref or_tmp)  (constant bool (1)) ) 
+      )
+      (
+        (declare (temporary ) bool and_tmp)
+        (if (expression bool any_nequal (var_ref assignment_tmp) (var_ref ui) ) (
+          (assign (constant bool (1)) (x) (var_ref and_tmp)  (expression bool all_equal (var_ref assignment_tmp) (var_ref ui) ) ) 
+        )
+        (
+          (assign (constant bool (1)) (x) (var_ref and_tmp)  (constant bool (0)) ) 
+        ))
+
+        (assign (constant bool (1)) (x) (var_ref or_tmp)  (expression bool ^^ (var_ref and_tmp) (expression bool any_nequal (var_ref assignment_tmp) (constant int (2)) ) ) ) 
+      ))
+
+      (if (var_ref or_tmp) (
+        (assign (constant bool (1)) (x) (var_ref i)  (expression int + (var_ref assignment_tmp) (constant int (1)) ) ) 
+      )
+      ())
+
+      (assign (constant bool (1)) (x) (var_ref f)  (expression float / (expression float - (expression float * (expression float + (var_ref uf) (var_ref uf) ) (var_ref uf) ) (var_ref uf) ) (var_ref uf) ) ) 
+      (declare (temporary ) float length_retval)
+      (assign (constant bool (1)) (x) (var_ref length_retval)  (call length ((var_ref v) ))
+) 
+      (assign (constant bool (1)) (x) (var_ref f)  (expression float + (var_ref f) (var_ref length_retval) ) ) 
+      (declare (temporary ) float distance_retval)
+      (assign (constant bool (1)) (x) (var_ref distance_retval)  (call distance ((var_ref v) (var_ref v) ))
+) 
+      (assign (constant bool (1)) (x) (var_ref f)  (expression float + (var_ref f) (var_ref distance_retval) ) ) 
+      (declare (temporary ) float dot_retval)
+      (assign (constant bool (1)) (x) (var_ref dot_retval)  (call dot ((var_ref v) (var_ref v) ))
+) 
+      (assign (constant bool (1)) (x) (var_ref f)  (expression float + (var_ref f) (var_ref dot_retval) ) ) 
+      (declare (temporary ) vec3 cross_retval)
+      (assign (constant bool (1)) (xyz) (var_ref cross_retval)  (call cross ((swiz xyz (var_ref v) )(swiz xyz (var_ref v) )))
+) 
+      (declare (temporary ) float assignment_tmp)
+      (assign (constant bool (1)) (x) (var_ref assignment_tmp)  (expression float + (var_ref f) (swiz x (var_ref cross_retval) )) ) 
+      (assign (constant bool (1)) (x) (var_ref f)  (var_ref assignment_tmp) ) 
+      (declare (temporary ) bool or_tmp)
+      (if (expression bool all_equal (var_ref assignment_tmp) (var_ref uf) ) (
+        (assign (constant bool (1)) (x) (var_ref or_tmp)  (constant bool (1)) ) 
+      )
+      (
+        (declare (temporary ) bool and_tmp)
+        (if (expression bool any_nequal (var_ref assignment_tmp) (var_ref uf) ) (
+          (assign (constant bool (1)) (x) (var_ref and_tmp)  (expression bool any_nequal (var_ref assignment_tmp) (constant float (2.000000)) ) ) 
+        )
+        (
+          (assign (constant bool (1)) (x) (var_ref and_tmp)  (constant bool (0)) ) 
+        ))
+
+        (assign (constant bool (1)) (x) (var_ref or_tmp)  (var_ref and_tmp) ) 
+      ))
+
+      (if (var_ref or_tmp) (
+        (assign (constant bool (1)) (x) (var_ref f)  (expression float + (var_ref assignment_tmp) (constant float (1.000000)) ) ) 
+      )
+      ())
+
+      (declare (temporary ) vec4 conditional_tmp)
+      (if (var_ref b) (
+        (assign (constant bool (1)) (xyzw) (var_ref conditional_tmp)  (expression vec4 + (expression vec4 + (swiz xxxx (expression float i2f (var_ref i) ) )(swiz xxxx (var_ref f) )) (var_ref v) ) ) 
+      )
+      (
+        (assign (constant bool (1)) (xyzw) (var_ref conditional_tmp)  (var_ref v) ) 
+      ))
+
+      (assign (constant bool (1)) (xyzw) (var_ref gl_FragColor)  (var_ref conditional_tmp) ) 
+    ))
+
+)
+
+
+)

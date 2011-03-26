@@ -191,7 +191,7 @@ public:
         shader << ";";
     }
 
-    void addIf(const llvm::Value* cond)
+    void addIf(const llvm::Value* cond, bool invert=false)
     {
         newLine();
         shader << "if (";
@@ -210,6 +210,29 @@ public:
     void addEndif()
     {
         leaveScope();
+    }
+
+    void addLoop(llvm::BasicBlock* headerBB)
+    {
+        // llvm::TerminatorInst* term = headerBB->getTerminator();
+        // llvm::BranchInst* branch = llvm::dyn_cast<llvm::BranchInst>(term);
+        // assert(branch && "addLoop called on non-loop header (non-branch)");
+
+        newLine();
+
+        shader << "while (true) ";
+        newScope();
+    }
+
+    void addLoopEnd()
+    {
+        leaveScope();
+    }
+
+    void addBreak()
+    {
+        newLine();
+        shader << "break;";
     }
 
     void print();
@@ -946,15 +969,17 @@ void gla::GlslTarget::add(const llvm::Instruction* llvmInstruction, bool lastBlo
 
     case llvm::Instruction::Ret:
         newLine();
-        if (! lastBlock) {
-            UnsupportedFunctionality("early return", EATContinue);
-            shader << "return;";
-        }
+        // if (! lastBlock) {
+        //     UnsupportedFunctionality("early return", EATContinue);
+        //     shader << "return;";
+        // }
+
+        shader << "return";
         if (llvmInstruction->getNumOperands() > 0) {
-            shader << "return ";
+            shader << " ";
             mapGlaOperand(llvmInstruction->getOperand(0));
-            shader << ";";
-        }        
+        }
+        shader << ";";
         return;
 
     case llvm::Instruction::Call: // includes intrinsics...
@@ -1424,6 +1449,6 @@ void gla::GlslTarget::print()
 #else
     printf("\n// LunarGOO output\n");
 #endif
-    
+
     printf("%s%s", globalDeclarations.str().c_str(), shader.str().c_str());
 }

@@ -92,7 +92,7 @@ void gla::PrivateManager::runLLVMOptimizations1()
     if (Options.optimizations.gvn)         passManager.add(llvm::createGVNPass());
     if (Options.optimizations.coalesce)    passManager.add(llvm::createCoalesceInsertsPass());
     if (Options.optimizations.adce)        passManager.add(llvm::createAggressiveDCEPass());
-    //    passManager.add(llvm::createCFGSimplificationPass());
+    passManager.add(llvm::createCFGSimplificationPass());
     if (Options.optimizations.verify)      passManager.add(llvm::createVerifierPass());
     llvm::Module::iterator function, lastFunction;
 

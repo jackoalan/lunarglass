@@ -137,7 +137,7 @@ public:
     // Motivated by need to convert to structured flow control and
     // eliminate phi functions.
     //
-    void addIf(const llvm::Value* cond)
+    void addIf(const llvm::Value* cond, bool invert=false)
     {
         mesaInstruction->Opcode = OPCODE_IF;
         assert(_mesa_num_inst_src_regs(OPCODE_IF) == 1);
@@ -155,6 +155,21 @@ public:
     {
         mesaInstruction->Opcode = OPCODE_ENDIF;
         incrementMesaInstruction();
+    }
+
+    void addLoop(llvm::BasicBlock* targetBB)
+    {
+        gla::UnsupportedFunctionality("Loops");
+    }
+
+    void addLoopEnd()
+    {
+        gla::UnsupportedFunctionality("Loops");
+    }
+
+    void addBreak()
+    {
+        gla::UnsupportedFunctionality("break");
     }
 
     void addPhiCopy(const llvm::Value* dst, const llvm::Value* src)
@@ -261,7 +276,7 @@ protected:
         case 2:   return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Y, SWIZZLE_Y);
         case 3:   return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Z, SWIZZLE_Z);
         case 4:   return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Z, SWIZZLE_W);
-        default:  
+        default:
             UnsupportedFunctionality("Vector with more than 4 components in Bottom IR: ", numComponents);
         }
 

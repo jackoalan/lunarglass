@@ -150,9 +150,18 @@ llvm::Value* GlslToTopVisitor::createLLVMConstant(ir_constant* constant)
 ir_visitor_status
     GlslToTopVisitor::visit(ir_loop_jump *ir)
 {
-    gla::UnsupportedFunctionality("Loops (loop jump found)");
+    builder.CreateBr(exitStack.top());
 
-    return visit_continue;
+    // Create a block for the parent to continue inserting stuff into (e.g. this
+    // break is inside an if-then-else)
+    llvm::Function *function = builder.GetInsertBlock()->getParent();
+    llvm::BasicBlock* postBranch = llvm::BasicBlock::Create(context, "post-break", function);
+    builder.SetInsertPoint(postBranch);
+
+    lastValue = 0;
+
+    // Continue on with the parent (any further statements discarded)
+    return visit_continue_with_parent;
 }
 
 int GlslToTopVisitor::getNextInterpIndex(ir_variable* var)
@@ -256,9 +265,44 @@ ir_visitor_status
 ir_visitor_status
     GlslToTopVisitor::visit_enter(ir_loop *ir)
 {
-    gla::UnsupportedFunctionality("Loops");
+    llvm::Function* function = builder.GetInsertBlock()->getParent();
 
-    return visit_continue;
+    llvm::BasicBlock* headerBB = llvm::BasicBlock::Create(context, "loop-header", function);
+    llvm::BasicBlock *mergeBB = llvm::BasicBlock::Create(context, "loop-merge");
+
+    // Push the merge block onto the exit stack, so that breaks inside the loop
+    // know where to go
+    exitStack.push(mergeBB);
+
+    // It seems like the AST we get from GLSL does not have anything in the loop
+    // filled in except it's body. Assert on these assumptions
+    assert(!ir->from && "Loop has from field set");
+    assert(!ir->to && "Loop has from field set");
+    assert(!ir->increment && "Loop has from field set");
+
+    // Branch into the loop
+    builder.CreateBr(headerBB);
+
+    // Set ourselves inside the loop
+    builder.SetInsertPoint(headerBB);
+
+    visit_list_elements(this, &ir->body_instructions);
+
+    // Branch back through the loop
+    builder.CreateBr(headerBB);
+
+    // Now, create a new block for the rest of the post-loop program
+    function->getBasicBlockList().push_back(mergeBB);
+    builder.SetInsertPoint(mergeBB);
+
+    // Remove ourselves from the exit stack
+    exitStack.pop();
+
+    // lastValue may not be up-to-date, and we shouldn't be referenced
+    // anyways
+    lastValue = 0;
+
+    return visit_continue_with_parent;
 }
 
 ir_visitor_status
@@ -360,9 +404,9 @@ ir_visitor_status
 ir_visitor_status
     GlslToTopVisitor::visit_leave(ir_function *f)
 {
-    // Nothing to do here.  
+    // Nothing to do here.
     // See comment in visit_enter(ir_function *f)
-    
+
     return visit_continue;
 }
 
@@ -543,7 +587,7 @@ ir_visitor_status
 
         // Track the return value for to be consumed by next instruction
         lastValue = callInst;
- 
+
     } else {
 
         llvm::Value* returnValue = 0;
@@ -893,7 +937,7 @@ ir_visitor_status
     if (inMain) {
         writePipelineOuts();
     }
-    
+
     // Return the expression result, which is tracked in lastValue
     if (ir->get_value()) {
         builder.CreateRet(lastValue);

@@ -63,23 +63,25 @@ define fastcc void @foo() {
 foo:
   %0 = load float* undef
   %1 = fadd float %0, 1.000000e+00
-  store float %1, float* undef
-  ret void
+  call void @llvm.trap()
+  unreachable
 }
 
 define fastcc void @foo2() {
 foo2:
   %0 = load float* undef
   %1 = fadd float %0, 1.000000e+00
-  store float %1, float* undef
-  ret void
+  call void @llvm.trap()
+  unreachable
 }
 
 declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
 
 declare <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float>, i32, float, i32, float, i32, float, i32, float, i32) nounwind readnone
 
-***Unsupported functionality: Basic Type in Bottom IR
+declare void @llvm.trap() nounwind
+
+***Unsupported functionality: Intrinsic in Bottom IR
 compiling voidFunction.frag...
 uniform vec4 bigColor ; 
 varying vec4 BaseColor ; 

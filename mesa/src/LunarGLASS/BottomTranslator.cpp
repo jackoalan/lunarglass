@@ -53,6 +53,33 @@
 #include "Manager.h"
 
 namespace {
+    class BottomTranslator {
+    public:
+        BottomTranslator(gla::BackEndTranslator* t)
+            : backEndTranslator(t)
+            , loopInfo(NULL)
+        { }
+
+
+        ~BottomTranslator()
+        { }
+
+        // Translate from LLVM CFG style to structured style.
+        void addFlowControl(const llvm::Instruction*, bool);
+
+        void declarePhiCopies(const llvm::Function*);
+
+        void setLoopInfo(llvm::LoopInfo* li) { loopInfo = li; }
+
+        void addPhiCopies(const llvm::Instruction*);
+
+    protected:
+        gla::BackEndTranslator* backEndTranslator;
+        std::vector<const llvm::Value*> flowControl;
+
+        llvm::LoopInfo* loopInfo;
+    };
+
     // Code Generation Class
     class CodeGeneration : public llvm::ModulePass {
     public:
@@ -66,40 +93,37 @@ namespace {
         void getAnalysisUsage(llvm::AnalysisUsage&) const;
 
         void setBackEndTranslator(gla::BackEndTranslator* bet) { backEndTranslator = bet; }
-        void setBackEnd(gla::BackEnd* be)             { backEnd = be; }
+        void setBackEnd(gla::BackEnd* be)                      { backEnd = be; }
+        void setBottomTranslator(BottomTranslator* bt)         { translator = bt; }
 
-        void handleLoopBlock(const llvm::BasicBlock*, llvm::LoopInfo&, bool lastBlock);
+        // Given a loop block, handle it. Dispatches to other methods and ends
+        // up handling all blocks in the loop, updating loopBlockSet as it goes.
+        void handleLoopBlock(const llvm::BasicBlock*, bool lastBlock);
 
     private:
         gla::BackEndTranslator* backEndTranslator;
         gla::BackEnd* backEnd;
 
-    };
+        BottomTranslator* translator;
 
-    class BottomTranslator {
-    public:
-        BottomTranslator(gla::BackEndTranslator* t)
-            : backEndTranslator(t)
-            , loopInfo(NULL)
-        { }
-
-
-        ~BottomTranslator() { }
-
-        // Translate from LLVM CFG style to structured style.
-        void addFlowControl(const llvm::Instruction*, bool);
-
-        void declarePhiCopies(const llvm::Function*);
-
-        void setLoopInfo(llvm::LoopInfo* li) { loopInfo = li; }
-
-    protected:
-        void addPhiCopies(const llvm::Instruction*);
-
-        gla::BackEndTranslator* backEndTranslator;
-        std::vector<const llvm::Value*> flowControl;
+        // Set of blocks belonging to loops that we've already handled
+        llvm::SmallPtrSet<const llvm::BasicBlock*,8> loopBlockSet;
 
         llvm::LoopInfo* loopInfo;
+
+        // Have the back-end output the start of the loop, then output all of
+        // the loop's members.
+        void handleLoopHeader(const llvm::BasicBlock*, bool lastBlock);
+
+        // Send off all the non-terminating instructions in a basic block to the
+        // backend
+        void handleNonTerminatingInstructions(const llvm::BasicBlock*, bool lastBlock);
+
+        ~CodeGeneration()
+        {
+            delete translator;
+        }
+
     };
 } // end namespace
 
@@ -200,44 +224,9 @@ void BottomTranslator::addPhiCopies(const llvm::Instruction* llvmInstruction)
     }
 }
 
-void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb, llvm::LoopInfo& loopInfo, bool lastBlock)
-{
-    llvm::errs() << "\n\n";
-    llvm::errs() << *bb;
-
+void CodeGeneration::handleNonTerminatingInstructions(const llvm::BasicBlock* bb, bool lastBlock) {
     const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
     assert(branchInst && "handleLoopsBlock called with non-branch terminator");
-
-    llvm::Loop* loop = loopInfo.getLoopFor(bb);
-    assert(loop && "handleLoopsBlock called on non-loop");
-
-    // Is the block a loop header
-    bool isLoopHeader = loop->getHeader() == bb;
-
-    // Is the block a latch
-    bool isLoopLatch = loop->getLoopLatch() == bb;
-
-
-    // // See if any of the branch's targets are loop headers, and handle each one
-    // for (int i = 0; i < branchInst->getNumSuccessors(); ++i) {
-    //     llvm::BasicBlock* targetBB = branchInst->getSuccessor(0);
-
-
-    //     // If we're branching back into the same loop, emit a loopEnd. Else
-    //     // we're branching into a new loop, so create it. This logic will
-    //     // need to be revised when nested loop support is added.
-    //     if (loopInfo->getLoopFor(targetBB) == loopInfo->getLoopFor(branchBB)) {
-    //         backEndTranslator->addLoopEnd();
-    //         return;
-    //     } else {
-    //         backEndTranslator->addLoop(targetBB);
-    //         return;
-    //     }
-    // }
-
-    if (isLoopHeader)
-        backEndTranslator->addLoop(NULL);
-
 
     // Add the non-terminating instructions
     for (llvm::BasicBlock::const_iterator i = bb->begin(), e = bb->end(); i != e; ++i) {
@@ -249,13 +238,96 @@ void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb, llvm::LoopInfo&
 
         if (! (backEnd->getRemovePhiFunctions() && llvmInstruction->getOpcode() == llvm::Instruction::PHI))
             backEndTranslator->add(llvmInstruction, lastBlock);
+
+    }
+}
+
+void CodeGeneration::handleLoopHeader(const llvm::BasicBlock* bb, bool lastBlock)
+{
+    // Add the loop
+    backEndTranslator->addLoop(NULL);
+
+    llvm::Loop* loop = loopInfo->getLoopFor(bb);
+    assert(loop && "handleLoopHeader called on non-loop");
+
+    handleNonTerminatingInstructions(bb, lastBlock);
+
+    const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
+    assert(branchInst && "handleLoopsBlock called with non-branch terminator");
+
+    // If the header's also an exit, then test the condition and break on it
+    if (loop->isLoopExiting(bb)) {
+        llvm::Value* condition = branchInst->getCondition();
+        assert(condition && "conditional branch without condition");
+
+        // Find the successor that exits the loop
+        llvm::SmallVector<llvm::BasicBlock*, 8> exitBlocks;
+        loop->getExitBlocks(exitBlocks);
+        int succNum = -1;
+        for (int i = 0; i < branchInst->getNumSuccessors(); ++i) {
+            for (llvm::SmallVector<llvm::BasicBlock*,8>::iterator bbI = exitBlocks.begin(), bbE = exitBlocks.end(); bbI != bbE; ++bbI) {
+                if (*bbI == branchInst->getSuccessor(i)) {
+                    succNum = i;
+                    break;
+                }
+            }
+        }
+        assert(succNum != -1 && succNum <= 1);
+
+        // if it's the first guy, just pass the condition on, otherwise we have
+        // to invert it
+        if (succNum == 0) {
+            backEndTranslator->addIf(condition);
+            backEndTranslator->addBreak();
+            backEndTranslator->addEndif();
+        } else {
+            // invert it then do stuff
+            assert(!"not handled yet");
+        }
     }
 
-    // If the block's an unconditional branch into a loop header, end the loop and return
-    if (branchInst->isUnconditional() && loopInfo.isLoopHeader(branchInst->getSuccessor(0))) {
+    // For every block in this loop, handle it.
+    for (llvm::Loop::block_iterator i = loop->block_begin(), e = loop->block_end(); i != e; ++i) {
+        handleLoopBlock(*i, lastBlock);
+    }
+
+    // If the block's a latch, close it
+    if (loop->getLoopLatch() == bb) {
+        translator->addPhiCopies(branchInst);
         backEndTranslator->addLoopEnd();
+    }
+
+    return;
+}
+
+void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb, bool lastBlock)
+{
+    // llvm::errs() << "\n\n";
+    // llvm::errs() << *bb;
+
+    // If we've already handled it, move on, else handle it
+    if (loopBlockSet.count(bb))
+        return;
+    loopBlockSet.insert(bb);
+
+    llvm::Loop* loop = loopInfo->getLoopFor(bb);
+    assert(loop && "handleLoopBlock called on non-loop");
+
+    // We don't handle nested loops yet
+    if (loop->getLoopDepth() > 1) {
+        gla::UnsupportedFunctionality("Nested loops");
+    }
+
+    // If it's a loop header, handle it specially, else send out instructions
+    if (loop->getHeader() == bb) {
+        handleLoopHeader(bb, lastBlock);
         return;
     }
+
+    handleNonTerminatingInstructions(bb, lastBlock);
+
+    const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
+    assert(branchInst && "handleLoopsBlock called with non-branch terminator");
 
     // If the block's an exit, then test the condition and break on it
     if (loop->isLoopExiting(bb)) {
@@ -284,30 +356,21 @@ void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb, llvm::LoopInfo&
             backEndTranslator->addEndif();
         } else {
             // invert it then do stuff
+            assert(!"not handled yet");
         }
-
-        // If it's a self-loop, add a loopEnd
-        llvm::BasicBlock* targetBB = branchInst->getSuccessor(succNum ? 0 : 1); // Find something more robust
-        if (targetBB == bb) {
-            backEndTranslator->addLoopEnd();
-        }
-
-        return;
     }
 
-    // All headers should be exits
-    assert(!isLoopHeader && "non-exit loop header");
-
-    // I haven't yet seen a case where a block could be a latch and nothing else
-    assert(!isLoopLatch && "non-exit non-header non-unconditionally branching latch");
+    // If the block's a latch, close it
+    if (loop->getLoopLatch() == bb) {
+        translator->addPhiCopies(branchInst);
+        backEndTranslator->addLoopEnd();
+    }
 
     return;
 }
 
 bool CodeGeneration::runOnModule(llvm::Module& module)
 {
-    BottomTranslator translator(backEndTranslator);
-
     //
     // Query the back end about its flow control
     //
@@ -333,12 +396,12 @@ bool CodeGeneration::runOnModule(llvm::Module& module)
         } else {
 
             // Get/set the loop info
-            llvm::LoopInfo& loopInfo = getAnalysis<llvm::LoopInfo>(*function);
-            translator.setLoopInfo(&loopInfo);
+            loopInfo = &getAnalysis<llvm::LoopInfo>(*function);
+            translator->setLoopInfo(loopInfo);
 
             // debug stuff
-            llvm::errs() << "\n\nLoop info:\n";
-            loopInfo.print(llvm::errs());
+            // llvm::errs() << "\n\nLoop info:\n";
+            // loopInfo->print(llvm::errs());
 
             // handle function's with bodies
 
@@ -357,7 +420,7 @@ bool CodeGeneration::runOnModule(llvm::Module& module)
 
             // Phi declaration pass
             if (backEnd->getDeclarePhiCopies())
-                translator.declarePhiCopies(function);
+                translator->declarePhiCopies(function);
 
             // basic blocks
             for (llvm::Function::const_iterator bb = function->begin(), E = function->end(); bb != E; ++bb) {
@@ -365,9 +428,9 @@ bool CodeGeneration::runOnModule(llvm::Module& module)
 
                 // If the basicblock's exhibits loop-relevant control flow,
                 // handle it specially
-                llvm::Loop* loop = loopInfo.getLoopFor(bb);
-                if (loop && (loop->getHeader() ==  &*bb || loop->isLoopExiting(bb) || &*bb == loop->getLoopLatch())) {
-                    handleLoopBlock(bb, loopInfo, lastBlock);
+                llvm::Loop* loop = loopInfo->getLoopFor(bb);
+                if (loop && loop->contains(bb)) {
+                    handleLoopBlock(bb, lastBlock);
                     continue;
                 }
 
@@ -379,7 +442,7 @@ bool CodeGeneration::runOnModule(llvm::Module& module)
                     // if (const CmpInst *CI = dyn_cast<CmpInst>(&llvmInstruction))
 
                     if (llvmInstruction->getOpcode() == llvm::Instruction::Br && flowControlMode == gla::EFcmStructuredOpCodes)
-                        translator.addFlowControl(llvmInstruction, backEnd->getRemovePhiFunctions());
+                        translator->addFlowControl(llvmInstruction, backEnd->getRemovePhiFunctions());
                     else {
                         if (! (backEnd->getRemovePhiFunctions() && llvmInstruction->getOpcode() == llvm::Instruction::PHI))
                             backEndTranslator->add(llvmInstruction, lastBlock);
@@ -419,6 +482,7 @@ namespace gla {
         CodeGeneration* cgp = new CodeGeneration();
         cgp->setBackEndTranslator(bet);
         cgp->setBackEnd(be);
+        cgp->setBottomTranslator(new BottomTranslator(bet));
         return cgp;
     }
 } // end gla namespace

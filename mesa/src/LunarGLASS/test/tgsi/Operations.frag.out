@@ -1106,143 +1106,75 @@ entry:
   %45 = add i32 %clamp48, %44
   %46 = fcmp olt <4 x float> %41, %41
   %any = call i1 @llvm.gla.any.v4i1(<4 x i1> %46)
-  br i1 %any, label %then, label %else
+  br i1 %any, label %then, label %ifmerge90
 
 then:                                             ; preds = %entry
   %47 = fcmp ole <4 x float> %41, %41
   %any50 = call i1 @llvm.gla.any.v4i1(<4 x i1> %47)
-  br label %ifmerge
+  br i1 %any50, label %then51, label %ifmerge90
 
-else:                                             ; preds = %entry
-  br label %ifmerge
-
-ifmerge:                                          ; preds = %else, %then
-  %and_tmp.0 = phi i1 [ %any50, %then ], [ false, %else ]
-  br i1 %and_tmp.0, label %then51, label %else55
-
-then51:                                           ; preds = %ifmerge
+then51:                                           ; preds = %then
   %48 = fcmp ogt <4 x float> %41, %41
   %any53 = call i1 @llvm.gla.any.v4i1(<4 x i1> %48)
-  br label %ifmerge56
+  br i1 %any53, label %then57, label %ifmerge90
 
-else55:                                           ; preds = %ifmerge
-  br label %ifmerge56
-
-ifmerge56:                                        ; preds = %else55, %then51
-  %and_tmp54.0 = phi i1 [ %any53, %then51 ], [ false, %else55 ]
-  br i1 %and_tmp54.0, label %then57, label %else61
-
-then57:                                           ; preds = %ifmerge56
+then57:                                           ; preds = %then51
   %49 = fcmp oge <4 x float> %41, %41
   %any59 = call i1 @llvm.gla.any.v4i1(<4 x i1> %49)
-  br label %ifmerge62
+  br i1 %any59, label %then63, label %ifmerge90
 
-else61:                                           ; preds = %ifmerge56
-  br label %ifmerge62
-
-ifmerge62:                                        ; preds = %else61, %then57
-  %and_tmp60.0 = phi i1 [ %any59, %then57 ], [ false, %else61 ]
-  br i1 %and_tmp60.0, label %then63, label %else67
-
-then63:                                           ; preds = %ifmerge62
+then63:                                           ; preds = %then57
   %50 = load <4 x i1> addrspace(1)* @ub41
   %51 = load <4 x i1> addrspace(1)* @ub42
   %52 = icmp eq <4 x i1> %50, %51
   %any65 = call i1 @llvm.gla.any.v4i1(<4 x i1> %52)
-  br label %ifmerge68
+  br i1 %any65, label %then69, label %ifmerge90
 
-else67:                                           ; preds = %ifmerge62
-  br label %ifmerge68
-
-ifmerge68:                                        ; preds = %else67, %then63
-  %and_tmp66.0 = phi i1 [ %any65, %then63 ], [ false, %else67 ]
-  br i1 %and_tmp66.0, label %then69, label %else73
-
-then69:                                           ; preds = %ifmerge68
+then69:                                           ; preds = %then63
   %53 = load <4 x i1> addrspace(1)* @ub41
   %54 = load <4 x i1> addrspace(1)* @ub42
   %55 = icmp ne <4 x i1> %53, %54
   %any71 = call i1 @llvm.gla.any.v4i1(<4 x i1> %55)
-  br label %ifmerge74
+  br i1 %any71, label %then75, label %ifmerge90
 
-else73:                                           ; preds = %ifmerge68
-  br label %ifmerge74
-
-ifmerge74:                                        ; preds = %else73, %then69
-  %and_tmp72.0 = phi i1 [ %any71, %then69 ], [ false, %else73 ]
-  br i1 %and_tmp72.0, label %then75, label %else79
-
-then75:                                           ; preds = %ifmerge74
+then75:                                           ; preds = %then69
   %56 = load <4 x i1> addrspace(1)* @ub41
   %any77 = call i1 @llvm.gla.any.v4i1(<4 x i1> %56)
-  br label %ifmerge80
+  br i1 %any77, label %then81, label %ifmerge90
 
-else79:                                           ; preds = %ifmerge74
-  br label %ifmerge80
-
-ifmerge80:                                        ; preds = %else79, %then75
-  %and_tmp78.0 = phi i1 [ %any77, %then75 ], [ false, %else79 ]
-  br i1 %and_tmp78.0, label %then81, label %else83
-
-then81:                                           ; preds = %ifmerge80
+then81:                                           ; preds = %then75
   %57 = load <4 x i1> addrspace(1)* @ub41
   %all = call i1 @llvm.gla.all.v4i1(<4 x i1> %57)
-  br label %ifmerge84
+  br i1 %all, label %then85, label %ifmerge90
 
-else83:                                           ; preds = %ifmerge80
-  br label %ifmerge84
-
-ifmerge84:                                        ; preds = %else83, %then81
-  %and_tmp82.0 = phi i1 [ %all, %then81 ], [ false, %else83 ]
-  br i1 %and_tmp82.0, label %then85, label %else89
-
-then85:                                           ; preds = %ifmerge84
+then85:                                           ; preds = %then81
   %58 = load <4 x i1> addrspace(1)* @ub41
   %59 = xor <4 x i1> %58, <i1 true, i1 true, i1 true, i1 true>
   %any87 = call i1 @llvm.gla.any.v4i1(<4 x i1> %59)
   br label %ifmerge90
 
-else89:                                           ; preds = %ifmerge84
-  br label %ifmerge90
-
-ifmerge90:                                        ; preds = %else89, %then85
-  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %else89 ]
+ifmerge90:                                        ; preds = %then81, %then69, %then57, %then, %entry, %then51, %then63, %then75, %then85
+  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %then75 ], [ false, %then63 ], [ false, %then51 ], [ false, %entry ], [ false, %then ], [ false, %then57 ], [ false, %then69 ], [ false, %then81 ]
   %60 = add i32 %42, %45
   %61 = mul i32 %60, %45
   %62 = sub i32 %61, %42
   %63 = sdiv i32 %62, %45
   %64 = srem i32 %63, %42
   %65 = icmp eq i32 %64, %42
-  br i1 %65, label %then92, label %else93
-
-then92:                                           ; preds = %ifmerge90
-  br label %ifmerge98
+  br i1 %65, label %then99, label %else93
 
 else93:                                           ; preds = %ifmerge90
   %66 = icmp ne i32 %64, %42
-  br i1 %66, label %then94, label %else96
-
-then94:                                           ; preds = %else93
-  br label %ifmerge97
-
-else96:                                           ; preds = %else93
-  br label %ifmerge97
-
-ifmerge97:                                        ; preds = %else96, %then94
   %67 = icmp ne i32 %64, 2
   %68 = xor i1 false, %67
-  br label %ifmerge98
+  br i1 %68, label %then99, label %ifmerge100
 
-ifmerge98:                                        ; preds = %ifmerge97, %then92
-  %or_tmp.0 = phi i1 [ true, %then92 ], [ %68, %ifmerge97 ]
-  br i1 %or_tmp.0, label %then99, label %ifmerge100
-
-then99:                                           ; preds = %ifmerge98
+then99:                                           ; preds = %ifmerge90, %else93
   %69 = add i32 %64, 1
   br label %ifmerge100
 
-ifmerge100:                                       ; preds = %then99, %ifmerge98
-  %i.0 = phi i32 [ %69, %then99 ], [ %64, %ifmerge98 ]
+ifmerge100:                                       ; preds = %then99, %else93
+  %i.0 = phi i32 [ %69, %then99 ], [ %64, %else93 ]
   %70 = fadd float %37, %37
   %71 = fmul float %70, %37
   %72 = fsub float %71, %37
@@ -1258,36 +1190,20 @@ ifmerge100:                                       ; preds = %then99, %ifmerge98
   %78 = extractelement <3 x float> %cross, i32 0
   %79 = fadd float %76, %78
   %80 = fcmp oeq float %79, %37
-  br i1 %80, label %then102, label %else104
-
-then102:                                          ; preds = %ifmerge100
-  br label %ifmerge109
+  br i1 %80, label %then110, label %else104
 
 else104:                                          ; preds = %ifmerge100
   %81 = fcmp one float %79, %37
-  br i1 %81, label %then105, label %else107
-
-then105:                                          ; preds = %else104
   %82 = fcmp one float %79, 2.000000e+00
-  br label %ifmerge108
+  %or.cond = and i1 %81, %82
+  br i1 %or.cond, label %then110, label %ifmerge111
 
-else107:                                          ; preds = %else104
-  br label %ifmerge108
-
-ifmerge108:                                       ; preds = %else107, %then105
-  %and_tmp106.0 = phi i1 [ %82, %then105 ], [ false, %else107 ]
-  br label %ifmerge109
-
-ifmerge109:                                       ; preds = %ifmerge108, %then102
-  %or_tmp103.0 = phi i1 [ true, %then102 ], [ %and_tmp106.0, %ifmerge108 ]
-  br i1 %or_tmp103.0, label %then110, label %ifmerge111
-
-then110:                                          ; preds = %ifmerge109
+then110:                                          ; preds = %ifmerge100, %else104
   %83 = fadd float %79, 1.000000e+00
   br label %ifmerge111
 
-ifmerge111:                                       ; preds = %then110, %ifmerge109
-  %f.0 = phi float [ %83, %then110 ], [ %79, %ifmerge109 ]
+ifmerge111:                                       ; preds = %else104, %then110
+  %f.0 = phi float [ %83, %then110 ], [ %79, %else104 ]
   %84 = and i32 %42, %i.0
   %85 = or i32 %84, 66
   %86 = xor i32 %85, %42
@@ -1296,7 +1212,7 @@ ifmerge111:                                       ; preds = %then110, %ifmerge10
   %89 = shl i32 %88, %42
   %90 = xor i32 %89, -1
   %91 = xor i1 %and_tmp88.0, true
-  br i1 %91, label %then114, label %else115
+  br i1 %91, label %then114, label %ifmerge116
 
 then114:                                          ; preds = %ifmerge111
   %92 = sitofp i32 %90 to float
@@ -1306,11 +1222,8 @@ then114:                                          ; preds = %ifmerge111
   %96 = fadd <4 x float> %95, %41
   br label %ifmerge116
 
-else115:                                          ; preds = %ifmerge111
-  br label %ifmerge116
-
-ifmerge116:                                       ; preds = %else115, %then114
-  %conditional_tmp.0 = phi <4 x float> [ %96, %then114 ], [ %41, %else115 ]
+ifmerge116:                                       ; preds = %ifmerge111, %then114
+  %conditional_tmp.0 = phi <4 x float> [ %96, %then114 ], [ %41, %ifmerge111 ]
   call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %conditional_tmp.0)
   ret void
 }

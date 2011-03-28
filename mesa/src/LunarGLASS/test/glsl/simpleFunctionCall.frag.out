@@ -155,5 +155,5 @@ void main()
 {
     vec4 temp21 = foo();
     gl_FragColor = temp21;
-    
+    return;
 }

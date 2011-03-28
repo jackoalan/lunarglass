@@ -171,5 +171,5 @@ void main()
     float temp23 = foo(BaseColor);
     vec4 temp24 = vec4(temp23, temp23, temp23, temp23);
     gl_FragColor = temp24;
-    
+    return;
 }

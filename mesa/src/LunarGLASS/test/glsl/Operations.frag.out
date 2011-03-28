@@ -1106,143 +1106,75 @@ entry:
   %45 = add i32 %clamp48, %44
   %46 = fcmp olt <4 x float> %41, %41
   %any = call i1 @llvm.gla.any.v4i1(<4 x i1> %46)
-  br i1 %any, label %then, label %else
+  br i1 %any, label %then, label %ifmerge90
 
 then:                                             ; preds = %entry
   %47 = fcmp ole <4 x float> %41, %41
   %any50 = call i1 @llvm.gla.any.v4i1(<4 x i1> %47)
-  br label %ifmerge
+  br i1 %any50, label %then51, label %ifmerge90
 
-else:                                             ; preds = %entry
-  br label %ifmerge
-
-ifmerge:                                          ; preds = %else, %then
-  %and_tmp.0 = phi i1 [ %any50, %then ], [ false, %else ]
-  br i1 %and_tmp.0, label %then51, label %else55
-
-then51:                                           ; preds = %ifmerge
+then51:                                           ; preds = %then
   %48 = fcmp ogt <4 x float> %41, %41
   %any53 = call i1 @llvm.gla.any.v4i1(<4 x i1> %48)
-  br label %ifmerge56
+  br i1 %any53, label %then57, label %ifmerge90
 
-else55:                                           ; preds = %ifmerge
-  br label %ifmerge56
-
-ifmerge56:                                        ; preds = %else55, %then51
-  %and_tmp54.0 = phi i1 [ %any53, %then51 ], [ false, %else55 ]
-  br i1 %and_tmp54.0, label %then57, label %else61
-
-then57:                                           ; preds = %ifmerge56
+then57:                                           ; preds = %then51
   %49 = fcmp oge <4 x float> %41, %41
   %any59 = call i1 @llvm.gla.any.v4i1(<4 x i1> %49)
-  br label %ifmerge62
+  br i1 %any59, label %then63, label %ifmerge90
 
-else61:                                           ; preds = %ifmerge56
-  br label %ifmerge62
-
-ifmerge62:                                        ; preds = %else61, %then57
-  %and_tmp60.0 = phi i1 [ %any59, %then57 ], [ false, %else61 ]
-  br i1 %and_tmp60.0, label %then63, label %else67
-
-then63:                                           ; preds = %ifmerge62
+then63:                                           ; preds = %then57
   %50 = load <4 x i1> addrspace(1)* @ub41
   %51 = load <4 x i1> addrspace(1)* @ub42
   %52 = icmp eq <4 x i1> %50, %51
   %any65 = call i1 @llvm.gla.any.v4i1(<4 x i1> %52)
-  br label %ifmerge68
+  br i1 %any65, label %then69, label %ifmerge90
 
-else67:                                           ; preds = %ifmerge62
-  br label %ifmerge68
-
-ifmerge68:                                        ; preds = %else67, %then63
-  %and_tmp66.0 = phi i1 [ %any65, %then63 ], [ false, %else67 ]
-  br i1 %and_tmp66.0, label %then69, label %else73
-
-then69:                                           ; preds = %ifmerge68
+then69:                                           ; preds = %then63
   %53 = load <4 x i1> addrspace(1)* @ub41
   %54 = load <4 x i1> addrspace(1)* @ub42
   %55 = icmp ne <4 x i1> %53, %54
   %any71 = call i1 @llvm.gla.any.v4i1(<4 x i1> %55)
-  br label %ifmerge74
+  br i1 %any71, label %then75, label %ifmerge90
 
-else73:                                           ; preds = %ifmerge68
-  br label %ifmerge74
-
-ifmerge74:                                        ; preds = %else73, %then69
-  %and_tmp72.0 = phi i1 [ %any71, %then69 ], [ false, %else73 ]
-  br i1 %and_tmp72.0, label %then75, label %else79
-
-then75:                                           ; preds = %ifmerge74
+then75:                                           ; preds = %then69
   %56 = load <4 x i1> addrspace(1)* @ub41
   %any77 = call i1 @llvm.gla.any.v4i1(<4 x i1> %56)
-  br label %ifmerge80
+  br i1 %any77, label %then81, label %ifmerge90
 
-else79:                                           ; preds = %ifmerge74
-  br label %ifmerge80
-
-ifmerge80:                                        ; preds = %else79, %then75
-  %and_tmp78.0 = phi i1 [ %any77, %then75 ], [ false, %else79 ]
-  br i1 %and_tmp78.0, label %then81, label %else83
-
-then81:                                           ; preds = %ifmerge80
+then81:                                           ; preds = %then75
   %57 = load <4 x i1> addrspace(1)* @ub41
   %all = call i1 @llvm.gla.all.v4i1(<4 x i1> %57)
-  br label %ifmerge84
+  br i1 %all, label %then85, label %ifmerge90
 
-else83:                                           ; preds = %ifmerge80
-  br label %ifmerge84
-
-ifmerge84:                                        ; preds = %else83, %then81
-  %and_tmp82.0 = phi i1 [ %all, %then81 ], [ false, %else83 ]
-  br i1 %and_tmp82.0, label %then85, label %else89
-
-then85:                                           ; preds = %ifmerge84
+then85:                                           ; preds = %then81
   %58 = load <4 x i1> addrspace(1)* @ub41
   %59 = xor <4 x i1> %58, <i1 true, i1 true, i1 true, i1 true>
   %any87 = call i1 @llvm.gla.any.v4i1(<4 x i1> %59)
   br label %ifmerge90
 
-else89:                                           ; preds = %ifmerge84
-  br label %ifmerge90
-
-ifmerge90:                                        ; preds = %else89, %then85
-  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %else89 ]
+ifmerge90:                                        ; preds = %then81, %then69, %then57, %then, %entry, %then51, %then63, %then75, %then85
+  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %then75 ], [ false, %then63 ], [ false, %then51 ], [ false, %entry ], [ false, %then ], [ false, %then57 ], [ false, %then69 ], [ false, %then81 ]
   %60 = add i32 %42, %45
   %61 = mul i32 %60, %45
   %62 = sub i32 %61, %42
   %63 = sdiv i32 %62, %45
   %64 = srem i32 %63, %42
   %65 = icmp eq i32 %64, %42
-  br i1 %65, label %then92, label %else93
-
-then92:                                           ; preds = %ifmerge90
-  br label %ifmerge98
+  br i1 %65, label %then99, label %else93
 
 else93:                                           ; preds = %ifmerge90
   %66 = icmp ne i32 %64, %42
-  br i1 %66, label %then94, label %else96
-
-then94:                                           ; preds = %else93
-  br label %ifmerge97
-
-else96:                                           ; preds = %else93
-  br label %ifmerge97
-
-ifmerge97:                                        ; preds = %else96, %then94
   %67 = icmp ne i32 %64, 2
   %68 = xor i1 false, %67
-  br label %ifmerge98
+  br i1 %68, label %then99, label %ifmerge100
 
-ifmerge98:                                        ; preds = %ifmerge97, %then92
-  %or_tmp.0 = phi i1 [ true, %then92 ], [ %68, %ifmerge97 ]
-  br i1 %or_tmp.0, label %then99, label %ifmerge100
-
-then99:                                           ; preds = %ifmerge98
+then99:                                           ; preds = %ifmerge90, %else93
   %69 = add i32 %64, 1
   br label %ifmerge100
 
-ifmerge100:                                       ; preds = %then99, %ifmerge98
-  %i.0 = phi i32 [ %69, %then99 ], [ %64, %ifmerge98 ]
+ifmerge100:                                       ; preds = %then99, %else93
+  %i.0 = phi i32 [ %69, %then99 ], [ %64, %else93 ]
   %70 = fadd float %37, %37
   %71 = fmul float %70, %37
   %72 = fsub float %71, %37
@@ -1258,36 +1190,20 @@ ifmerge100:                                       ; preds = %then99, %ifmerge98
   %78 = extractelement <3 x float> %cross, i32 0
   %79 = fadd float %76, %78
   %80 = fcmp oeq float %79, %37
-  br i1 %80, label %then102, label %else104
-
-then102:                                          ; preds = %ifmerge100
-  br label %ifmerge109
+  br i1 %80, label %then110, label %else104
 
 else104:                                          ; preds = %ifmerge100
   %81 = fcmp one float %79, %37
-  br i1 %81, label %then105, label %else107
-
-then105:                                          ; preds = %else104
   %82 = fcmp one float %79, 2.000000e+00
-  br label %ifmerge108
+  %or.cond = and i1 %81, %82
+  br i1 %or.cond, label %then110, label %ifmerge111
 
-else107:                                          ; preds = %else104
-  br label %ifmerge108
-
-ifmerge108:                                       ; preds = %else107, %then105
-  %and_tmp106.0 = phi i1 [ %82, %then105 ], [ false, %else107 ]
-  br label %ifmerge109
-
-ifmerge109:                                       ; preds = %ifmerge108, %then102
-  %or_tmp103.0 = phi i1 [ true, %then102 ], [ %and_tmp106.0, %ifmerge108 ]
-  br i1 %or_tmp103.0, label %then110, label %ifmerge111
-
-then110:                                          ; preds = %ifmerge109
+then110:                                          ; preds = %ifmerge100, %else104
   %83 = fadd float %79, 1.000000e+00
   br label %ifmerge111
 
-ifmerge111:                                       ; preds = %then110, %ifmerge109
-  %f.0 = phi float [ %83, %then110 ], [ %79, %ifmerge109 ]
+ifmerge111:                                       ; preds = %else104, %then110
+  %f.0 = phi float [ %83, %then110 ], [ %79, %else104 ]
   %84 = and i32 %42, %i.0
   %85 = or i32 %84, 66
   %86 = xor i32 %85, %42
@@ -1296,7 +1212,7 @@ ifmerge111:                                       ; preds = %then110, %ifmerge10
   %89 = shl i32 %88, %42
   %90 = xor i32 %89, -1
   %91 = xor i1 %and_tmp88.0, true
-  br i1 %91, label %then114, label %else115
+  br i1 %91, label %then114, label %ifmerge116
 
 then114:                                          ; preds = %ifmerge111
   %92 = sitofp i32 %90 to float
@@ -1306,11 +1222,8 @@ then114:                                          ; preds = %ifmerge111
   %96 = fadd <4 x float> %95, %41
   br label %ifmerge116
 
-else115:                                          ; preds = %ifmerge111
-  br label %ifmerge116
-
-ifmerge116:                                       ; preds = %else115, %then114
-  %conditional_tmp.0 = phi <4 x float> [ %96, %then114 ], [ %41, %else115 ]
+ifmerge116:                                       ; preds = %ifmerge111, %then114
+  %conditional_tmp.0 = phi <4 x float> [ %96, %then114 ], [ %41, %ifmerge111 ]
   call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %conditional_tmp.0)
   ret void
 }
@@ -1966,270 +1879,198 @@ uniform float uf;
 uniform int ui;
 uniform bvec4 ub41;
 uniform bvec4 ub42;
-const bool const122 = false;
-const bool const141 = true;
-const int const144 = 2;
-const int const147 = 1;
-const float const164 = 2;
-const float const166 = 1;
-const int const169 = 66;
-const int const172 = 17;
+const bool const110 = false;
+const int const133 = 2;
+const int const136 = 1;
+const float const153 = 2;
+const float const156 = 1;
+const int const159 = 66;
+const int const162 = 17;
 
 void main()
 {
     bool temp21;
-    bool temp22;
-    bool temp23;
-    bool temp24;
-    bool temp25;
-    bool temp26;
-    bool temp27;
-    bool temp28;
-    bool temp29;
-    int temp30;
-    bool temp31;
-    bool temp32;
-    float temp33;
-    vec4 temp34;
-    vec4 temp35 = radians(uv4);
-    vec4 temp36 = degrees(temp35);
+    int temp22;
+    float temp23;
+    vec4 temp24;
+    vec4 temp25 = radians(uv4);
+    vec4 temp26 = degrees(temp25);
+    vec4 temp27 = temp25 + temp26;
+    vec4 temp28 = sin(temp27);
+    vec4 temp29 = temp27 + temp28;
+    vec4 temp30 = cos(temp29);
+    vec4 temp31 = temp29 + temp30;
+    vec4 temp32 = tan(temp31);
+    vec4 temp33 = temp31 + temp32;
+    vec4 temp34 = asin(temp33);
+    vec4 temp35 = temp33 + temp34;
+    vec4 temp36 = acos(temp35);
     vec4 temp37 = temp35 + temp36;
-    vec4 temp38 = sin(temp37);
+    vec4 temp38 = atan(temp37);
     vec4 temp39 = temp37 + temp38;
-    vec4 temp40 = cos(temp39);
+    vec4 temp40 = sinh(temp39);
     vec4 temp41 = temp39 + temp40;
-    vec4 temp42 = tan(temp41);
+    vec4 temp42 = cosh(temp41);
     vec4 temp43 = temp41 + temp42;
-    vec4 temp44 = asin(temp43);
+    vec4 temp44 = tanh(temp43);
     vec4 temp45 = temp43 + temp44;
-    vec4 temp46 = acos(temp45);
+    vec4 temp46 = pow(temp45, temp45);
     vec4 temp47 = temp45 + temp46;
-    vec4 temp48 = atan(temp47);
+    vec4 temp48 = exp(temp47);
     vec4 temp49 = temp47 + temp48;
-    vec4 temp50 = sinh(temp49);
+    vec4 temp50 = log(temp49);
     vec4 temp51 = temp49 + temp50;
-    vec4 temp52 = cosh(temp51);
+    vec4 temp52 = exp2(temp51);
     vec4 temp53 = temp51 + temp52;
-    vec4 temp54 = tanh(temp53);
+    vec4 temp54 = log2(temp53);
     vec4 temp55 = temp53 + temp54;
-    vec4 temp56 = pow(temp55, temp55);
+    vec4 temp56 = sqrt(temp55);
     vec4 temp57 = temp55 + temp56;
-    vec4 temp58 = exp(temp57);
+    vec4 temp58 = inversesqrt(temp57);
     vec4 temp59 = temp57 + temp58;
-    vec4 temp60 = log(temp59);
+    vec4 temp60 = abs(temp59);
     vec4 temp61 = temp59 + temp60;
-    vec4 temp62 = exp2(temp61);
+    vec4 temp62 = sign(temp61);
     vec4 temp63 = temp61 + temp62;
-    vec4 temp64 = log2(temp63);
+    vec4 temp64 = floor(temp63);
     vec4 temp65 = temp63 + temp64;
-    vec4 temp66 = sqrt(temp65);
+    vec4 temp66 = ceil(temp65);
     vec4 temp67 = temp65 + temp66;
-    vec4 temp68 = inversesqrt(temp67);
+    vec4 temp68 = fract(temp67);
     vec4 temp69 = temp67 + temp68;
-    vec4 temp70 = abs(temp69);
+    vec4 temp70 = mod(temp69, temp69);
     vec4 temp71 = temp69 + temp70;
-    vec4 temp72 = sign(temp71);
+    vec4 temp72 = min(temp71, uv4);
     vec4 temp73 = temp71 + temp72;
-    vec4 temp74 = floor(temp73);
+    vec4 temp74 = max(temp73, uv4);
     vec4 temp75 = temp73 + temp74;
-    vec4 temp76 = ceil(temp75);
+    vec4 temp76 = clamp(temp75, uv4, uv4);
     vec4 temp77 = temp75 + temp76;
-    vec4 temp78 = fract(temp77);
+    vec4 temp78 = mix(temp77, temp77, temp77);
     vec4 temp79 = temp77 + temp78;
-    vec4 temp80 = mod(temp79, temp79);
-    vec4 temp81 = temp79 + temp80;
-    vec4 temp82 = min(temp81, uv4);
-    vec4 temp83 = temp81 + temp82;
-    vec4 temp84 = max(temp83, uv4);
-    vec4 temp85 = temp83 + temp84;
-    vec4 temp86 = clamp(temp85, uv4, uv4);
-    vec4 temp87 = temp85 + temp86;
-    vec4 temp88 = mix(temp87, temp87, temp87);
-    vec4 temp89 = temp87 + temp88;
-    float temp90 = float(ub);
-    vec4 temp91 = mix(temp89, temp89, temp90);
-    vec4 temp92 = temp89 + temp91;
-    vec4 temp93 = step(temp92, temp92);
+    float temp80 = float(ub);
+    vec4 temp81 = mix(temp79, temp79, temp80);
+    vec4 temp82 = temp79 + temp81;
+    vec4 temp83 = step(temp82, temp82);
+    vec4 temp84 = temp82 + temp83;
+    vec4 temp85 = smoothstep(temp84, temp84, temp84);
+    vec4 temp86 = temp84 + temp85;
+    vec4 temp87 = normalize(temp86);
+    vec4 temp88 = temp86 + temp87;
+    vec4 temp89 = faceforward(temp88, temp88, temp88);
+    vec4 temp90 = temp88 + temp89;
+    vec4 temp91 = reflect(temp90, temp90);
+    vec4 temp92 = temp90 + temp91;
+    vec4 temp93 = refract(temp92, temp92, uf);
     vec4 temp94 = temp92 + temp93;
-    vec4 temp95 = smoothstep(temp94, temp94, temp94);
+    vec4 temp95 = dFdx(temp94);
     vec4 temp96 = temp94 + temp95;
-    vec4 temp97 = normalize(temp96);
+    vec4 temp97 = dFdy(temp96);
     vec4 temp98 = temp96 + temp97;
-    vec4 temp99 = faceforward(temp98, temp98, temp98);
+    vec4 temp99 = fwidth(temp98);
     vec4 temp100 = temp98 + temp99;
-    vec4 temp101 = reflect(temp100, temp100);
-    vec4 temp102 = temp100 + temp101;
-    vec4 temp103 = refract(temp102, temp102, uf);
-    vec4 temp104 = temp102 + temp103;
-    vec4 temp105 = dFdx(temp104);
-    vec4 temp106 = temp104 + temp105;
-    vec4 temp107 = dFdy(temp106);
-    vec4 temp108 = temp106 + temp107;
-    vec4 temp109 = fwidth(temp108);
-    vec4 temp110 = temp108 + temp109;
-    int temp111 = abs(ui);
-    int temp112 = min(temp111, ui);
-    int temp113 = temp112 + temp111;
-    int temp114 = max(temp113, ui);
-    int temp115 = temp114 + temp113;
-    int temp116 = clamp(temp115, ui, ui);
-    int temp117 = temp116 + temp115;
-    bvec4 temp118 = lessThan(temp110, temp110);
-    bool temp119 = any(temp118);
-    if (temp119) {
-        bvec4 temp120 = lessThanEqual(temp110, temp110);
-        bool temp121 = any(temp120);
-        temp21 = temp121;
-    }
-    else {
-        temp21 = const122;
-    }
-    
-    if (temp21) {
-        bvec4 temp123 = greaterThan(temp110, temp110);
-        bool temp124 = any(temp123);
-        temp22 = temp124;
-    }
-    else {
-        temp22 = const122;
-    }
-    
-    if (temp22) {
-        bvec4 temp125 = greaterThanEqual(temp110, temp110);
-        bool temp126 = any(temp125);
-        temp23 = temp126;
-    }
-    else {
-        temp23 = const122;
-    }
-    
-    if (temp23) {
-        bvec4 temp127 = equal(ub41, ub42);
-        bool temp128 = any(temp127);
-        temp24 = temp128;
-    }
-    else {
-        temp24 = const122;
-    }
-    
-    if (temp24) {
-        bvec4 temp129 = notEqual(ub41, ub42);
-        bool temp130 = any(temp129);
-        temp25 = temp130;
-    }
-    else {
-        temp25 = const122;
-    }
-    
-    if (temp25) {
-        bool temp131 = any(ub41);
-        temp26 = temp131;
-    }
-    else {
-        temp26 = const122;
-    }
-    
-    if (temp26) {
-        bool temp132 = all(ub41);
-        temp27 = temp132;
-    }
-    else {
-        temp27 = const122;
-    }
-    
-    if (temp27) {
-        bvec4 temp133 = not(ub41);
-        bool temp134 = any(temp133);
-        temp28 = temp134;
-    }
-    else {
-        temp28 = const122;
-    }
-    
-    int temp135 = ui + temp117;
-    int temp136 = temp135 * temp117;
-    int temp137 = temp136 - ui;
-    int temp138 = temp137 / temp117;
-    int temp139 = temp138 % ui;
-    bool temp140 = temp139 == ui;
-    if (temp140) {
-        temp29 = const141;
-    }
-    else {
-        bool temp142 = temp139 != ui;
-        if (temp142) {
-        }
-        else {
-        }
-        
-        bool temp143 = temp139 != const144;
-        bool temp145 = const122 ^^ temp143;
-        temp29 = temp145;
-    }
-    
-    temp30 = temp139;
-    if (temp29) {
-        int temp146 = temp139 + const147;
-        temp30 = temp146;
-    }
-    
-    float temp148 = uf + uf;
-    float temp149 = temp148 * uf;
-    float temp150 = temp149 - uf;
-    float temp151 = temp150 / uf;
-    float temp152 = length(temp110);
-    float temp153 = temp151 + temp152;
-    float temp154 = distance(temp110, temp110);
-    float temp155 = temp153 + temp154;
-    float temp156 = dot(temp110, temp110);
-    float temp157 = temp155 + temp156;
-    vec3 temp158;
-    temp158.xyz = temp110.xyz;
-    vec3 temp159 = cross(temp158, temp158);
-    float temp160 = temp157 + temp159.x;
-    bool temp161 = temp160 == uf;
-    if (temp161) {
-        temp32 = const141;
-    }
-    else {
-        bool temp162 = temp160 != uf;
-        if (temp162) {
-            bool temp163 = temp160 != const164;
-            temp31 = temp163;
-        }
-        else {
-            temp31 = const122;
-        }
-        
-        temp32 = temp31;
-    }
-    
-    temp33 = temp160;
-    if (temp32) {
-        float temp165 = temp160 + const166;
-        temp33 = temp165;
-    }
-    
-    int temp167 = ui & temp30;
-    int temp168 = temp167 | const169;
-    int temp170 = temp168 ^ ui;
-    int temp171 = temp170 % const172;
-    int temp173 = temp171 >> const144;
-    int temp174 = temp173 << ui;
-    int temp175 = ~ temp174;
-    bool temp176 = ! temp28;
-    if (temp176) {
-        float temp177 = float(temp175);
-        vec4 temp178 = vec4(temp177, temp177, temp177, temp177);
-        vec4 temp179 = vec4(temp33, temp33, temp33, temp33);
-        vec4 temp180 = temp178 + temp179;
-        vec4 temp181 = temp180 + temp110;
-        temp34 = temp181;
-    }
-    else {
-        temp34 = temp110;
-    }
-    
-    gl_FragColor = temp34;
-    
-}
+    int temp101 = abs(ui);
+    int temp102 = min(temp101, ui);
+    int temp103 = temp102 + temp101;
+    int temp104 = max(temp103, ui);
+    int temp105 = temp104 + temp103;
+    int temp106 = clamp(temp105, ui, ui);
+    int temp107 = temp106 + temp105;
+    bvec4 temp108 = lessThan(temp100, temp100);
+    bool temp109 = any(temp108);
+    temp21 = const110;
+    if (temp109) {
+        bvec4 temp111 = lessThanEqual(temp100, temp100);
+        bool temp112 = any(temp111);
+        temp21 = const110;
+        if (temp112) {
+            bvec4 temp113 = greaterThan(temp100, temp100);
+            bool temp114 = any(temp113);
+            temp21 = const110;
+            if (temp114) {
+                bvec4 temp115 = greaterThanEqual(temp100, temp100);
+                bool temp116 = any(temp115);
+                temp21 = const110;
+                if (temp116) {
+                    bvec4 temp117 = equal(ub41, ub42);
+                    bool temp118 = any(temp117);
+                    temp21 = const110;
+                    if (temp118) {
+                        bvec4 temp119 = notEqual(ub41, ub42);
+                        bool temp120 = any(temp119);
+                        temp21 = const110;
+                        if (temp120) {
+                            bool temp121 = any(ub41);
+                            temp21 = const110;
+                            if (temp121) {
+                                bool temp122 = all(ub41);
+                                temp21 = const110;
+                                if (temp122) {
+                                    bvec4 temp123 = not(ub41);
+                                    bool temp124 = any(temp123);
+                                    temp21 = temp124;
+                                }
+                                
+                                int temp125 = ui + temp107;
+                                int temp126 = temp125 * temp107;
+                                int temp127 = temp126 - ui;
+                                int temp128 = temp127 / temp107;
+                                int temp129 = temp128 % ui;
+                                bool temp130 = temp129 == ui;
+                                if (temp130) {
+                                    bool temp131 = temp129 != ui;
+                                    bool temp132 = temp129 != const133;
+                                    bool temp134 = const110 ^^ temp132;
+                                    temp22 = temp129;
+                                    if (temp134) {
+                                        int temp135 = temp129 + const136;
+                                        temp22 = temp135;
+                                    }
+                                    
+                                    float temp137 = uf + uf;
+                                    float temp138 = temp137 * uf;
+                                    float temp139 = temp138 - uf;
+                                    float temp140 = temp139 / uf;
+                                    float temp141 = length(temp100);
+                                    float temp142 = temp140 + temp141;
+                                    float temp143 = distance(temp100, temp100);
+                                    float temp144 = temp142 + temp143;
+                                    float temp145 = dot(temp100, temp100);
+                                    float temp146 = temp144 + temp145;
+                                    vec3 temp147;
+                                    temp147.xyz = temp100.xyz;
+                                    vec3 temp148 = cross(temp147, temp147);
+                                    float temp149 = temp146 + temp148.x;
+                                    bool temp150 = temp149 == uf;
+                                    if (temp150) {
+                                        bool temp151 = temp149 != uf;
+                                        bool temp152 = temp149 != const153;
+                                        bool temp154 = temp151 & temp152;
+                                        temp23 = temp149;
+                                        if (temp154) {
+                                            float temp155 = temp149 + const156;
+                                            temp23 = temp155;
+                                        }
+                                        
+                                        int temp157 = ui & temp22;
+                                        int temp158 = temp157 | const159;
+                                        int temp160 = temp158 ^ ui;
+                                        int temp161 = temp160 % const162;
+                                        int temp163 = temp161 >> const133;
+                                        int temp164 = temp163 << ui;
+                                        int temp165 = ~ temp164;
+                                        bool temp166 = ! temp21;
+                                        temp24 = temp100;
+                                        if (temp166) {
+                                            float temp167 = float(temp165);
+                                            vec4 temp168 = vec4(temp167, temp167, temp167, temp167);
+                                            vec4 temp169 = vec4(temp23, temp23, temp23, temp23);
+                                            vec4 temp170 = temp168 + temp169;
+                                            vec4 temp171 = temp170 + temp100;
+                                            temp24 = temp171;
+                                        }
+                                        
+                                        gl_FragColor = temp24;
+                                        return;
+                                    }
+                                    

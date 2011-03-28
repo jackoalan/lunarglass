@@ -1,3 +1,77 @@
+; ModuleID = 'Top'
+
+@d = external addrspace(1) constant float
+@bigColor = external addrspace(1) constant <4 x float>
+@gl_FragColor = internal global <4 x float> zeroinitializer
+
+define void @main() {
+entry:
+  %color = alloca <4 x float>
+  %BaseColor = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 0, i32 0)
+  store <4 x float> %BaseColor, <4 x float>* %color
+  br label %loop-header
+
+loop-header:                                      ; preds = %ifmerge, %entry
+  %0 = load <4 x float>* %color
+  %1 = extractelement <4 x float> %0, i32 0
+  %2 = load float addrspace(1)* @d
+  %3 = fcmp oge float %1, %2
+  br i1 %3, label %then, label %ifmerge
+
+then:                                             ; preds = %loop-header
+  br label %loop-merge
+
+post-break:                                       ; No predecessors!
+  br label %ifmerge
+
+ifmerge:                                          ; preds = %post-break, %loop-header
+  %4 = load <4 x float>* %color
+  %5 = load <4 x float> addrspace(1)* @bigColor
+  %6 = fadd <4 x float> %4, %5
+  store <4 x float> %6, <4 x float>* %color
+  br label %loop-header
+
+loop-merge:                                       ; preds = %then
+  %7 = load <4 x float>* %color
+  store <4 x float> %7, <4 x float>* @gl_FragColor
+  %8 = load <4 x float>* @gl_FragColor
+  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %8)
+  ret void
+}
+
+declare <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32, i32) nounwind readonly
+
+declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
+; ModuleID = 'Top'
+
+@d = external addrspace(1) constant float
+@bigColor = external addrspace(1) constant <4 x float>
+
+define void @main() {
+entry:
+  %BaseColor = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 0, i32 0)
+  br label %loop-header
+
+loop-header:                                      ; preds = %ifmerge, %entry
+  %color.0 = phi <4 x float> [ %BaseColor, %entry ], [ %4, %ifmerge ]
+  %0 = extractelement <4 x float> %color.0, i32 0
+  %1 = load float addrspace(1)* @d
+  %2 = fcmp oge float %0, %1
+  br i1 %2, label %then, label %ifmerge
+
+then:                                             ; preds = %loop-header
+  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %color.0)
+  ret void
+
+ifmerge:                                          ; preds = %loop-header
+  %3 = load <4 x float> addrspace(1)* @bigColor
+  %4 = fadd <4 x float> %color.0, %3
+  br label %loop-header
+}
+
+declare <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32, i32) nounwind readonly
+
+declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
 
 ***Unsupported functionality: Loops
 compiling whileLoop.frag...

@@ -817,6 +817,12 @@ declare <3 x i1> @llvm.gla.multiInsert.v3i1.v3i1.i1.i1.i1.i1(<3 x i1>, i32, i1, 
 declare <4 x i1> @llvm.gla.multiInsert.v4i1.v4i1.i1.i1.i1.i1(<4 x i1>, i32, i1, i32, i1, i32, i1, i32, i1, i32) nounwind readnone
 
 declare <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float>, i32, float, i32, float, i32, float, i32, float, i32) nounwind readnone
+confluence: 
+ifmerge:                                          ; preds = %entry, %then
+  %and_tmp.0 = phi i1 [ %i_b, %then ], [ false, %entry ]
+  %1 = load <2 x i1> addrspace(1)* @u_b2
+  %2 = extractelement <2 x i1> %1, i32 0
+  br i1 %2, label %then1, label %ifmerge13
 
 ***Unsupported functionality: opcode in Bottom IR: 50
 compiling types.frag...

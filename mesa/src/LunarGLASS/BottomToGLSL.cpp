@@ -149,7 +149,7 @@ public:
         mapGlaType(shader, type->getContainedType(0));
         shader << " " << name << "(";
     }
-    
+
     virtual void addArgument(const llvm::Value* value, bool last)
     {
         mapGlaDestination(value);
@@ -173,7 +173,7 @@ public:
         leaveScope();
     }
 
-    void add(const llvm::Instruction* llvmInstruction, bool lastBlock);
+    void add(const llvm::Instruction* llvmInstruction);
 
     void declarePhiCopy(const llvm::Value* dst)
     {
@@ -515,7 +515,7 @@ protected:
     void mapGlaType(std::ostringstream& out, const llvm::Type* type, int count = -1)
     {
         // if it's a vector, output a vector type
-        if (type->getTypeID() == llvm::Type::VectorTyID) {            
+        if (type->getTypeID() == llvm::Type::VectorTyID) {
             const llvm::VectorType *vectorType = llvm::dyn_cast<llvm::VectorType>(type);
             assert(vectorType);
 
@@ -819,7 +819,7 @@ void gla::ReleaseGlslTranslator(gla::BackEndTranslator* target)
 //
 // Add an LLVM instruction to the end of the mesa instructions.
 //
-void gla::GlslTarget::add(const llvm::Instruction* llvmInstruction, bool lastBlock)
+void gla::GlslTarget::add(const llvm::Instruction* llvmInstruction)
 {
     const char* charOp = 0;
 
@@ -969,11 +969,6 @@ void gla::GlslTarget::add(const llvm::Instruction* llvmInstruction, bool lastBlo
 
     case llvm::Instruction::Ret:
         newLine();
-        // if (! lastBlock) {
-        //     UnsupportedFunctionality("early return", EATContinue);
-        //     shader << "return;";
-        // }
-
         shader << "return";
         if (llvmInstruction->getNumOperands() > 0) {
             shader << " ";

@@ -817,6 +817,656 @@ declare <3 x i1> @llvm.gla.multiInsert.v3i1.v3i1.i1.i1.i1.i1(<3 x i1>, i32, i1, 
 declare <4 x i1> @llvm.gla.multiInsert.v4i1.v4i1.i1.i1.i1.i1(<4 x i1>, i32, i1, i32, i1, i32, i1, i32, i1, i32) nounwind readnone
 
 declare <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float>, i32, float, i32, float, i32, float, i32, float, i32) nounwind readnone
+confluence: 
+ifmerge:                                          ; preds = %entry, %then
+  %and_tmp.0 = phi i1 [ %i_b, %then ], [ false, %entry ]
+  %1 = load <2 x i1> addrspace(1)* @u_b2
+  %2 = extractelement <2 x i1> %1, i32 0
+  br i1 %2, label %then1, label %ifmerge13
+confluence: 
+ifmerge13:                                        ; preds = %then5, %ifmerge, %then1, %then9
+  %and_tmp10.0 = phi i1 [ %5, %then9 ], [ false, %then1 ], [ false, %ifmerge ], [ false, %then5 ]
+  %6 = call <2 x i1> @llvm.gla.multiInsert.v2i1.v2i1.i1.i1.i1.i1(<2 x i1> undef, i32 3, i1 %and_tmp10.0, i32 -1, i1 %and_tmp10.0, i32 -1, i1 false, i32 -1, i1 false, i32 -1)
+  %7 = load <3 x i1> addrspace(1)* @u_b3
+  %8 = extractelement <3 x i1> %7, i32 0
+  br i1 %8, label %then14, label %ifmerge35
+confluence: 
+ifmerge13:                                        ; preds = %then5, %ifmerge, %then1, %then9
+  %and_tmp10.0 = phi i1 [ %5, %then9 ], [ false, %then1 ], [ false, %ifmerge ], [ false, %then5 ]
+  %6 = call <2 x i1> @llvm.gla.multiInsert.v2i1.v2i1.i1.i1.i1.i1(<2 x i1> undef, i32 3, i1 %and_tmp10.0, i32 -1, i1 %and_tmp10.0, i32 -1, i1 false, i32 -1, i1 false, i32 -1)
+  %7 = load <3 x i1> addrspace(1)* @u_b3
+  %8 = extractelement <3 x i1> %7, i32 0
+  br i1 %8, label %then14, label %ifmerge35
+confluence: 
+ifmerge13:                                        ; preds = %then5, %ifmerge, %then1, %then9
+  %and_tmp10.0 = phi i1 [ %5, %then9 ], [ false, %then1 ], [ false, %ifmerge ], [ false, %then5 ]
+  %6 = call <2 x i1> @llvm.gla.multiInsert.v2i1.v2i1.i1.i1.i1.i1(<2 x i1> undef, i32 3, i1 %and_tmp10.0, i32 -1, i1 %and_tmp10.0, i32 -1, i1 false, i32 -1, i1 false, i32 -1)
+  %7 = load <3 x i1> addrspace(1)* @u_b3
+  %8 = extractelement <3 x i1> %7, i32 0
+  br i1 %8, label %then14, label %ifmerge35
+confluence: 
+ifmerge35:                                        ; preds = %then27, %then18, %ifmerge13, %then14, %then22, %then31
+  %and_tmp32.0 = phi i1 [ %13, %then31 ], [ false, %then22 ], [ false, %then14 ], [ false, %ifmerge13 ], [ false, %then18 ], [ false, %then27 ]
+  %14 = call <3 x i1> @llvm.gla.multiInsert.v3i1.v3i1.i1.i1.i1.i1(<3 x i1> undef, i32 7, i1 %and_tmp32.0, i32 -1, i1 %and_tmp32.0, i32 -1, i1 %and_tmp32.0, i32 -1, i1 false, i32 -1)
+  %15 = load <4 x i1> addrspace(1)* @u_b4
+  %16 = extractelement <4 x i1> %15, i32 0
+  br i1 %16, label %then37, label %ifmerge67
+confluence: 
+ifmerge35:                                        ; preds = %then27, %then18, %ifmerge13, %then14, %then22, %then31
+  %and_tmp32.0 = phi i1 [ %13, %then31 ], [ false, %then22 ], [ false, %then14 ], [ false, %ifmerge13 ], [ false, %then18 ], [ false, %then27 ]
+  %14 = call <3 x i1> @llvm.gla.multiInsert.v3i1.v3i1.i1.i1.i1.i1(<3 x i1> undef, i32 7, i1 %and_tmp32.0, i32 -1, i1 %and_tmp32.0, i32 -1, i1 %and_tmp32.0, i32 -1, i1 false, i32 -1)
+  %15 = load <4 x i1> addrspace(1)* @u_b4
+  %16 = extractelement <4 x i1> %15, i32 0
+  br i1 %16, label %then37, label %ifmerge67
+confluence: 
+ifmerge35:                                        ; preds = %then27, %then18, %ifmerge13, %then14, %then22, %then31
+  %and_tmp32.0 = phi i1 [ %13, %then31 ], [ false, %then22 ], [ false, %then14 ], [ false, %ifmerge13 ], [ false, %then18 ], [ false, %then27 ]
+  %14 = call <3 x i1> @llvm.gla.multiInsert.v3i1.v3i1.i1.i1.i1.i1(<3 x i1> undef, i32 7, i1 %and_tmp32.0, i32 -1, i1 %and_tmp32.0, i32 -1, i1 %and_tmp32.0, i32 -1, i1 false, i32 -1)
+  %15 = load <4 x i1> addrspace(1)* @u_b4
+  %16 = extractelement <4 x i1> %15, i32 0
+  br i1 %16, label %then37, label %ifmerge67
+confluence: 
+ifmerge35:                                        ; preds = %then27, %then18, %ifmerge13, %then14, %then22, %then31
+  %and_tmp32.0 = phi i1 [ %13, %then31 ], [ false, %then22 ], [ false, %then14 ], [ false, %ifmerge13 ], [ false, %then18 ], [ false, %then27 ]
+  %14 = call <3 x i1> @llvm.gla.multiInsert.v3i1.v3i1.i1.i1.i1.i1(<3 x i1> undef, i32 7, i1 %and_tmp32.0, i32 -1, i1 %and_tmp32.0, i32 -1, i1 %and_tmp32.0, i32 -1, i1 false, i32 -1)
+  %15 = load <4 x i1> addrspace(1)* @u_b4
+  %16 = extractelement <4 x i1> %15, i32 0
+  br i1 %16, label %then37, label %ifmerge67
+confluence: 
+ifmerge35:                                        ; preds = %then27, %then18, %ifmerge13, %then14, %then22, %then31
+  %and_tmp32.0 = phi i1 [ %13, %then31 ], [ false, %then22 ], [ false, %then14 ], [ false, %ifmerge13 ], [ false, %then18 ], [ false, %then27 ]
+  %14 = call <3 x i1> @llvm.gla.multiInsert.v3i1.v3i1.i1.i1.i1.i1(<3 x i1> undef, i32 7, i1 %and_tmp32.0, i32 -1, i1 %and_tmp32.0, i32 -1, i1 %and_tmp32.0, i32 -1, i1 false, i32 -1)
+  %15 = load <4 x i1> addrspace(1)* @u_b4
+  %16 = extractelement <4 x i1> %15, i32 0
+  br i1 %16, label %then37, label %ifmerge67
+confluence: 
+ifmerge67:                                        ; preds = %then59, %then50, %then41, %ifmerge35, %then37, %then45, %then54, %then63
+  %and_tmp64.0 = phi i1 [ %23, %then63 ], [ false, %then54 ], [ false, %then45 ], [ false, %then37 ], [ false, %ifmerge35 ], [ false, %then41 ], [ false, %then50 ], [ false, %then59 ]
+  %24 = call <4 x i1> @llvm.gla.multiInsert.v4i1.v4i1.i1.i1.i1.i1(<4 x i1> undef, i32 15, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1)
+  %25 = load i32 addrspace(1)* @u_i
+  %i_i = call i32 @llvm.gla.readData.i32(i32 4)
+  %26 = load <2 x i32> addrspace(1)* @u_i2
+  %i_i2 = call <2 x i32> @llvm.gla.readData.v2i32(i32 5)
+  %27 = add <2 x i32> %26, %i_i2
+  %28 = load <3 x i32> addrspace(1)* @u_i3
+  %i_i3 = call <3 x i32> @llvm.gla.readData.v3i32(i32 6)
+  %29 = add <3 x i32> %28, %i_i3
+  %30 = load <4 x i32> addrspace(1)* @u_i4
+  %i_i4 = call <4 x i32> @llvm.gla.readData.v4i32(i32 7)
+  %31 = add <4 x i32> %30, %i_i4
+  %32 = load float addrspace(1)* @u_f
+  %i_f = call float @llvm.gla.fReadInterpolant.f32(i32 8, i32 0)
+  %33 = fadd float %32, %i_f
+  %34 = load <2 x float> addrspace(1)* @u_f2
+  %i_f2 = call <2 x float> @llvm.gla.fReadInterpolant.v2f32(i32 9, i32 0)
+  %35 = fadd <2 x float> %34, %i_f2
+  %36 = load <3 x float> addrspace(1)* @u_f3
+  %i_f3 = call <3 x float> @llvm.gla.fReadInterpolant.v3f32(i32 10, i32 0)
+  %37 = fadd <3 x float> %36, %i_f3
+  %38 = load <4 x float> addrspace(1)* @u_f4
+  %i_f4 = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 11, i32 0)
+  %39 = fadd <4 x float> %38, %i_f4
+  br i1 %and_tmp.0, label %then111, label %else77
+confluence: 
+ifmerge67:                                        ; preds = %then59, %then50, %then41, %ifmerge35, %then37, %then45, %then54, %then63
+  %and_tmp64.0 = phi i1 [ %23, %then63 ], [ false, %then54 ], [ false, %then45 ], [ false, %then37 ], [ false, %ifmerge35 ], [ false, %then41 ], [ false, %then50 ], [ false, %then59 ]
+  %24 = call <4 x i1> @llvm.gla.multiInsert.v4i1.v4i1.i1.i1.i1.i1(<4 x i1> undef, i32 15, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1)
+  %25 = load i32 addrspace(1)* @u_i
+  %i_i = call i32 @llvm.gla.readData.i32(i32 4)
+  %26 = load <2 x i32> addrspace(1)* @u_i2
+  %i_i2 = call <2 x i32> @llvm.gla.readData.v2i32(i32 5)
+  %27 = add <2 x i32> %26, %i_i2
+  %28 = load <3 x i32> addrspace(1)* @u_i3
+  %i_i3 = call <3 x i32> @llvm.gla.readData.v3i32(i32 6)
+  %29 = add <3 x i32> %28, %i_i3
+  %30 = load <4 x i32> addrspace(1)* @u_i4
+  %i_i4 = call <4 x i32> @llvm.gla.readData.v4i32(i32 7)
+  %31 = add <4 x i32> %30, %i_i4
+  %32 = load float addrspace(1)* @u_f
+  %i_f = call float @llvm.gla.fReadInterpolant.f32(i32 8, i32 0)
+  %33 = fadd float %32, %i_f
+  %34 = load <2 x float> addrspace(1)* @u_f2
+  %i_f2 = call <2 x float> @llvm.gla.fReadInterpolant.v2f32(i32 9, i32 0)
+  %35 = fadd <2 x float> %34, %i_f2
+  %36 = load <3 x float> addrspace(1)* @u_f3
+  %i_f3 = call <3 x float> @llvm.gla.fReadInterpolant.v3f32(i32 10, i32 0)
+  %37 = fadd <3 x float> %36, %i_f3
+  %38 = load <4 x float> addrspace(1)* @u_f4
+  %i_f4 = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 11, i32 0)
+  %39 = fadd <4 x float> %38, %i_f4
+  br i1 %and_tmp.0, label %then111, label %else77
+confluence: 
+ifmerge67:                                        ; preds = %then59, %then50, %then41, %ifmerge35, %then37, %then45, %then54, %then63
+  %and_tmp64.0 = phi i1 [ %23, %then63 ], [ false, %then54 ], [ false, %then45 ], [ false, %then37 ], [ false, %ifmerge35 ], [ false, %then41 ], [ false, %then50 ], [ false, %then59 ]
+  %24 = call <4 x i1> @llvm.gla.multiInsert.v4i1.v4i1.i1.i1.i1.i1(<4 x i1> undef, i32 15, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1)
+  %25 = load i32 addrspace(1)* @u_i
+  %i_i = call i32 @llvm.gla.readData.i32(i32 4)
+  %26 = load <2 x i32> addrspace(1)* @u_i2
+  %i_i2 = call <2 x i32> @llvm.gla.readData.v2i32(i32 5)
+  %27 = add <2 x i32> %26, %i_i2
+  %28 = load <3 x i32> addrspace(1)* @u_i3
+  %i_i3 = call <3 x i32> @llvm.gla.readData.v3i32(i32 6)
+  %29 = add <3 x i32> %28, %i_i3
+  %30 = load <4 x i32> addrspace(1)* @u_i4
+  %i_i4 = call <4 x i32> @llvm.gla.readData.v4i32(i32 7)
+  %31 = add <4 x i32> %30, %i_i4
+  %32 = load float addrspace(1)* @u_f
+  %i_f = call float @llvm.gla.fReadInterpolant.f32(i32 8, i32 0)
+  %33 = fadd float %32, %i_f
+  %34 = load <2 x float> addrspace(1)* @u_f2
+  %i_f2 = call <2 x float> @llvm.gla.fReadInterpolant.v2f32(i32 9, i32 0)
+  %35 = fadd <2 x float> %34, %i_f2
+  %36 = load <3 x float> addrspace(1)* @u_f3
+  %i_f3 = call <3 x float> @llvm.gla.fReadInterpolant.v3f32(i32 10, i32 0)
+  %37 = fadd <3 x float> %36, %i_f3
+  %38 = load <4 x float> addrspace(1)* @u_f4
+  %i_f4 = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 11, i32 0)
+  %39 = fadd <4 x float> %38, %i_f4
+  br i1 %and_tmp.0, label %then111, label %else77
+confluence: 
+ifmerge67:                                        ; preds = %then59, %then50, %then41, %ifmerge35, %then37, %then45, %then54, %then63
+  %and_tmp64.0 = phi i1 [ %23, %then63 ], [ false, %then54 ], [ false, %then45 ], [ false, %then37 ], [ false, %ifmerge35 ], [ false, %then41 ], [ false, %then50 ], [ false, %then59 ]
+  %24 = call <4 x i1> @llvm.gla.multiInsert.v4i1.v4i1.i1.i1.i1.i1(<4 x i1> undef, i32 15, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1)
+  %25 = load i32 addrspace(1)* @u_i
+  %i_i = call i32 @llvm.gla.readData.i32(i32 4)
+  %26 = load <2 x i32> addrspace(1)* @u_i2
+  %i_i2 = call <2 x i32> @llvm.gla.readData.v2i32(i32 5)
+  %27 = add <2 x i32> %26, %i_i2
+  %28 = load <3 x i32> addrspace(1)* @u_i3
+  %i_i3 = call <3 x i32> @llvm.gla.readData.v3i32(i32 6)
+  %29 = add <3 x i32> %28, %i_i3
+  %30 = load <4 x i32> addrspace(1)* @u_i4
+  %i_i4 = call <4 x i32> @llvm.gla.readData.v4i32(i32 7)
+  %31 = add <4 x i32> %30, %i_i4
+  %32 = load float addrspace(1)* @u_f
+  %i_f = call float @llvm.gla.fReadInterpolant.f32(i32 8, i32 0)
+  %33 = fadd float %32, %i_f
+  %34 = load <2 x float> addrspace(1)* @u_f2
+  %i_f2 = call <2 x float> @llvm.gla.fReadInterpolant.v2f32(i32 9, i32 0)
+  %35 = fadd <2 x float> %34, %i_f2
+  %36 = load <3 x float> addrspace(1)* @u_f3
+  %i_f3 = call <3 x float> @llvm.gla.fReadInterpolant.v3f32(i32 10, i32 0)
+  %37 = fadd <3 x float> %36, %i_f3
+  %38 = load <4 x float> addrspace(1)* @u_f4
+  %i_f4 = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 11, i32 0)
+  %39 = fadd <4 x float> %38, %i_f4
+  br i1 %and_tmp.0, label %then111, label %else77
+confluence: 
+ifmerge67:                                        ; preds = %then59, %then50, %then41, %ifmerge35, %then37, %then45, %then54, %then63
+  %and_tmp64.0 = phi i1 [ %23, %then63 ], [ false, %then54 ], [ false, %then45 ], [ false, %then37 ], [ false, %ifmerge35 ], [ false, %then41 ], [ false, %then50 ], [ false, %then59 ]
+  %24 = call <4 x i1> @llvm.gla.multiInsert.v4i1.v4i1.i1.i1.i1.i1(<4 x i1> undef, i32 15, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1)
+  %25 = load i32 addrspace(1)* @u_i
+  %i_i = call i32 @llvm.gla.readData.i32(i32 4)
+  %26 = load <2 x i32> addrspace(1)* @u_i2
+  %i_i2 = call <2 x i32> @llvm.gla.readData.v2i32(i32 5)
+  %27 = add <2 x i32> %26, %i_i2
+  %28 = load <3 x i32> addrspace(1)* @u_i3
+  %i_i3 = call <3 x i32> @llvm.gla.readData.v3i32(i32 6)
+  %29 = add <3 x i32> %28, %i_i3
+  %30 = load <4 x i32> addrspace(1)* @u_i4
+  %i_i4 = call <4 x i32> @llvm.gla.readData.v4i32(i32 7)
+  %31 = add <4 x i32> %30, %i_i4
+  %32 = load float addrspace(1)* @u_f
+  %i_f = call float @llvm.gla.fReadInterpolant.f32(i32 8, i32 0)
+  %33 = fadd float %32, %i_f
+  %34 = load <2 x float> addrspace(1)* @u_f2
+  %i_f2 = call <2 x float> @llvm.gla.fReadInterpolant.v2f32(i32 9, i32 0)
+  %35 = fadd <2 x float> %34, %i_f2
+  %36 = load <3 x float> addrspace(1)* @u_f3
+  %i_f3 = call <3 x float> @llvm.gla.fReadInterpolant.v3f32(i32 10, i32 0)
+  %37 = fadd <3 x float> %36, %i_f3
+  %38 = load <4 x float> addrspace(1)* @u_f4
+  %i_f4 = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 11, i32 0)
+  %39 = fadd <4 x float> %38, %i_f4
+  br i1 %and_tmp.0, label %then111, label %else77
+confluence: 
+ifmerge67:                                        ; preds = %then59, %then50, %then41, %ifmerge35, %then37, %then45, %then54, %then63
+  %and_tmp64.0 = phi i1 [ %23, %then63 ], [ false, %then54 ], [ false, %then45 ], [ false, %then37 ], [ false, %ifmerge35 ], [ false, %then41 ], [ false, %then50 ], [ false, %then59 ]
+  %24 = call <4 x i1> @llvm.gla.multiInsert.v4i1.v4i1.i1.i1.i1.i1(<4 x i1> undef, i32 15, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1)
+  %25 = load i32 addrspace(1)* @u_i
+  %i_i = call i32 @llvm.gla.readData.i32(i32 4)
+  %26 = load <2 x i32> addrspace(1)* @u_i2
+  %i_i2 = call <2 x i32> @llvm.gla.readData.v2i32(i32 5)
+  %27 = add <2 x i32> %26, %i_i2
+  %28 = load <3 x i32> addrspace(1)* @u_i3
+  %i_i3 = call <3 x i32> @llvm.gla.readData.v3i32(i32 6)
+  %29 = add <3 x i32> %28, %i_i3
+  %30 = load <4 x i32> addrspace(1)* @u_i4
+  %i_i4 = call <4 x i32> @llvm.gla.readData.v4i32(i32 7)
+  %31 = add <4 x i32> %30, %i_i4
+  %32 = load float addrspace(1)* @u_f
+  %i_f = call float @llvm.gla.fReadInterpolant.f32(i32 8, i32 0)
+  %33 = fadd float %32, %i_f
+  %34 = load <2 x float> addrspace(1)* @u_f2
+  %i_f2 = call <2 x float> @llvm.gla.fReadInterpolant.v2f32(i32 9, i32 0)
+  %35 = fadd <2 x float> %34, %i_f2
+  %36 = load <3 x float> addrspace(1)* @u_f3
+  %i_f3 = call <3 x float> @llvm.gla.fReadInterpolant.v3f32(i32 10, i32 0)
+  %37 = fadd <3 x float> %36, %i_f3
+  %38 = load <4 x float> addrspace(1)* @u_f4
+  %i_f4 = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 11, i32 0)
+  %39 = fadd <4 x float> %38, %i_f4
+  br i1 %and_tmp.0, label %then111, label %else77
+confluence: 
+ifmerge67:                                        ; preds = %then59, %then50, %then41, %ifmerge35, %then37, %then45, %then54, %then63
+  %and_tmp64.0 = phi i1 [ %23, %then63 ], [ false, %then54 ], [ false, %then45 ], [ false, %then37 ], [ false, %ifmerge35 ], [ false, %then41 ], [ false, %then50 ], [ false, %then59 ]
+  %24 = call <4 x i1> @llvm.gla.multiInsert.v4i1.v4i1.i1.i1.i1.i1(<4 x i1> undef, i32 15, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1, i1 %and_tmp64.0, i32 -1)
+  %25 = load i32 addrspace(1)* @u_i
+  %i_i = call i32 @llvm.gla.readData.i32(i32 4)
+  %26 = load <2 x i32> addrspace(1)* @u_i2
+  %i_i2 = call <2 x i32> @llvm.gla.readData.v2i32(i32 5)
+  %27 = add <2 x i32> %26, %i_i2
+  %28 = load <3 x i32> addrspace(1)* @u_i3
+  %i_i3 = call <3 x i32> @llvm.gla.readData.v3i32(i32 6)
+  %29 = add <3 x i32> %28, %i_i3
+  %30 = load <4 x i32> addrspace(1)* @u_i4
+  %i_i4 = call <4 x i32> @llvm.gla.readData.v4i32(i32 7)
+  %31 = add <4 x i32> %30, %i_i4
+  %32 = load float addrspace(1)* @u_f
+  %i_f = call float @llvm.gla.fReadInterpolant.f32(i32 8, i32 0)
+  %33 = fadd float %32, %i_f
+  %34 = load <2 x float> addrspace(1)* @u_f2
+  %i_f2 = call <2 x float> @llvm.gla.fReadInterpolant.v2f32(i32 9, i32 0)
+  %35 = fadd <2 x float> %34, %i_f2
+  %36 = load <3 x float> addrspace(1)* @u_f3
+  %i_f3 = call <3 x float> @llvm.gla.fReadInterpolant.v3f32(i32 10, i32 0)
+  %37 = fadd <3 x float> %36, %i_f3
+  %38 = load <4 x float> addrspace(1)* @u_f4
+  %i_f4 = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 11, i32 0)
+  %39 = fadd <4 x float> %38, %i_f4
+  br i1 %and_tmp.0, label %then111, label %else77
+confluence: 
+then111:                                          ; preds = %else105, %else97, %else89, %else81, %ifmerge67, %else77, %else85, %else93, %else101, %else109
+  %49 = extractelement <2 x i32> %27, i32 0
+  %50 = extractelement <2 x i32> %27, i32 1
+  %51 = extractelement <3 x i32> %29, i32 0
+  %52 = extractelement <3 x i32> %29, i32 1
+  %53 = extractelement <3 x i32> %29, i32 2
+  %54 = extractelement <4 x i32> %31, i32 0
+  %55 = extractelement <4 x i32> %31, i32 1
+  %56 = extractelement <4 x i32> %31, i32 2
+  %57 = extractelement <4 x i32> %31, i32 3
+  %58 = add i32 %i_i, %25
+  %59 = add i32 %58, %50
+  %60 = add i32 %59, %49
+  %61 = add i32 %60, %53
+  %62 = add i32 %61, %52
+  %63 = add i32 %62, %51
+  %64 = add i32 %63, %57
+  %65 = add i32 %64, %56
+  %66 = add i32 %65, %55
+  %67 = add i32 %66, %54
+  %68 = sitofp i32 %67 to float
+  %69 = fadd float %68, %33
+  %70 = extractelement <2 x float> %35, i32 0
+  %71 = fadd float %69, %70
+  %72 = extractelement <2 x float> %35, i32 1
+  %73 = fadd float %71, %72
+  %74 = extractelement <3 x float> %37, i32 0
+  %75 = fadd float %73, %74
+  %76 = extractelement <3 x float> %37, i32 1
+  %77 = fadd float %75, %76
+  %78 = extractelement <3 x float> %37, i32 2
+  %79 = fadd float %77, %78
+  %80 = extractelement <4 x float> %39, i32 0
+  %81 = fadd float %79, %80
+  %82 = extractelement <4 x float> %39, i32 1
+  %83 = fadd float %81, %82
+  %84 = extractelement <4 x float> %39, i32 2
+  %85 = fadd float %83, %84
+  %86 = extractelement <4 x float> %39, i32 3
+  %87 = fadd float %85, %86
+  %88 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1)
+  br label %ifmerge113
+confluence: 
+then111:                                          ; preds = %else105, %else97, %else89, %else81, %ifmerge67, %else77, %else85, %else93, %else101, %else109
+  %49 = extractelement <2 x i32> %27, i32 0
+  %50 = extractelement <2 x i32> %27, i32 1
+  %51 = extractelement <3 x i32> %29, i32 0
+  %52 = extractelement <3 x i32> %29, i32 1
+  %53 = extractelement <3 x i32> %29, i32 2
+  %54 = extractelement <4 x i32> %31, i32 0
+  %55 = extractelement <4 x i32> %31, i32 1
+  %56 = extractelement <4 x i32> %31, i32 2
+  %57 = extractelement <4 x i32> %31, i32 3
+  %58 = add i32 %i_i, %25
+  %59 = add i32 %58, %50
+  %60 = add i32 %59, %49
+  %61 = add i32 %60, %53
+  %62 = add i32 %61, %52
+  %63 = add i32 %62, %51
+  %64 = add i32 %63, %57
+  %65 = add i32 %64, %56
+  %66 = add i32 %65, %55
+  %67 = add i32 %66, %54
+  %68 = sitofp i32 %67 to float
+  %69 = fadd float %68, %33
+  %70 = extractelement <2 x float> %35, i32 0
+  %71 = fadd float %69, %70
+  %72 = extractelement <2 x float> %35, i32 1
+  %73 = fadd float %71, %72
+  %74 = extractelement <3 x float> %37, i32 0
+  %75 = fadd float %73, %74
+  %76 = extractelement <3 x float> %37, i32 1
+  %77 = fadd float %75, %76
+  %78 = extractelement <3 x float> %37, i32 2
+  %79 = fadd float %77, %78
+  %80 = extractelement <4 x float> %39, i32 0
+  %81 = fadd float %79, %80
+  %82 = extractelement <4 x float> %39, i32 1
+  %83 = fadd float %81, %82
+  %84 = extractelement <4 x float> %39, i32 2
+  %85 = fadd float %83, %84
+  %86 = extractelement <4 x float> %39, i32 3
+  %87 = fadd float %85, %86
+  %88 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1)
+  br label %ifmerge113
+confluence: 
+then111:                                          ; preds = %else105, %else97, %else89, %else81, %ifmerge67, %else77, %else85, %else93, %else101, %else109
+  %49 = extractelement <2 x i32> %27, i32 0
+  %50 = extractelement <2 x i32> %27, i32 1
+  %51 = extractelement <3 x i32> %29, i32 0
+  %52 = extractelement <3 x i32> %29, i32 1
+  %53 = extractelement <3 x i32> %29, i32 2
+  %54 = extractelement <4 x i32> %31, i32 0
+  %55 = extractelement <4 x i32> %31, i32 1
+  %56 = extractelement <4 x i32> %31, i32 2
+  %57 = extractelement <4 x i32> %31, i32 3
+  %58 = add i32 %i_i, %25
+  %59 = add i32 %58, %50
+  %60 = add i32 %59, %49
+  %61 = add i32 %60, %53
+  %62 = add i32 %61, %52
+  %63 = add i32 %62, %51
+  %64 = add i32 %63, %57
+  %65 = add i32 %64, %56
+  %66 = add i32 %65, %55
+  %67 = add i32 %66, %54
+  %68 = sitofp i32 %67 to float
+  %69 = fadd float %68, %33
+  %70 = extractelement <2 x float> %35, i32 0
+  %71 = fadd float %69, %70
+  %72 = extractelement <2 x float> %35, i32 1
+  %73 = fadd float %71, %72
+  %74 = extractelement <3 x float> %37, i32 0
+  %75 = fadd float %73, %74
+  %76 = extractelement <3 x float> %37, i32 1
+  %77 = fadd float %75, %76
+  %78 = extractelement <3 x float> %37, i32 2
+  %79 = fadd float %77, %78
+  %80 = extractelement <4 x float> %39, i32 0
+  %81 = fadd float %79, %80
+  %82 = extractelement <4 x float> %39, i32 1
+  %83 = fadd float %81, %82
+  %84 = extractelement <4 x float> %39, i32 2
+  %85 = fadd float %83, %84
+  %86 = extractelement <4 x float> %39, i32 3
+  %87 = fadd float %85, %86
+  %88 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1)
+  br label %ifmerge113
+confluence: 
+then111:                                          ; preds = %else105, %else97, %else89, %else81, %ifmerge67, %else77, %else85, %else93, %else101, %else109
+  %49 = extractelement <2 x i32> %27, i32 0
+  %50 = extractelement <2 x i32> %27, i32 1
+  %51 = extractelement <3 x i32> %29, i32 0
+  %52 = extractelement <3 x i32> %29, i32 1
+  %53 = extractelement <3 x i32> %29, i32 2
+  %54 = extractelement <4 x i32> %31, i32 0
+  %55 = extractelement <4 x i32> %31, i32 1
+  %56 = extractelement <4 x i32> %31, i32 2
+  %57 = extractelement <4 x i32> %31, i32 3
+  %58 = add i32 %i_i, %25
+  %59 = add i32 %58, %50
+  %60 = add i32 %59, %49
+  %61 = add i32 %60, %53
+  %62 = add i32 %61, %52
+  %63 = add i32 %62, %51
+  %64 = add i32 %63, %57
+  %65 = add i32 %64, %56
+  %66 = add i32 %65, %55
+  %67 = add i32 %66, %54
+  %68 = sitofp i32 %67 to float
+  %69 = fadd float %68, %33
+  %70 = extractelement <2 x float> %35, i32 0
+  %71 = fadd float %69, %70
+  %72 = extractelement <2 x float> %35, i32 1
+  %73 = fadd float %71, %72
+  %74 = extractelement <3 x float> %37, i32 0
+  %75 = fadd float %73, %74
+  %76 = extractelement <3 x float> %37, i32 1
+  %77 = fadd float %75, %76
+  %78 = extractelement <3 x float> %37, i32 2
+  %79 = fadd float %77, %78
+  %80 = extractelement <4 x float> %39, i32 0
+  %81 = fadd float %79, %80
+  %82 = extractelement <4 x float> %39, i32 1
+  %83 = fadd float %81, %82
+  %84 = extractelement <4 x float> %39, i32 2
+  %85 = fadd float %83, %84
+  %86 = extractelement <4 x float> %39, i32 3
+  %87 = fadd float %85, %86
+  %88 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1)
+  br label %ifmerge113
+confluence: 
+then111:                                          ; preds = %else105, %else97, %else89, %else81, %ifmerge67, %else77, %else85, %else93, %else101, %else109
+  %49 = extractelement <2 x i32> %27, i32 0
+  %50 = extractelement <2 x i32> %27, i32 1
+  %51 = extractelement <3 x i32> %29, i32 0
+  %52 = extractelement <3 x i32> %29, i32 1
+  %53 = extractelement <3 x i32> %29, i32 2
+  %54 = extractelement <4 x i32> %31, i32 0
+  %55 = extractelement <4 x i32> %31, i32 1
+  %56 = extractelement <4 x i32> %31, i32 2
+  %57 = extractelement <4 x i32> %31, i32 3
+  %58 = add i32 %i_i, %25
+  %59 = add i32 %58, %50
+  %60 = add i32 %59, %49
+  %61 = add i32 %60, %53
+  %62 = add i32 %61, %52
+  %63 = add i32 %62, %51
+  %64 = add i32 %63, %57
+  %65 = add i32 %64, %56
+  %66 = add i32 %65, %55
+  %67 = add i32 %66, %54
+  %68 = sitofp i32 %67 to float
+  %69 = fadd float %68, %33
+  %70 = extractelement <2 x float> %35, i32 0
+  %71 = fadd float %69, %70
+  %72 = extractelement <2 x float> %35, i32 1
+  %73 = fadd float %71, %72
+  %74 = extractelement <3 x float> %37, i32 0
+  %75 = fadd float %73, %74
+  %76 = extractelement <3 x float> %37, i32 1
+  %77 = fadd float %75, %76
+  %78 = extractelement <3 x float> %37, i32 2
+  %79 = fadd float %77, %78
+  %80 = extractelement <4 x float> %39, i32 0
+  %81 = fadd float %79, %80
+  %82 = extractelement <4 x float> %39, i32 1
+  %83 = fadd float %81, %82
+  %84 = extractelement <4 x float> %39, i32 2
+  %85 = fadd float %83, %84
+  %86 = extractelement <4 x float> %39, i32 3
+  %87 = fadd float %85, %86
+  %88 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1)
+  br label %ifmerge113
+confluence: 
+then111:                                          ; preds = %else105, %else97, %else89, %else81, %ifmerge67, %else77, %else85, %else93, %else101, %else109
+  %49 = extractelement <2 x i32> %27, i32 0
+  %50 = extractelement <2 x i32> %27, i32 1
+  %51 = extractelement <3 x i32> %29, i32 0
+  %52 = extractelement <3 x i32> %29, i32 1
+  %53 = extractelement <3 x i32> %29, i32 2
+  %54 = extractelement <4 x i32> %31, i32 0
+  %55 = extractelement <4 x i32> %31, i32 1
+  %56 = extractelement <4 x i32> %31, i32 2
+  %57 = extractelement <4 x i32> %31, i32 3
+  %58 = add i32 %i_i, %25
+  %59 = add i32 %58, %50
+  %60 = add i32 %59, %49
+  %61 = add i32 %60, %53
+  %62 = add i32 %61, %52
+  %63 = add i32 %62, %51
+  %64 = add i32 %63, %57
+  %65 = add i32 %64, %56
+  %66 = add i32 %65, %55
+  %67 = add i32 %66, %54
+  %68 = sitofp i32 %67 to float
+  %69 = fadd float %68, %33
+  %70 = extractelement <2 x float> %35, i32 0
+  %71 = fadd float %69, %70
+  %72 = extractelement <2 x float> %35, i32 1
+  %73 = fadd float %71, %72
+  %74 = extractelement <3 x float> %37, i32 0
+  %75 = fadd float %73, %74
+  %76 = extractelement <3 x float> %37, i32 1
+  %77 = fadd float %75, %76
+  %78 = extractelement <3 x float> %37, i32 2
+  %79 = fadd float %77, %78
+  %80 = extractelement <4 x float> %39, i32 0
+  %81 = fadd float %79, %80
+  %82 = extractelement <4 x float> %39, i32 1
+  %83 = fadd float %81, %82
+  %84 = extractelement <4 x float> %39, i32 2
+  %85 = fadd float %83, %84
+  %86 = extractelement <4 x float> %39, i32 3
+  %87 = fadd float %85, %86
+  %88 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1)
+  br label %ifmerge113
+confluence: 
+then111:                                          ; preds = %else105, %else97, %else89, %else81, %ifmerge67, %else77, %else85, %else93, %else101, %else109
+  %49 = extractelement <2 x i32> %27, i32 0
+  %50 = extractelement <2 x i32> %27, i32 1
+  %51 = extractelement <3 x i32> %29, i32 0
+  %52 = extractelement <3 x i32> %29, i32 1
+  %53 = extractelement <3 x i32> %29, i32 2
+  %54 = extractelement <4 x i32> %31, i32 0
+  %55 = extractelement <4 x i32> %31, i32 1
+  %56 = extractelement <4 x i32> %31, i32 2
+  %57 = extractelement <4 x i32> %31, i32 3
+  %58 = add i32 %i_i, %25
+  %59 = add i32 %58, %50
+  %60 = add i32 %59, %49
+  %61 = add i32 %60, %53
+  %62 = add i32 %61, %52
+  %63 = add i32 %62, %51
+  %64 = add i32 %63, %57
+  %65 = add i32 %64, %56
+  %66 = add i32 %65, %55
+  %67 = add i32 %66, %54
+  %68 = sitofp i32 %67 to float
+  %69 = fadd float %68, %33
+  %70 = extractelement <2 x float> %35, i32 0
+  %71 = fadd float %69, %70
+  %72 = extractelement <2 x float> %35, i32 1
+  %73 = fadd float %71, %72
+  %74 = extractelement <3 x float> %37, i32 0
+  %75 = fadd float %73, %74
+  %76 = extractelement <3 x float> %37, i32 1
+  %77 = fadd float %75, %76
+  %78 = extractelement <3 x float> %37, i32 2
+  %79 = fadd float %77, %78
+  %80 = extractelement <4 x float> %39, i32 0
+  %81 = fadd float %79, %80
+  %82 = extractelement <4 x float> %39, i32 1
+  %83 = fadd float %81, %82
+  %84 = extractelement <4 x float> %39, i32 2
+  %85 = fadd float %83, %84
+  %86 = extractelement <4 x float> %39, i32 3
+  %87 = fadd float %85, %86
+  %88 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1)
+  br label %ifmerge113
+confluence: 
+then111:                                          ; preds = %else105, %else97, %else89, %else81, %ifmerge67, %else77, %else85, %else93, %else101, %else109
+  %49 = extractelement <2 x i32> %27, i32 0
+  %50 = extractelement <2 x i32> %27, i32 1
+  %51 = extractelement <3 x i32> %29, i32 0
+  %52 = extractelement <3 x i32> %29, i32 1
+  %53 = extractelement <3 x i32> %29, i32 2
+  %54 = extractelement <4 x i32> %31, i32 0
+  %55 = extractelement <4 x i32> %31, i32 1
+  %56 = extractelement <4 x i32> %31, i32 2
+  %57 = extractelement <4 x i32> %31, i32 3
+  %58 = add i32 %i_i, %25
+  %59 = add i32 %58, %50
+  %60 = add i32 %59, %49
+  %61 = add i32 %60, %53
+  %62 = add i32 %61, %52
+  %63 = add i32 %62, %51
+  %64 = add i32 %63, %57
+  %65 = add i32 %64, %56
+  %66 = add i32 %65, %55
+  %67 = add i32 %66, %54
+  %68 = sitofp i32 %67 to float
+  %69 = fadd float %68, %33
+  %70 = extractelement <2 x float> %35, i32 0
+  %71 = fadd float %69, %70
+  %72 = extractelement <2 x float> %35, i32 1
+  %73 = fadd float %71, %72
+  %74 = extractelement <3 x float> %37, i32 0
+  %75 = fadd float %73, %74
+  %76 = extractelement <3 x float> %37, i32 1
+  %77 = fadd float %75, %76
+  %78 = extractelement <3 x float> %37, i32 2
+  %79 = fadd float %77, %78
+  %80 = extractelement <4 x float> %39, i32 0
+  %81 = fadd float %79, %80
+  %82 = extractelement <4 x float> %39, i32 1
+  %83 = fadd float %81, %82
+  %84 = extractelement <4 x float> %39, i32 2
+  %85 = fadd float %83, %84
+  %86 = extractelement <4 x float> %39, i32 3
+  %87 = fadd float %85, %86
+  %88 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1)
+  br label %ifmerge113
+confluence: 
+then111:                                          ; preds = %else105, %else97, %else89, %else81, %ifmerge67, %else77, %else85, %else93, %else101, %else109
+  %49 = extractelement <2 x i32> %27, i32 0
+  %50 = extractelement <2 x i32> %27, i32 1
+  %51 = extractelement <3 x i32> %29, i32 0
+  %52 = extractelement <3 x i32> %29, i32 1
+  %53 = extractelement <3 x i32> %29, i32 2
+  %54 = extractelement <4 x i32> %31, i32 0
+  %55 = extractelement <4 x i32> %31, i32 1
+  %56 = extractelement <4 x i32> %31, i32 2
+  %57 = extractelement <4 x i32> %31, i32 3
+  %58 = add i32 %i_i, %25
+  %59 = add i32 %58, %50
+  %60 = add i32 %59, %49
+  %61 = add i32 %60, %53
+  %62 = add i32 %61, %52
+  %63 = add i32 %62, %51
+  %64 = add i32 %63, %57
+  %65 = add i32 %64, %56
+  %66 = add i32 %65, %55
+  %67 = add i32 %66, %54
+  %68 = sitofp i32 %67 to float
+  %69 = fadd float %68, %33
+  %70 = extractelement <2 x float> %35, i32 0
+  %71 = fadd float %69, %70
+  %72 = extractelement <2 x float> %35, i32 1
+  %73 = fadd float %71, %72
+  %74 = extractelement <3 x float> %37, i32 0
+  %75 = fadd float %73, %74
+  %76 = extractelement <3 x float> %37, i32 1
+  %77 = fadd float %75, %76
+  %78 = extractelement <3 x float> %37, i32 2
+  %79 = fadd float %77, %78
+  %80 = extractelement <4 x float> %39, i32 0
+  %81 = fadd float %79, %80
+  %82 = extractelement <4 x float> %39, i32 1
+  %83 = fadd float %81, %82
+  %84 = extractelement <4 x float> %39, i32 2
+  %85 = fadd float %83, %84
+  %86 = extractelement <4 x float> %39, i32 3
+  %87 = fadd float %85, %86
+  %88 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1, float %87, i32 -1)
+  br label %ifmerge113
+confluence: 
+ifmerge113:                                       ; preds = %else109, %then111
+  %conditional_tmp.0 = phi <4 x float> [ %88, %then111 ], [ <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %else109 ]
+  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %conditional_tmp.0)
+  ret void
 compiling types.frag...
 uniform bool u_b ; 
 uniform bvec2 u_b2 ; 
@@ -1209,7 +1859,7 @@ in float i_f;
 in vec2 i_f2;
 in vec3 i_f3;
 in vec4 i_f4;
-const vec4 const37 = vec4(1);
+const vec4 const59 = vec4(1);
 
 void main()
 {
@@ -1232,85 +1882,144 @@ void main()
                 temp22 = i_b211.y;
             }
             
-            bvec2 temp27;
-            temp27.xy = bvec2(temp22, temp22);
+        }
+        
+    }
+    
+    bvec2 temp27;
+    temp27.xy = bvec2(temp22, temp22);
+    temp23 = const26;
+    if (u_b3.x) {
+        temp23 = const26;
+        if (i_b3.x) {
             temp23 = const26;
-            if (u_b3.x) {
+            if (u_b3.y) {
                 temp23 = const26;
-                if (i_b3.x) {
+                if (i_b324.y) {
                     temp23 = const26;
-                    if (u_b3.y) {
-                        temp23 = const26;
-                        if (i_b324.y) {
-                            temp23 = const26;
-                            if (u_b3.z) {
-                                temp23 = i_b333.z;
+                    if (u_b3.z) {
+                        temp23 = i_b333.z;
+                    }
+                    
+                }
+                
+            }
+            
+        }
+        
+    }
+    
+    bvec3 temp28;
+    temp28.xyz = bvec3(temp23, temp23, temp23);
+    temp24 = const26;
+    if (u_b4.x) {
+        temp24 = const26;
+        if (i_b4.x) {
+            temp24 = const26;
+            if (u_b4.y) {
+                temp24 = const26;
+                if (i_b447.y) {
+                    temp24 = const26;
+                    if (u_b4.z) {
+                        temp24 = const26;
+                        if (i_b456.z) {
+                            temp24 = const26;
+                            if (u_b4.w) {
+                                temp24 = i_b465.w;
                             }
                             
-                            bvec3 temp28;
-                            temp28.xyz = bvec3(temp23, temp23, temp23);
-                            temp24 = const26;
-                            if (u_b4.x) {
-                                temp24 = const26;
-                                if (i_b4.x) {
-                                    temp24 = const26;
-                                    if (u_b4.y) {
-                                        temp24 = const26;
-                                        if (i_b447.y) {
-                                            temp24 = const26;
-                                            if (u_b4.z) {
-                                                temp24 = const26;
-                                                if (i_b456.z) {
-                                                    temp24 = const26;
-                                                    if (u_b4.w) {
-                                                        temp24 = i_b465.w;
-                                                    }
-                                                    
-                                                    bvec4 temp29 = bvec4(temp24, temp24, temp24, temp24);
-                                                    ivec2 temp30 = u_i2 + i_i2;
-                                                    ivec3 temp31 = u_i3 + i_i3;
-                                                    ivec4 temp32 = u_i4 + i_i4;
-                                                    float temp33 = u_f + i_f;
-                                                    vec2 temp34 = u_f2 + i_f2;
-                                                    vec3 temp35 = u_f3 + i_f3;
-                                                    vec4 temp36 = u_f4 + i_f4;
-                                                    if (temp21) {
-                                                        if (temp27.x) {
-                                                            if (temp27.y) {
-                                                                if (temp28.x) {
-                                                                    if (temp28.y) {
-                                                                        if (temp28.z) {
-                                                                            if (temp29.x) {
-                                                                                if (temp29.y) {
-                                                                                    if (temp29.z) {
-                                                                                        temp25 = const37;
-                                                                                        if (temp29.w) {
-                                                                                            int temp38 = i_i + u_i;
-                                                                                            int temp39 = temp38 + temp30.y;
-                                                                                            int temp40 = temp39 + temp30.x;
-                                                                                            int temp41 = temp40 + temp31.z;
-                                                                                            int temp42 = temp41 + temp31.y;
-                                                                                            int temp43 = temp42 + temp31.x;
-                                                                                            int temp44 = temp43 + temp32.w;
-                                                                                            int temp45 = temp44 + temp32.z;
-                                                                                            int temp46 = temp45 + temp32.y;
-                                                                                            int temp47 = temp46 + temp32.x;
-                                                                                            float temp48 = float(temp47);
-                                                                                            float temp49 = temp48 + temp33;
-                                                                                            float temp50 = temp49 + temp34.x;
-                                                                                            float temp51 = temp50 + temp34.y;
-                                                                                            float temp52 = temp51 + temp35.x;
-                                                                                            float temp53 = temp52 + temp35.y;
-                                                                                            float temp54 = temp53 + temp35.z;
-                                                                                            float temp55 = temp54 + temp36.x;
-                                                                                            float temp56 = temp55 + temp36.y;
-                                                                                            float temp57 = temp56 + temp36.z;
-                                                                                            float temp58 = temp57 + temp36.w;
-                                                                                            vec4 temp59 = vec4(temp58, temp58, temp58, temp58);
-                                                                                            temp25 = temp59;
-                                                                                        }
-                                                                                        
-                                                                                        gl_FragColor = temp25;
-                                                                                        return;
-                                                                                    }
-                                                                                    
+                        }
+                        
+                    }
+                    
+                }
+                
+            }
+            
+        }
+        
+    }
+    
+    bvec4 temp29 = bvec4(temp24, temp24, temp24, temp24);
+    ivec2 temp30 = u_i2 + i_i2;
+    ivec3 temp31 = u_i3 + i_i3;
+    ivec4 temp32 = u_i4 + i_i4;
+    float temp33 = u_f + i_f;
+    vec2 temp34 = u_f2 + i_f2;
+    vec3 temp35 = u_f3 + i_f3;
+    vec4 temp36 = u_f4 + i_f4;
+    if (temp21) {
+        int temp37 = i_i + u_i;
+        int temp38 = temp37 + temp30.y;
+        int temp39 = temp38 + temp30.x;
+        int temp40 = temp39 + temp31.z;
+        int temp41 = temp40 + temp31.y;
+        int temp42 = temp41 + temp31.x;
+        int temp43 = temp42 + temp32.w;
+        int temp44 = temp43 + temp32.z;
+        int temp45 = temp44 + temp32.y;
+        int temp46 = temp45 + temp32.x;
+        float temp47 = float(temp46);
+        float temp48 = temp47 + temp33;
+        float temp49 = temp48 + temp34.x;
+        float temp50 = temp49 + temp34.y;
+        float temp51 = temp50 + temp35.x;
+        float temp52 = temp51 + temp35.y;
+        float temp53 = temp52 + temp35.z;
+        float temp54 = temp53 + temp36.x;
+        float temp55 = temp54 + temp36.y;
+        float temp56 = temp55 + temp36.z;
+        float temp57 = temp56 + temp36.w;
+        vec4 temp58 = vec4(temp57, temp57, temp57, temp57);
+        temp25 = temp58;
+    }
+    else {
+        if (temp27.x) {
+        }
+        else {
+            if (temp27.y) {
+            }
+            else {
+                if (temp28.x) {
+                }
+                else {
+                    if (temp28.y) {
+                    }
+                    else {
+                        if (temp28.z) {
+                        }
+                        else {
+                            if (temp29.x) {
+                            }
+                            else {
+                                if (temp29.y) {
+                                }
+                                else {
+                                    if (temp29.z) {
+                                    }
+                                    else {
+                                        temp25 = const59;
+                                        if (temp29.w) {
+                                        }
+                                        
+                                    }
+                                    
+                                }
+                                
+                            }
+                            
+                        }
+                        
+                    }
+                    
+                }
+                
+            }
+            
+        }
+        
+    }
+    
+    gl_FragColor = temp25;
+    return;
+}

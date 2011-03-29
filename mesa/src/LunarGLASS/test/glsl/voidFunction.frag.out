@@ -80,8 +80,9 @@ declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
 declare <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float>, i32, float, i32, float, i32, float, i32, float, i32) nounwind readnone
 
 declare void @llvm.trap() nounwind
-
-***Unsupported functionality: Intrinsic in Bottom IR
+StandAlone: ../LunarGLASS/BottomTranslator.cpp:407: void<unnamed>::CodeGeneration::handleReturnBlock(const llvm::BasicBlock*): Assertion `llvm::isa<llvm::ReturnInst>(bb->getTerminator())' failed.
+Stack dump:
+0.	Running pass 'LunarGLASS code generation pass' on module 'Top'.
 compiling voidFunction.frag...
 uniform vec4 bigColor ; 
 varying vec4 BaseColor ; 

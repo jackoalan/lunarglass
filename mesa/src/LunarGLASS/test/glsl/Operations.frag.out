@@ -1327,6 +1327,130 @@ declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
 declare <3 x float> @llvm.gla.fMultiInsert.v3f32.v3f32.v4f32.v4f32.v4f32.f32(<3 x float>, i32, <4 x float>, i32, <4 x float>, i32, <4 x float>, i32, float, i32) nounwind readnone
 
 declare <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float>, i32, float, i32, float, i32, float, i32, float, i32) nounwind readnone
+confluence: 
+ifmerge90:                                        ; preds = %then81, %then69, %then57, %then, %entry, %then51, %then63, %then75, %then85
+  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %then75 ], [ false, %then63 ], [ false, %then51 ], [ false, %entry ], [ false, %then ], [ false, %then57 ], [ false, %then69 ], [ false, %then81 ]
+  %60 = add i32 %42, %45
+  %61 = mul i32 %60, %45
+  %62 = sub i32 %61, %42
+  %63 = sdiv i32 %62, %45
+  %64 = srem i32 %63, %42
+  %65 = icmp eq i32 %64, %42
+  br i1 %65, label %then99, label %else93
+confluence: 
+ifmerge90:                                        ; preds = %then81, %then69, %then57, %then, %entry, %then51, %then63, %then75, %then85
+  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %then75 ], [ false, %then63 ], [ false, %then51 ], [ false, %entry ], [ false, %then ], [ false, %then57 ], [ false, %then69 ], [ false, %then81 ]
+  %60 = add i32 %42, %45
+  %61 = mul i32 %60, %45
+  %62 = sub i32 %61, %42
+  %63 = sdiv i32 %62, %45
+  %64 = srem i32 %63, %42
+  %65 = icmp eq i32 %64, %42
+  br i1 %65, label %then99, label %else93
+confluence: 
+ifmerge90:                                        ; preds = %then81, %then69, %then57, %then, %entry, %then51, %then63, %then75, %then85
+  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %then75 ], [ false, %then63 ], [ false, %then51 ], [ false, %entry ], [ false, %then ], [ false, %then57 ], [ false, %then69 ], [ false, %then81 ]
+  %60 = add i32 %42, %45
+  %61 = mul i32 %60, %45
+  %62 = sub i32 %61, %42
+  %63 = sdiv i32 %62, %45
+  %64 = srem i32 %63, %42
+  %65 = icmp eq i32 %64, %42
+  br i1 %65, label %then99, label %else93
+confluence: 
+ifmerge90:                                        ; preds = %then81, %then69, %then57, %then, %entry, %then51, %then63, %then75, %then85
+  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %then75 ], [ false, %then63 ], [ false, %then51 ], [ false, %entry ], [ false, %then ], [ false, %then57 ], [ false, %then69 ], [ false, %then81 ]
+  %60 = add i32 %42, %45
+  %61 = mul i32 %60, %45
+  %62 = sub i32 %61, %42
+  %63 = sdiv i32 %62, %45
+  %64 = srem i32 %63, %42
+  %65 = icmp eq i32 %64, %42
+  br i1 %65, label %then99, label %else93
+confluence: 
+ifmerge90:                                        ; preds = %then81, %then69, %then57, %then, %entry, %then51, %then63, %then75, %then85
+  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %then75 ], [ false, %then63 ], [ false, %then51 ], [ false, %entry ], [ false, %then ], [ false, %then57 ], [ false, %then69 ], [ false, %then81 ]
+  %60 = add i32 %42, %45
+  %61 = mul i32 %60, %45
+  %62 = sub i32 %61, %42
+  %63 = sdiv i32 %62, %45
+  %64 = srem i32 %63, %42
+  %65 = icmp eq i32 %64, %42
+  br i1 %65, label %then99, label %else93
+confluence: 
+ifmerge90:                                        ; preds = %then81, %then69, %then57, %then, %entry, %then51, %then63, %then75, %then85
+  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %then75 ], [ false, %then63 ], [ false, %then51 ], [ false, %entry ], [ false, %then ], [ false, %then57 ], [ false, %then69 ], [ false, %then81 ]
+  %60 = add i32 %42, %45
+  %61 = mul i32 %60, %45
+  %62 = sub i32 %61, %42
+  %63 = sdiv i32 %62, %45
+  %64 = srem i32 %63, %42
+  %65 = icmp eq i32 %64, %42
+  br i1 %65, label %then99, label %else93
+confluence: 
+ifmerge90:                                        ; preds = %then81, %then69, %then57, %then, %entry, %then51, %then63, %then75, %then85
+  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %then75 ], [ false, %then63 ], [ false, %then51 ], [ false, %entry ], [ false, %then ], [ false, %then57 ], [ false, %then69 ], [ false, %then81 ]
+  %60 = add i32 %42, %45
+  %61 = mul i32 %60, %45
+  %62 = sub i32 %61, %42
+  %63 = sdiv i32 %62, %45
+  %64 = srem i32 %63, %42
+  %65 = icmp eq i32 %64, %42
+  br i1 %65, label %then99, label %else93
+confluence: 
+ifmerge90:                                        ; preds = %then81, %then69, %then57, %then, %entry, %then51, %then63, %then75, %then85
+  %and_tmp88.0 = phi i1 [ %any87, %then85 ], [ false, %then75 ], [ false, %then63 ], [ false, %then51 ], [ false, %entry ], [ false, %then ], [ false, %then57 ], [ false, %then69 ], [ false, %then81 ]
+  %60 = add i32 %42, %45
+  %61 = mul i32 %60, %45
+  %62 = sub i32 %61, %42
+  %63 = sdiv i32 %62, %45
+  %64 = srem i32 %63, %42
+  %65 = icmp eq i32 %64, %42
+  br i1 %65, label %then99, label %else93
+confluence: 
+then99:                                           ; preds = %ifmerge90, %else93
+  %69 = add i32 %64, 1
+  br label %ifmerge100
+confluence: 
+ifmerge100:                                       ; preds = %then99, %else93
+  %i.0 = phi i32 [ %69, %then99 ], [ %64, %else93 ]
+  %70 = fadd float %37, %37
+  %71 = fmul float %70, %37
+  %72 = fsub float %71, %37
+  %73 = fdiv float %72, %37
+  %length = call float @llvm.gla.fLength.v4f32(<4 x float> %41)
+  %74 = fadd float %73, %length
+  %distance = call float @llvm.gla.fDistance.v4f32.v4f32(<4 x float> %41, <4 x float> %41)
+  %75 = fadd float %74, %distance
+  %dot = call float @llvm.gla.fDot.v4f32.v4f32(<4 x float> %41, <4 x float> %41)
+  %76 = fadd float %75, %dot
+  %77 = call <3 x float> @llvm.gla.fMultiInsert.v3f32.v3f32.v4f32.v4f32.v4f32.f32(<3 x float> undef, i32 7, <4 x float> %41, i32 0, <4 x float> %41, i32 1, <4 x float> %41, i32 2, float 0.000000e+00, i32 -1)
+  %cross = call <3 x float> @llvm.gla.fCross.v3f32.v3f32.v3f32(<3 x float> %77, <3 x float> %77)
+  %78 = extractelement <3 x float> %cross, i32 0
+  %79 = fadd float %76, %78
+  %80 = fcmp oeq float %79, %37
+  br i1 %80, label %then110, label %else104
+confluence: 
+then110:                                          ; preds = %ifmerge100, %else104
+  %83 = fadd float %79, 1.000000e+00
+  br label %ifmerge111
+confluence: 
+ifmerge111:                                       ; preds = %else104, %then110
+  %f.0 = phi float [ %83, %then110 ], [ %79, %else104 ]
+  %84 = and i32 %42, %i.0
+  %85 = or i32 %84, 66
+  %86 = xor i32 %85, %42
+  %87 = srem i32 %86, 17
+  %88 = lshr i32 %87, 2
+  %89 = shl i32 %88, %42
+  %90 = xor i32 %89, -1
+  %91 = xor i1 %and_tmp88.0, true
+  br i1 %91, label %then114, label %ifmerge116
+confluence: 
+ifmerge116:                                       ; preds = %ifmerge111, %then114
+  %conditional_tmp.0 = phi <4 x float> [ %96, %then114 ], [ %41, %ifmerge111 ]
+  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %conditional_tmp.0)
+  ret void
 compiling Operations.frag...
 uniform ivec4 uiv4 ; 
 uniform vec4 uv4 ; 
@@ -1880,10 +2004,10 @@ uniform int ui;
 uniform bvec4 ub41;
 uniform bvec4 ub42;
 const bool const110 = false;
-const int const133 = 2;
-const int const136 = 1;
-const float const153 = 2;
-const float const156 = 1;
+const int const132 = 1;
+const int const135 = 2;
+const float const152 = 1;
+const float const155 = 2;
 const int const159 = 66;
 const int const162 = 17;
 
@@ -2011,66 +2135,87 @@ void main()
                                     temp21 = temp124;
                                 }
                                 
-                                int temp125 = ui + temp107;
-                                int temp126 = temp125 * temp107;
-                                int temp127 = temp126 - ui;
-                                int temp128 = temp127 / temp107;
-                                int temp129 = temp128 % ui;
-                                bool temp130 = temp129 == ui;
-                                if (temp130) {
-                                    bool temp131 = temp129 != ui;
-                                    bool temp132 = temp129 != const133;
-                                    bool temp134 = const110 ^^ temp132;
-                                    temp22 = temp129;
-                                    if (temp134) {
-                                        int temp135 = temp129 + const136;
-                                        temp22 = temp135;
-                                    }
-                                    
-                                    float temp137 = uf + uf;
-                                    float temp138 = temp137 * uf;
-                                    float temp139 = temp138 - uf;
-                                    float temp140 = temp139 / uf;
-                                    float temp141 = length(temp100);
-                                    float temp142 = temp140 + temp141;
-                                    float temp143 = distance(temp100, temp100);
-                                    float temp144 = temp142 + temp143;
-                                    float temp145 = dot(temp100, temp100);
-                                    float temp146 = temp144 + temp145;
-                                    vec3 temp147;
-                                    temp147.xyz = temp100.xyz;
-                                    vec3 temp148 = cross(temp147, temp147);
-                                    float temp149 = temp146 + temp148.x;
-                                    bool temp150 = temp149 == uf;
-                                    if (temp150) {
-                                        bool temp151 = temp149 != uf;
-                                        bool temp152 = temp149 != const153;
-                                        bool temp154 = temp151 & temp152;
-                                        temp23 = temp149;
-                                        if (temp154) {
-                                            float temp155 = temp149 + const156;
-                                            temp23 = temp155;
-                                        }
-                                        
-                                        int temp157 = ui & temp22;
-                                        int temp158 = temp157 | const159;
-                                        int temp160 = temp158 ^ ui;
-                                        int temp161 = temp160 % const162;
-                                        int temp163 = temp161 >> const133;
-                                        int temp164 = temp163 << ui;
-                                        int temp165 = ~ temp164;
-                                        bool temp166 = ! temp21;
-                                        temp24 = temp100;
-                                        if (temp166) {
-                                            float temp167 = float(temp165);
-                                            vec4 temp168 = vec4(temp167, temp167, temp167, temp167);
-                                            vec4 temp169 = vec4(temp23, temp23, temp23, temp23);
-                                            vec4 temp170 = temp168 + temp169;
-                                            vec4 temp171 = temp170 + temp100;
-                                            temp24 = temp171;
-                                        }
-                                        
-                                        gl_FragColor = temp24;
-                                        return;
-                                    }
-                                    
+                            }
+                            
+                        }
+                        
+                    }
+                    
+                }
+                
+            }
+            
+        }
+        
+    }
+    
+    int temp125 = ui + temp107;
+    int temp126 = temp125 * temp107;
+    int temp127 = temp126 - ui;
+    int temp128 = temp127 / temp107;
+    int temp129 = temp128 % ui;
+    bool temp130 = temp129 == ui;
+    if (temp130) {
+        int temp131 = temp129 + const132;
+        temp22 = temp131;
+    }
+    else {
+        bool temp133 = temp129 != ui;
+        bool temp134 = temp129 != const135;
+        bool temp136 = const110 ^^ temp134;
+        temp22 = temp129;
+        if (temp136) {
+        }
+        
+    }
+    
+    float temp137 = uf + uf;
+    float temp138 = temp137 * uf;
+    float temp139 = temp138 - uf;
+    float temp140 = temp139 / uf;
+    float temp141 = length(temp100);
+    float temp142 = temp140 + temp141;
+    float temp143 = distance(temp100, temp100);
+    float temp144 = temp142 + temp143;
+    float temp145 = dot(temp100, temp100);
+    float temp146 = temp144 + temp145;
+    vec3 temp147;
+    temp147.xyz = temp100.xyz;
+    vec3 temp148 = cross(temp147, temp147);
+    float temp149 = temp146 + temp148.x;
+    bool temp150 = temp149 == uf;
+    if (temp150) {
+        float temp151 = temp149 + const152;
+        temp23 = temp151;
+    }
+    else {
+        bool temp153 = temp149 != uf;
+        bool temp154 = temp149 != const155;
+        bool temp156 = temp153 & temp154;
+        temp23 = temp149;
+        if (temp156) {
+        }
+        
+    }
+    
+    int temp157 = ui & temp22;
+    int temp158 = temp157 | const159;
+    int temp160 = temp158 ^ ui;
+    int temp161 = temp160 % const162;
+    int temp163 = temp161 >> const135;
+    int temp164 = temp163 << ui;
+    int temp165 = ~ temp164;
+    bool temp166 = ! temp21;
+    temp24 = temp100;
+    if (temp166) {
+        float temp167 = float(temp165);
+        vec4 temp168 = vec4(temp167, temp167, temp167, temp167);
+        vec4 temp169 = vec4(temp23, temp23, temp23, temp23);
+        vec4 temp170 = temp168 + temp169;
+        vec4 temp171 = temp170 + temp100;
+        temp24 = temp171;
+    }
+    
+    gl_FragColor = temp24;
+    return;
+}

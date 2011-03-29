@@ -124,14 +124,14 @@ public:
     {
         // don't free instructions, as they needs to live on
     }
-    
+
     void startFunctionDeclaration(const llvm::Type*, const std::string&) { }
     void addArgument(const llvm::Value*, bool last) { }
     void endFunctionDeclaration() { }
     void startFunctionBody() { }
     void endFunctionBody() { }
 
-    void add(const llvm::Instruction* llvmInstruction, bool lastBlock);
+    void add(const llvm::Instruction* llvmInstruction);
 
     //
     // Motivated by need to convert to structured flow control and
@@ -425,7 +425,7 @@ void gla::ReleaseTgsiTranslator(gla::BackEndTranslator* target)
 //
 // Add an LLVM instruction to the end of the mesa instructions.
 //
-void gla::MesaTarget::add(const llvm::Instruction* llvmInstruction, bool lastBlock)
+void gla::MesaTarget::add(const llvm::Instruction* llvmInstruction)
 {
     // create a map for the typcial case, overridden as necessary
     mesaOp = OPCODE_NOP;

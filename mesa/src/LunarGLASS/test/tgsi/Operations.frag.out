@@ -1161,69 +1161,60 @@ ifmerge90:                                        ; preds = %then81, %then69, %t
   %63 = sdiv i32 %62, %45
   %64 = srem i32 %63, %42
   %65 = icmp eq i32 %64, %42
-  br i1 %65, label %then99, label %else93
-
-else93:                                           ; preds = %ifmerge90
-  %66 = icmp ne i32 %64, %42
-  %67 = icmp ne i32 %64, 2
-  %68 = xor i1 false, %67
-  br i1 %68, label %then99, label %ifmerge100
-
-then99:                                           ; preds = %ifmerge90, %else93
-  %69 = add i32 %64, 1
-  br label %ifmerge100
-
-ifmerge100:                                       ; preds = %then99, %else93
-  %i.0 = phi i32 [ %69, %then99 ], [ %64, %else93 ]
-  %70 = fadd float %37, %37
-  %71 = fmul float %70, %37
-  %72 = fsub float %71, %37
-  %73 = fdiv float %72, %37
+  %66 = icmp ne i32 %64, 2
+  %67 = xor i1 false, %66
+  %68 = add i32 %64, 1
+  %or.cond139 = or i1 %65, %67
+  %. = select i1 %or.cond139, i32 %68, i32 %64
+  %69 = fadd float %37, %37
+  %70 = fmul float %69, %37
+  %71 = fsub float %70, %37
+  %72 = fdiv float %71, %37
   %length = call float @llvm.gla.fLength.v4f32(<4 x float> %41)
-  %74 = fadd float %73, %length
+  %73 = fadd float %72, %length
   %distance = call float @llvm.gla.fDistance.v4f32.v4f32(<4 x float> %41, <4 x float> %41)
-  %75 = fadd float %74, %distance
+  %74 = fadd float %73, %distance
   %dot = call float @llvm.gla.fDot.v4f32.v4f32(<4 x float> %41, <4 x float> %41)
-  %76 = fadd float %75, %dot
-  %77 = call <3 x float> @llvm.gla.fMultiInsert.v3f32.v3f32.v4f32.v4f32.v4f32.f32(<3 x float> undef, i32 7, <4 x float> %41, i32 0, <4 x float> %41, i32 1, <4 x float> %41, i32 2, float 0.000000e+00, i32 -1)
-  %cross = call <3 x float> @llvm.gla.fCross.v3f32.v3f32.v3f32(<3 x float> %77, <3 x float> %77)
-  %78 = extractelement <3 x float> %cross, i32 0
-  %79 = fadd float %76, %78
-  %80 = fcmp oeq float %79, %37
-  br i1 %80, label %then110, label %else104
+  %75 = fadd float %74, %dot
+  %76 = call <3 x float> @llvm.gla.fMultiInsert.v3f32.v3f32.v4f32.v4f32.v4f32.f32(<3 x float> undef, i32 7, <4 x float> %41, i32 0, <4 x float> %41, i32 1, <4 x float> %41, i32 2, float 0.000000e+00, i32 -1)
+  %cross = call <3 x float> @llvm.gla.fCross.v3f32.v3f32.v3f32(<3 x float> %76, <3 x float> %76)
+  %77 = extractelement <3 x float> %cross, i32 0
+  %78 = fadd float %75, %77
+  %79 = fcmp oeq float %78, %37
+  br i1 %79, label %then110, label %else104
 
-else104:                                          ; preds = %ifmerge100
-  %81 = fcmp one float %79, %37
-  %82 = fcmp one float %79, 2.000000e+00
-  %or.cond = and i1 %81, %82
+else104:                                          ; preds = %ifmerge90
+  %80 = fcmp one float %78, %37
+  %81 = fcmp one float %78, 2.000000e+00
+  %or.cond = and i1 %80, %81
   br i1 %or.cond, label %then110, label %ifmerge111
 
-then110:                                          ; preds = %ifmerge100, %else104
-  %83 = fadd float %79, 1.000000e+00
+then110:                                          ; preds = %ifmerge90, %else104
+  %82 = fadd float %78, 1.000000e+00
   br label %ifmerge111
 
 ifmerge111:                                       ; preds = %else104, %then110
-  %f.0 = phi float [ %83, %then110 ], [ %79, %else104 ]
-  %84 = and i32 %42, %i.0
-  %85 = or i32 %84, 66
-  %86 = xor i32 %85, %42
-  %87 = srem i32 %86, 17
-  %88 = lshr i32 %87, 2
-  %89 = shl i32 %88, %42
-  %90 = xor i32 %89, -1
-  %91 = xor i1 %and_tmp88.0, true
-  br i1 %91, label %then114, label %ifmerge116
+  %f.0 = phi float [ %82, %then110 ], [ %78, %else104 ]
+  %83 = and i32 %42, %.
+  %84 = or i32 %83, 66
+  %85 = xor i32 %84, %42
+  %86 = srem i32 %85, 17
+  %87 = lshr i32 %86, 2
+  %88 = shl i32 %87, %42
+  %89 = xor i32 %88, -1
+  %90 = xor i1 %and_tmp88.0, true
+  br i1 %90, label %then114, label %ifmerge116
 
 then114:                                          ; preds = %ifmerge111
-  %92 = sitofp i32 %90 to float
-  %93 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %92, i32 -1, float %92, i32 -1, float %92, i32 -1, float %92, i32 -1)
-  %94 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %f.0, i32 -1, float %f.0, i32 -1, float %f.0, i32 -1, float %f.0, i32 -1)
-  %95 = fadd <4 x float> %93, %94
-  %96 = fadd <4 x float> %95, %41
+  %91 = sitofp i32 %89 to float
+  %92 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %91, i32 -1, float %91, i32 -1, float %91, i32 -1, float %91, i32 -1)
+  %93 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %f.0, i32 -1, float %f.0, i32 -1, float %f.0, i32 -1, float %f.0, i32 -1)
+  %94 = fadd <4 x float> %92, %93
+  %95 = fadd <4 x float> %94, %41
   br label %ifmerge116
 
 ifmerge116:                                       ; preds = %ifmerge111, %then114
-  %conditional_tmp.0 = phi <4 x float> [ %96, %then114 ], [ %41, %ifmerge111 ]
+  %conditional_tmp.0 = phi <4 x float> [ %95, %then114 ], [ %41, %ifmerge111 ]
   call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %conditional_tmp.0)
   ret void
 }

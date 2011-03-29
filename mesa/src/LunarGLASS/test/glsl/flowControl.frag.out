@@ -83,13 +83,6 @@ declare <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32, i32) nounwind readonly
 declare float @llvm.gla.fReadInterpolant.f32(i32, i32) nounwind readonly
 
 declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
-confluence: 
-ifmerge:                                          ; preds = %else, %then
-  %color.0 = phi <4 x float> [ %3, %then ], [ %5, %else ]
-  %6 = load <4 x float> addrspace(1)* @otherColor
-  %7 = fmul <4 x float> %color.0, %6
-  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %7)
-  ret void
 compiling flowControl.frag...
 uniform float d ; 
 uniform vec4 bigColor , smallColor ; 

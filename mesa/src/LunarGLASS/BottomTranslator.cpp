@@ -373,7 +373,7 @@ void CodeGeneration::handleIfBlock(const llvm::BasicBlock* bb)
     // Find the earliest confluence point and add it to our stack
     llvm::BasicBlock* cBB = gla::FindEarliestConfluencePoint(branchInst->getSuccessor(0), branchInst->getSuccessor(1));
     confluencePoints.push(cBB);
-    llvm::errs() << "confluence: " << *cBB;
+    //llvm::errs() << "confluence: " << *cBB;
 
     if (backEnd->getRemovePhiFunctions()) {
         // All branches that branch to a block having phi instructions for that

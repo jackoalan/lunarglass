@@ -61,16 +61,12 @@ entry:
 
 define fastcc void @foo() {
 foo:
-  %0 = load float* undef
-  %1 = fadd float %0, 1.000000e+00
   call void @llvm.trap()
   unreachable
 }
 
 define fastcc void @foo2() {
 foo2:
-  %0 = load float* undef
-  %1 = fadd float %0, 1.000000e+00
   call void @llvm.trap()
   unreachable
 }

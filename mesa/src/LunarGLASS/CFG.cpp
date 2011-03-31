@@ -79,9 +79,6 @@ llvm::BasicBlock* BFSCFG::findCommon() {
     return findCommon();
 }
 
-
-
-
 // Find and return the earliest confluence point in the CFG
 llvm::BasicBlock* gla::FindEarliestConfluencePoint(llvm::BasicBlock* leftBB, llvm::BasicBlock* rightBB)
 {

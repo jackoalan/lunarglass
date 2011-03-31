@@ -101,7 +101,7 @@ public:
     llvm::Value* expandGLSLOp(ir_expression_operation, llvm::Value**);
     llvm::Value* expandGLSLSwizzle(ir_swizzle*);
     llvm::Value* createLLVMIntrinsic(ir_call*, llvm::Value**, int);
-    llvm::Value* createLLVMConstant(ir_constant*);
+    llvm::Constant* createLLVMConstant(ir_constant*);
     llvm::Type*  convertGLSLToLLVMType(const glsl_type*);
     llvm::Function* getLLVMIntrinsicFunction1(llvm::Intrinsic::ID, const llvm::Type*);
     llvm::Function* getLLVMIntrinsicFunction2(llvm::Intrinsic::ID, const llvm::Type*, const llvm::Type*);
@@ -137,11 +137,17 @@ protected:
 
     int interpIndex;
     bool inMain;
+    bool localScope;
 
-    // Stack of the exit blocks of loops, so that 'break' knows where
-    // to go.
     typedef std::stack<llvm::BasicBlock*> LoopExitStack;
+    typedef std::stack<llvm::BasicBlock*> LoopHeaderStack;
+
+    // Stack of the exit blocks of loops, so that 'break' knows where to go.
     LoopExitStack exitStack;
+
+    // Stack of the header blocks of loops, so that 'continue' knows where to
+    // go.
+    LoopHeaderStack headerStack;
 
     llvm::BasicBlock* shaderEntry;
 };

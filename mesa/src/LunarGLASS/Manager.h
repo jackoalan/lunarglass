@@ -38,6 +38,7 @@
 #include "LunarGLASSTopIR.h"
 
 namespace gla {
+    enum LoopExitType { ELETTopExit, ELETBottomExit, ELETNeither };
 
     class BackEndTranslator {
     public:
@@ -67,7 +68,7 @@ namespace gla {
         virtual void addIf(const llvm::Value* cond, bool invert=false) = 0;
         virtual void addElse() = 0;
         virtual void addEndif() = 0;
-        virtual void addLoop(llvm::BasicBlock*) = 0;
+        virtual void addLoop(LoopExitType, bool, llvm::BasicBlock*) = 0;
         virtual void addLoopEnd() = 0;
         virtual void addBreak() = 0;
         virtual void addContinue() = 0;

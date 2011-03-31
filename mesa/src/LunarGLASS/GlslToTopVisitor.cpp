@@ -49,8 +49,10 @@ void GlslToTop(struct gl_shader* glShader, llvm::Module* module)
 }
 
 GlslToTopVisitor::GlslToTopVisitor(struct gl_shader* s, llvm::Module* m)
-    : context(llvm::getGlobalContext()), builder(context), module(m), glShader(s), interpIndex(0), shaderEntry(0), inMain(false)
+    : context(llvm::getGlobalContext()), builder(context), module(m), glShader(s), interpIndex(0), shaderEntry(0), inMain(false),
+      localScope(false)
 {
+    builder.SetInsertPoint(getShaderEntry());
 }
 
 GlslToTopVisitor::~GlslToTopVisitor()
@@ -60,6 +62,15 @@ GlslToTopVisitor::~GlslToTopVisitor()
 ir_visitor_status
     GlslToTopVisitor::visit(ir_variable *variable)
 {
+    // If it's an auto or temporary, we allocate it now, at declaration time
+    // to get the scoping correct.
+    //
+    // Otherwise, we do deferred evaluation, so that we don't deal with things
+    // that are never used.
+
+    if (variable->mode == ir_var_auto || variable->mode == ir_var_temporary)
+        namedValues[variable] = createLLVMVariable(variable);
+
     return visit_continue;
 }
 
@@ -71,7 +82,7 @@ ir_visitor_status
     return visit_continue;
 }
 
-llvm::Value* GlslToTopVisitor::createLLVMConstant(ir_constant* constant)
+llvm::Constant* GlslToTopVisitor::createLLVMConstant(ir_constant* constant)
 {
     // XXXX Ints are 32-bit, bools are 1-bit
     llvm::Constant* llvmConstant;
@@ -150,18 +161,26 @@ llvm::Value* GlslToTopVisitor::createLLVMConstant(ir_constant* constant)
 ir_visitor_status
     GlslToTopVisitor::visit(ir_loop_jump *ir)
 {
-    builder.CreateBr(exitStack.top());
-
     // Create a block for the parent to continue inserting stuff into (e.g. this
-    // break is inside an if-then-else)
+    // break/continue is inside an if-then-else)
     llvm::Function *function = builder.GetInsertBlock()->getParent();
-    llvm::BasicBlock* postBranch = llvm::BasicBlock::Create(context, "post-break", function);
-    builder.SetInsertPoint(postBranch);
+    llvm::BasicBlock* postLoopJump = llvm::BasicBlock::Create(context, "post-loopjump", function);
+
+    if (ir->is_break()) {
+        builder.CreateBr(exitStack.top());
+    }
+
+    if (ir->is_continue()) {
+        builder.CreateBr(headerStack.top());
+    }
+
+    builder.SetInsertPoint(postLoopJump);
 
     lastValue = 0;
 
     // Continue on with the parent (any further statements discarded)
     return visit_continue_with_parent;
+
 }
 
 int GlslToTopVisitor::getNextInterpIndex(ir_variable* var)
@@ -252,7 +271,7 @@ ir_visitor_status
             case 2:  lastValue = builder.CreateCall2 (intrinsicName, interpLoc, interpOffset, name); break;
             case 1:  lastValue = builder.CreateCall  (intrinsicName, interpLoc, name);               break;
             }
-        } 
+        }
         else if (var->mode != ir_var_in) {
             // Don't load inputs again... just use them
             lastValue = builder.CreateLoad(lastValue);
@@ -270,9 +289,10 @@ ir_visitor_status
     llvm::BasicBlock* headerBB = llvm::BasicBlock::Create(context, "loop-header", function);
     llvm::BasicBlock *mergeBB = llvm::BasicBlock::Create(context, "loop-merge");
 
-    // Push the merge block onto the exit stack, so that breaks inside the loop
+    // Push the blocks onto the stacks, so that breaks/continues inside the loop
     // know where to go
     exitStack.push(mergeBB);
+    headerStack.push(headerBB);
 
     // It seems like the AST we get from GLSL does not have anything in the loop
     // filled in except it's body. Assert on these assumptions
@@ -295,8 +315,9 @@ ir_visitor_status
     function->getBasicBlockList().push_back(mergeBB);
     builder.SetInsertPoint(mergeBB);
 
-    // Remove ourselves from the exit stack
+    // Remove ourselves from the stacks
     exitStack.pop();
+    headerStack.pop();
 
     // lastValue may not be up-to-date, and we shouldn't be referenced
     // anyways
@@ -315,12 +336,15 @@ ir_visitor_status
 ir_visitor_status
     GlslToTopVisitor::visit_enter(ir_function_signature *sig)
 {
+    localScope = true;
+
     if (!sig->is_builtin) {
 
         // For now, don't build parameter list or call for main()
         if (strcmp(sig->function_name(), "main") == 0) {
             inMain = true;
             builder.SetInsertPoint(getShaderEntry());
+
             return visit_continue;
         }
 
@@ -348,8 +372,8 @@ ir_visitor_status
         iterParam = sig->parameters.iterator();
 
         llvm::Function::arg_iterator arg = function->arg_begin();
-        llvm::Function::arg_iterator endArg = function->arg_end(); 
-        
+        llvm::Function::arg_iterator endArg = function->arg_end();
+
         while (iterParam.has_next() && arg != endArg) {
             // Create a variable for our formal parameter
             parameter = (ir_variable *) iterParam.get();
@@ -361,6 +385,7 @@ ir_visitor_status
         // Track our user function to call later
         functionMap[sig] = function;
     }
+
     return visit_continue;
 }
 
@@ -369,14 +394,14 @@ ir_visitor_status
 {
     // Ignore builtins for now
     if (!sig->is_builtin) {
-           
+
         llvm::BasicBlock* BB = builder.GetInsertBlock();
         assert(BB);
 
         // If our function did not contain a return,
         // return void now
         if (0 == BB->getTerminator()) {
-            
+
             if (inMain) {
                 // If we're leaving main and it is not terminated,
                 // generate our pipeline writes
@@ -387,6 +412,9 @@ ir_visitor_status
             builder.CreateRet(0);
         }
     }
+
+    localScope = false;
+    builder.SetInsertPoint(getShaderEntry());
 
     return visit_continue;
 }
@@ -535,8 +563,14 @@ ir_visitor_status
         lastValue = targetVector;
     }
 
-    //Store the result, using dest we track in base class
+    // Retroactively change the name of the last-value temp to the name of the
+    // l-value, to help debuggability, if it's just an llvm temp name.
+    if (lastValue->getNameStr().length() < 2 || (lastValue->getNameStr()[1] >= '0' && lastValue->getNameStr()[1] <= '9'))
+        lastValue->setName(lValue->getName());
+
+    // Store the last value into the l-value, using dest we track in base class.
     llvm::StoreInst *store = builder.CreateStore(lastValue, lValue);
+
     lastValue = store;
 
     return visit_continue;
@@ -635,7 +669,6 @@ ir_visitor_status
 llvm::Value* GlslToTopVisitor::createLLVMIntrinsic(ir_call *call, llvm::Value** llvmParams, int paramCount)
 {
     llvm::Function *intrinsicName = 0;
-    const char *name = NULL;
     gla::ETextureFlags texFlags = {0};
     llvm::Type* resultType = convertGLSLToLLVMType(call->type);
 
@@ -648,136 +681,129 @@ llvm::Value* GlslToTopVisitor::createLLVMIntrinsic(ir_call *call, llvm::Value** 
     gla::ESamplerType   samplerType;
 
     // Based on the name of the callee, create the appropriate intrinsicID
-    if(!strcmp(call->callee_name(), "radians"))                 { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fRadians, resultType, llvmParams[0]->getType());  name = "radians";  }
-    else if(!strcmp(call->callee_name(), "degrees"))            { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fDegrees, resultType, llvmParams[0]->getType()); name = "degrees"; }
-    else if(!strcmp(call->callee_name(), "sin"))                { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fSin, resultType, llvmParams[0]->getType()); name = "sin"; }
-    else if(!strcmp(call->callee_name(), "cos"))                { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fCos, resultType, llvmParams[0]->getType()); name = "cos"; }
-    else if(!strcmp(call->callee_name(), "tan"))                { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fTan, resultType, llvmParams[0]->getType()); name = "tan"; }
-    else if(!strcmp(call->callee_name(), "asin"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAsin, resultType, llvmParams[0]->getType()); name = "asin"; }
-    else if(!strcmp(call->callee_name(), "acos"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAcos, resultType, llvmParams[0]->getType()); name = "acos"; }
-    else if(!strcmp(call->callee_name(), "atan"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAtan, resultType, llvmParams[0]->getType()); name = "atan"; }
-    else if(!strcmp(call->callee_name(), "sinh"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fSinh, resultType, llvmParams[0]->getType()); name = "sinh"; }
-    else if(!strcmp(call->callee_name(), "cosh"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fCosh, resultType, llvmParams[0]->getType()); name = "cosh"; }
-    else if(!strcmp(call->callee_name(), "tanh"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fTanh, resultType, llvmParams[0]->getType()); name = "tanh"; }
-    else if(!strcmp(call->callee_name(), "asinh"))              { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAsinh, resultType, llvmParams[0]->getType()); name = "asinh"; }
-    else if(!strcmp(call->callee_name(), "acosh"))              { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAcosh, resultType, llvmParams[0]->getType()); name = "acosh"; }
-    else if(!strcmp(call->callee_name(), "atanh"))              { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAtanh, resultType, llvmParams[0]->getType()); name = "atanh"; }
-    else if(!strcmp(call->callee_name(), "pow"))                { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fPow, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); name = "pow";  }
-    else if(!strcmp(call->callee_name(), "exp"))                { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fExp, resultType, llvmParams[0]->getType()); name = "exp"; }
-    else if(!strcmp(call->callee_name(), "log"))                { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fLog, resultType, llvmParams[0]->getType()); name = "log"; }
-    else if(!strcmp(call->callee_name(), "exp2"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fExp2, resultType, llvmParams[0]->getType()); name = "exp2"; }
-    else if(!strcmp(call->callee_name(), "log2"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fLog2, resultType, llvmParams[0]->getType()); name = "log2"; }
-    else if(!strcmp(call->callee_name(), "sqrt"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fSqrt, resultType, llvmParams[0]->getType()); name = "sqrt"; }
-    else if(!strcmp(call->callee_name(), "inversesqrt"))        { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fInverseSqrt, resultType, llvmParams[0]->getType()); name = "inversesqrt"; }
-    else if(!strcmp(call->callee_name(), "floor"))              { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fFloor, resultType, llvmParams[0]->getType()); name = "floor"; }
-    //else if(!strcmp(call->callee_name(), "trunc"))            { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); name = "xxxx"; }  // defect in glsl2
-    else if(!strcmp(call->callee_name(), "round"))              { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fRoundFast, resultType, llvmParams[0]->getType()); name = "round"; }
-    else if(!strcmp(call->callee_name(), "roundEven"))          { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fRoundEven, resultType, llvmParams[0]->getType()); name = "roundEven"; }
-    else if(!strcmp(call->callee_name(), "ceil"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fCeiling, resultType, llvmParams[0]->getType()); name = "ceil"; }
-    else if(!strcmp(call->callee_name(), "fract"))              { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fFraction, resultType, llvmParams[0]->getType()); name = "fract"; }
-    else if(!strcmp(call->callee_name(), "modf"))               { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fModF, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); name = "modf";  }
-    else if(!strcmp(call->callee_name(), "mix"))                { intrinsicName = getLLVMIntrinsicFunction4(llvm::Intrinsic::gla_fMix, resultType, llvmParams[0]->getType(), llvmParams[1]->getType(), llvmParams[2]->getType()); name = "mix"; }
-    else if(!strcmp(call->callee_name(), "step"))               { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fStep, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); name = "step";  }
-    else if(!strcmp(call->callee_name(), "smoothstep"))         { intrinsicName = getLLVMIntrinsicFunction4(llvm::Intrinsic::gla_fSmoothStep, resultType, llvmParams[0]->getType(), llvmParams[1]->getType(), llvmParams[2]->getType()); name = "smoothstep"; }
-    else if(!strcmp(call->callee_name(), "intBitsToFloat"))     { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fIntBitsTofloat, resultType); name = "intBitsToFloat"; }
-    else if(!strcmp(call->callee_name(), "uintBitsToFloat"))    { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fIntBitsTofloat, resultType); name = "uintBitsToFloat"; }
-    else if(!strcmp(call->callee_name(), "fma"))                { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fFma, resultType); name = "fma"; }
-    else if(!strcmp(call->callee_name(), "frexp"))              { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fFrexp, resultType); name = "frexp"; }
-    else if(!strcmp(call->callee_name(), "ldexp"))              { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fLdexp, resultType); name = "ldexp"; }
-    else if(!strcmp(call->callee_name(), "unpackUnorm2x16"))    { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fUnpackUnorm2x16, resultType); name = "unpackUnorm2x16"; }
-    else if(!strcmp(call->callee_name(), "unpackUnorm4x8"))     { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fUnpackUnorm4x8, resultType); name = "unpackUnorm4x8"; }
-    else if(!strcmp(call->callee_name(), "unpackSnorm4x8"))     { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fUnpackSnorm4x8, resultType); name = "unpackSnorm4x8"; }
-    else if(!strcmp(call->callee_name(), "length"))             { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fLength, llvmParams[0]->getType()); name = "length"; }
-    else if(!strcmp(call->callee_name(), "distance"))           { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fDistance, llvmParams[0]->getType(), llvmParams[1]->getType()); name = "distance";  }
-    else if(!strcmp(call->callee_name(), "dot"))                { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fDot, llvmParams[0]->getType(), llvmParams[1]->getType()); name = "dot";  }
-    else if(!strcmp(call->callee_name(), "cross"))              { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fCross, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); name = "cross";  }
-    else if(!strcmp(call->callee_name(), "normalize"))          { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fNormalize, resultType, llvmParams[0]->getType()); name = "normalize"; }
-    else if(!strcmp(call->callee_name(), "ftransform"))         { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fFixedTransform, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); name = "ftransform";  }
-    else if(!strcmp(call->callee_name(), "faceforward"))        { intrinsicName = getLLVMIntrinsicFunction4(llvm::Intrinsic::gla_fFaceForward, resultType, llvmParams[0]->getType(), llvmParams[1]->getType(), llvmParams[2]->getType()); name = "faceforward"; }
-    else if(!strcmp(call->callee_name(), "reflect"))            { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fReflect, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); name = "reflect";  }
-    else if(!strcmp(call->callee_name(), "refract"))            { intrinsicName = getLLVMIntrinsicFunction4(llvm::Intrinsic::gla_fRefract, resultType, llvmParams[0]->getType(), llvmParams[1]->getType(), llvmParams[2]->getType()); name = "refract"; }
-    else if(!strcmp(call->callee_name(), "dFdx"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fDFdx, resultType, llvmParams[0]->getType()); name = "dFdx"; }
-    else if(!strcmp(call->callee_name(), "dFdy"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fDFdy, resultType, llvmParams[0]->getType()); name = "dFdy"; }
-    else if(!strcmp(call->callee_name(), "fwidth"))             { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fFilterWidth, resultType, llvmParams[0]->getType()); name = "fwidth"; }
-    else if(!strcmp(call->callee_name(), "any"))                { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_any, llvmParams[0]->getType()); name = "any"; }
-    else if(!strcmp(call->callee_name(), "all"))                { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_all, llvmParams[0]->getType()); name = "all"; }
+    if(!strcmp(call->callee_name(), "radians"))                 { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fRadians, resultType, llvmParams[0]->getType());  }
+    else if(!strcmp(call->callee_name(), "degrees"))            { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fDegrees, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "sin"))                { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fSin, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "cos"))                { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fCos, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "tan"))                { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fTan, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "asin"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAsin, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "acos"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAcos, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "atan"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAtan, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "sinh"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fSinh, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "cosh"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fCosh, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "tanh"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fTanh, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "asinh"))              { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAsinh, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "acosh"))              { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAcosh, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "atanh"))              { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAtanh, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "pow"))                { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fPow, resultType, llvmParams[0]->getType(), llvmParams[1]->getType());  }
+    else if(!strcmp(call->callee_name(), "exp"))                { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fExp, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "log"))                { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fLog, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "exp2"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fExp2, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "log2"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fLog2, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "sqrt"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fSqrt, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "inversesqrt"))        { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fInverseSqrt, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "floor"))              { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fFloor, resultType, llvmParams[0]->getType()); }
+    //else if(!strcmp(call->callee_name(), "trunc"))            { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); }  // defect in glsl2
+    else if(!strcmp(call->callee_name(), "round"))              { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fRoundFast, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "roundEven"))          { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fRoundEven, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "ceil"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fCeiling, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "fract"))              { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fFraction, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "modf"))               { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fModF, resultType, llvmParams[0]->getType(), llvmParams[1]->getType());  }
+    else if(!strcmp(call->callee_name(), "mix"))                { intrinsicName = getLLVMIntrinsicFunction4(llvm::Intrinsic::gla_fMix, resultType, llvmParams[0]->getType(), llvmParams[1]->getType(), llvmParams[2]->getType()); }
+    else if(!strcmp(call->callee_name(), "step"))               { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fStep, resultType, llvmParams[0]->getType(), llvmParams[1]->getType());  }
+    else if(!strcmp(call->callee_name(), "smoothstep"))         { intrinsicName = getLLVMIntrinsicFunction4(llvm::Intrinsic::gla_fSmoothStep, resultType, llvmParams[0]->getType(), llvmParams[1]->getType(), llvmParams[2]->getType()); }
+    else if(!strcmp(call->callee_name(), "intBitsToFloat"))     { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fIntBitsTofloat, resultType); }
+    else if(!strcmp(call->callee_name(), "uintBitsToFloat"))    { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fIntBitsTofloat, resultType); }
+    else if(!strcmp(call->callee_name(), "fma"))                { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fFma, resultType); }
+    else if(!strcmp(call->callee_name(), "frexp"))              { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fFrexp, resultType); }
+    else if(!strcmp(call->callee_name(), "ldexp"))              { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fLdexp, resultType); }
+    else if(!strcmp(call->callee_name(), "unpackUnorm2x16"))    { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fUnpackUnorm2x16, resultType); }
+    else if(!strcmp(call->callee_name(), "unpackUnorm4x8"))     { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fUnpackUnorm4x8, resultType); }
+    else if(!strcmp(call->callee_name(), "unpackSnorm4x8"))     { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fUnpackSnorm4x8, resultType); }
+    else if(!strcmp(call->callee_name(), "length"))             { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_fLength, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "distance"))           { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fDistance, llvmParams[0]->getType(), llvmParams[1]->getType());  }
+    else if(!strcmp(call->callee_name(), "dot"))                { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fDot, llvmParams[0]->getType(), llvmParams[1]->getType());  }
+    else if(!strcmp(call->callee_name(), "cross"))              { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fCross, resultType, llvmParams[0]->getType(), llvmParams[1]->getType());  }
+    else if(!strcmp(call->callee_name(), "normalize"))          { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fNormalize, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "ftransform"))         { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fFixedTransform, resultType, llvmParams[0]->getType(), llvmParams[1]->getType());  }
+    else if(!strcmp(call->callee_name(), "faceforward"))        { intrinsicName = getLLVMIntrinsicFunction4(llvm::Intrinsic::gla_fFaceForward, resultType, llvmParams[0]->getType(), llvmParams[1]->getType(), llvmParams[2]->getType()); }
+    else if(!strcmp(call->callee_name(), "reflect"))            { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fReflect, resultType, llvmParams[0]->getType(), llvmParams[1]->getType());  }
+    else if(!strcmp(call->callee_name(), "refract"))            { intrinsicName = getLLVMIntrinsicFunction4(llvm::Intrinsic::gla_fRefract, resultType, llvmParams[0]->getType(), llvmParams[1]->getType(), llvmParams[2]->getType()); }
+    else if(!strcmp(call->callee_name(), "dFdx"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fDFdx, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "dFdy"))               { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fDFdy, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "fwidth"))             { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fFilterWidth, resultType, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "any"))                { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_any, llvmParams[0]->getType()); }
+    else if(!strcmp(call->callee_name(), "all"))                { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_all, llvmParams[0]->getType()); }
 
     // Select intrinsic based on parameter types
     else if(!strcmp(call->callee_name(), "abs"))                {
         switch(getLLVMBaseType(llvmParams[0]))                  {
-        case llvm::Type::IntegerTyID:                           { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_abs, resultType, llvmParams[0]->getType()); name = "abs";   break;  }
-        case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAbs, resultType, llvmParams[0]->getType()); name = "abs";  break;  }  }  }
+        case llvm::Type::IntegerTyID:                           { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_abs, resultType, llvmParams[0]->getType()); break; }
+        case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAbs, resultType, llvmParams[0]->getType()); break; }  }  }
     else if(!strcmp(call->callee_name(), "sign"))               {
         switch(getLLVMBaseType(llvmParams[0]))                  {
         case llvm::Type::IntegerTyID:                           { gla::UnsupportedFunctionality("Integer sign() ");  break;  }
-        case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fSign, resultType, llvmParams[0]->getType()); name = "sign"; break;  }  }  }
+        case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fSign, resultType, llvmParams[0]->getType());  break; }  }  }
     else if(!strcmp(call->callee_name(), "min"))                {
         switch(getLLVMBaseType(llvmParams[0]))                  {
-        case llvm::Type::IntegerTyID:                           { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_sMin, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); name = "min";  break;  }
-        case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fMin, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); name = "min";  break;  }  }  }
+        case llvm::Type::IntegerTyID:                           { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_sMin, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); break; }
+        case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fMin, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); break; }  }  }
     else if(!strcmp(call->callee_name(), "max"))                {
         switch(getLLVMBaseType(llvmParams[0]))                  {
-        case llvm::Type::IntegerTyID:                           { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_sMax, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); name = "max";  break;  }
-        case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fMax, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); name = "max";  break;  }  }  }
+        case llvm::Type::IntegerTyID:                           { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_sMax, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); break; }
+        case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fMax, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); break; }  }  }
     else if(!strcmp(call->callee_name(), "clamp"))              {
         switch(getLLVMBaseType(llvmParams[0]))                  {
-        case llvm::Type::IntegerTyID:                           { intrinsicName = getLLVMIntrinsicFunction4(llvm::Intrinsic::gla_sClamp, resultType, llvmParams[0]->getType(), llvmParams[1]->getType(), llvmParams[2]->getType()); name = "clamp";  break;  }
-        case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction4(llvm::Intrinsic::gla_fClamp, resultType, llvmParams[0]->getType(), llvmParams[1]->getType(), llvmParams[2]->getType()); name = "clamp";  break;  }  }  }
+        case llvm::Type::IntegerTyID:                           { intrinsicName = getLLVMIntrinsicFunction4(llvm::Intrinsic::gla_sClamp, resultType, llvmParams[0]->getType(), llvmParams[1]->getType(), llvmParams[2]->getType()); break; }
+        case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction4(llvm::Intrinsic::gla_fClamp, resultType, llvmParams[0]->getType(), llvmParams[1]->getType(), llvmParams[2]->getType()); break; }  }  }
 
     // Unsupported calls
     //noise*")) { }
-    //else if(!strcmp(call->callee_name(), "matrixCompMult"))   { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); name = "xxxx"; }
-    //else if(!strcmp(call->callee_name(), "outerProduct"))     { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); name = "xxxx"; }
-    //else if(!strcmp(call->callee_name(), "transpose"))        { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); name = "xxxx"; }
-    //else if(!strcmp(call->callee_name(), "determinant"))      { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); name = "xxxx"; }
-    //else if(!strcmp(call->callee_name(), "inverse"))          { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); name = "xxxx"; }
+    //else if(!strcmp(call->callee_name(), "matrixCompMult"))   { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); }
+    //else if(!strcmp(call->callee_name(), "outerProduct"))     { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); }
+    //else if(!strcmp(call->callee_name(), "transpose"))        { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); }
+    //else if(!strcmp(call->callee_name(), "determinant"))      { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); }
+    //else if(!strcmp(call->callee_name(), "inverse"))          { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); }
 
     // Texture calls
     else if(!strcmp(call->callee_name(), "texture1D")) {
         samplerType    = gla::ESampler1D;
         texFlags.EBias = (paramCount > 2) ? true : false;
-        name           = "texture1DTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "texture1DProj")) {
         samplerType         = gla::ESampler1D;
         texFlags.EProjected = true;
         texFlags.EBias      = (paramCount > 2) ? true : false;
-        name                = "texture1DProjTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "texture1DLod")) {
         textureIntrinsicID   = llvm::Intrinsic::gla_fTextureSampleLod;
         samplerType   = gla::ESampler1D;
         texFlags.ELod = true;
-        name          = "texture1DLodTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "texture1DProjLod")) {
         textureIntrinsicID   = llvm::Intrinsic::gla_fTextureSampleLod;
         samplerType   = gla::ESampler1D;
         texFlags.ELod = true;
-        name          = "texture1DLodTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "texture2D")) {
         samplerType      = gla::ESampler2D;
         texFlags.EBias   = (paramCount > 2) ? true : false;
-        name             = "texture2DTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "texture2DProj")) {
         samplerType         = gla::ESampler2D;
         texFlags.EProjected = true;
         texFlags.EBias      = (paramCount > 2) ? true : false;
-        name                = "texture2DProjTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "texture2DLod")) {
         textureIntrinsicID  = llvm::Intrinsic::gla_fTextureSampleLod;
         samplerType         = gla::ESampler2D;
         texFlags.ELod       = true;
-        name                = "texture2DLodTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "texture2DProjLod")) {
@@ -785,26 +811,22 @@ llvm::Value* GlslToTopVisitor::createLLVMIntrinsic(ir_call *call, llvm::Value** 
         samplerType         = gla::ESampler2D;
         texFlags.EProjected = true;
         texFlags.ELod       = true;
-        name                = "texture2DProjLodTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "texture3D")) {
         samplerType     = gla::ESampler3D;
         texFlags.EBias  = (paramCount > 2) ? true : false;
-        name            = "texture3DTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "texture3DProj")) {
         samplerType         = gla::ESampler3D;
         texFlags.EProjected = true;
         texFlags.EBias      = (paramCount > 2) ? true : false;
-        name                = "texture3DProjTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "texture3DLod")) {
         samplerType     = gla::ESampler3D;
         texFlags.ELod   = true;
-        name            = "texture3DLodTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "texture3DProjLod")) {
@@ -812,60 +834,51 @@ llvm::Value* GlslToTopVisitor::createLLVMIntrinsic(ir_call *call, llvm::Value** 
         samplerType         = gla::ESampler3D;
         texFlags.EProjected = true;
         texFlags.ELod       = true;
-        name                = "texture3DLodTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "textureCube")) {
         samplerType     = gla::ESamplerCube;
         texFlags.EBias  = (paramCount > 2) ? true : false;
-        name            = "textureCubeTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "textureCubeLod ")) {
         textureIntrinsicID = llvm::Intrinsic::gla_fTextureSampleLod;
         samplerType        = gla::ESamplerCube;
         texFlags.ELod      = true;
-        name               = "textureCubeLodTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "shadow1D")) {
         samplerType     = gla::ESampler1DShadow;
         texFlags.EBias  = (paramCount > 2) ? true : false;
-        name            = "shadow1DTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "shadow2D")) {
         samplerType     = gla::ESampler2DShadow;
         texFlags.EBias  = (paramCount > 2) ? true : false;
-        name            = "shadow2DTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "shadow1DProj")) {
         samplerType         = gla::ESampler1DShadow;
         texFlags.EProjected = true;
         texFlags.EBias      = (paramCount > 2) ? true : false;
-        name                = "shadow1DProjTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "shadow2DProj")) {
         samplerType         = gla::ESampler2DShadow;
         texFlags.EProjected = true;
         texFlags.EBias      = (paramCount > 2) ? true : false;
-        name                = "shadow2DProjTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "shadow1DLod")) {
         textureIntrinsicID = llvm::Intrinsic::gla_fTextureSampleLod;
         samplerType        = gla::ESampler1DShadow;
         texFlags.ELod      = true;
-        name               = "shadow1DLodTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "shadow2DLod")) {
         textureIntrinsicID = llvm::Intrinsic::gla_fTextureSampleLod;
         samplerType        = gla::ESampler2DShadow;
         texFlags.ELod      = true;
-        name               = "shadow2DLodTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "shadow1DProjLod")) {
@@ -873,7 +886,6 @@ llvm::Value* GlslToTopVisitor::createLLVMIntrinsic(ir_call *call, llvm::Value** 
         samplerType         = gla::ESampler1DShadow;
         texFlags.EProjected = true;
         texFlags.ELod       = true;
-        name                = "shadow1DProjLodTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else if(!strcmp(call->callee_name(), "shadow2DProjLod")) {
@@ -881,7 +893,6 @@ llvm::Value* GlslToTopVisitor::createLLVMIntrinsic(ir_call *call, llvm::Value** 
         samplerType         = gla::ESampler2DShadow;
         texFlags.EProjected = true;
         texFlags.ELod       = true;
-        name                = "shadow2DProjLodTmp";
         createLLVMTextureIntrinsic(intrinsicName, paramCount, outParams, llvmParams, resultType, textureIntrinsicID, samplerType, texFlags);
     }
     else {
@@ -895,19 +906,19 @@ llvm::Value* GlslToTopVisitor::createLLVMIntrinsic(ir_call *call, llvm::Value** 
     switch(paramCount)
     {
     case 5:
-        callInst = builder.CreateCall5(intrinsicName, outParams[0] , outParams[1], outParams[2], outParams[3], outParams[4], name);
+        callInst = builder.CreateCall5(intrinsicName, outParams[0] , outParams[1], outParams[2], outParams[3], outParams[4]);
         break;
     case 4:
-        callInst = builder.CreateCall4(intrinsicName, outParams[0] , outParams[1], outParams[2], outParams[3], name);
+        callInst = builder.CreateCall4(intrinsicName, outParams[0] , outParams[1], outParams[2], outParams[3]);
         break;
     case 3:
-        callInst = builder.CreateCall3(intrinsicName, outParams[0] , outParams[1], outParams[2], name);
+        callInst = builder.CreateCall3(intrinsicName, outParams[0] , outParams[1], outParams[2]);
         break;
     case 2:
-        callInst = builder.CreateCall2(intrinsicName, outParams[0], outParams[1], name);
+        callInst = builder.CreateCall2(intrinsicName, outParams[0], outParams[1]);
         break;
     case 1:
-        callInst = builder.CreateCall (intrinsicName, outParams[0], name);
+        callInst = builder.CreateCall (intrinsicName, outParams[0]);
         break;
     default:
         assert(! "Unsupported parameter count");
@@ -1034,11 +1045,11 @@ llvm::Value* GlslToTopVisitor::createLLVMVariable(ir_variable* var)
 {
     unsigned int addressSpace = gla::GlobalAddressSpace;
     bool constant = var->read_only;
-    bool local = false;
     llvm::Constant* initializer = 0;
     llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalVariable::InternalLinkage;
     llvm::Type *llvmVarType = convertGLSLToLLVMType(var->type);
     llvm::Value* value = 0;
+    bool globalQualifier = false;
 
     const char* typePrefix = 0;
     if (var->type->base_type == GLSL_TYPE_SAMPLER)
@@ -1046,37 +1057,40 @@ llvm::Value* GlslToTopVisitor::createLLVMVariable(ir_variable* var)
 
     switch (var->mode) {
     case ir_var_auto:
-        //?? want to distinguish between globals and locals
-        //?? this will break for a global accessed by multiple functions
-        // a global needs an initializer so it will get eliminated by LLVM
-        local = true;
+        if (constant)
+            initializer = createLLVMConstant(var->constant_value);
+        else if (! localScope)
+            initializer = llvm::Constant::getNullValue(llvmVarType);
         break;
 
     case ir_var_uniform:
         // ?? need to generalize to N objects (constant buffers) for higher shader models
         // ?? link:  we need link info to know how large the memory object is
+        linkage = llvm::GlobalVariable::ExternalLinkage;
+        globalQualifier = true;
         addressSpace = gla::UniformAddressSpace;
         assert(var->read_only == true);
-        linkage = llvm::GlobalVariable::ExternalLinkage;
         break;
 
     case ir_var_in:
+        // inputs should all be pipeline reads or created at function creation time
         assert(! "no memory allocations for inputs");
         return 0;
 
     case ir_var_out:
-        // keep internal linkage, because epilogue will to the write out to the pipe
+        // use internal linkage, because epilogue will to the write out to the pipe
         // internal linkage helps with global optimizations, so does having an initializer
+        globalQualifier = true;
         initializer = llvm::Constant::getNullValue(llvmVarType);
         break;
 
     case ir_var_inout:
         // can only be for function parameters
-        local = true;
         break;
 
     case ir_var_temporary:
-        local = true;
+        if (! localScope)
+            initializer = llvm::Constant::getNullValue(llvmVarType);
         break;
 
     default:
@@ -1092,14 +1106,13 @@ llvm::Value* GlslToTopVisitor::createLLVMVariable(ir_variable* var)
     // var->origin_upper_left;
     // var->pixel_center_integer;
     // var->location;
-    // var->constant_value;
 
-    if (local) {
-        //?? if global scope
-            llvm::BasicBlock* entryBlock = getShaderEntry();
-        //?? else.
-            //llvm::BasicBlock* entryBlock = &builder.GetInsertBlock()->getParent()->getEntryBlock();
+    if (localScope && ! globalQualifier) {
 
+        // LLVM promote memory to registers pass only works when alloca
+        // is in the entry block.
+
+        llvm::BasicBlock* entryBlock = &builder.GetInsertBlock()->getParent()->getEntryBlock();
         llvm::IRBuilder<> entryBuilder(entryBlock, entryBlock->begin());
         value = entryBuilder.CreateAlloca(llvmVarType, 0, var->name);
     } else {
@@ -1547,13 +1560,6 @@ void GlslToTopVisitor::findAndSmearScalars(llvm::Value** operands, int numOperan
     if( (vectorType[0] && vectorType[1]) || (!vectorType[0] && !vectorType[1]) )
         return;
 
-    // Create a new, same size vector
-    //?? if local scope
-        llvm::BasicBlock* entryBlock = &builder.GetInsertBlock()->getParent()->getEntryBlock();
-    //?? else
-        //llvm::BasicBlock* entryBlock = getShaderEntry();
-
-    llvm::IRBuilder<> entryBuilder(entryBlock, entryBlock->begin());
     operands[scalarIndex] = llvm::UndefValue::get(vectorType[vectorIndex]);
 
     // Use a swizzle to expand the scalar to a vector
@@ -1585,7 +1591,6 @@ llvm::BasicBlock* GlslToTopVisitor::getShaderEntry()
     llvm::FunctionType *functionType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), false);
     llvm::Function *function = llvm::Function::Create(functionType, llvm::Function::ExternalLinkage, "main", module);
     shaderEntry = llvm::BasicBlock::Create(context, "entry", function);
-    builder.SetInsertPoint(shaderEntry);
 
     return shaderEntry;
 }

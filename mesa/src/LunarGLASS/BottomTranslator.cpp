@@ -282,12 +282,11 @@ void CodeGeneration::handleExiting(const llvm::BranchInst* branchInst, llvm::Loo
     llvm::SmallVector<llvm::BasicBlock*, 8> exitBlocks;
     loop->getExitBlocks(exitBlocks);
     int succNum = -1;
+    // Find the first successor that the loop doesn't contain
     for (int i = 0; i < branchInst->getNumSuccessors(); ++i) {
-        for (llvm::SmallVector<llvm::BasicBlock*,8>::iterator bbI = exitBlocks.begin(), bbE = exitBlocks.end(); bbI != bbE; ++bbI) {
-            if (*bbI == branchInst->getSuccessor(i)) {
-                succNum = i;
-                break;
-            }
+        if (!loop->contains(branchInst->getSuccessor(i))) {
+            succNum = i;
+            break;
         }
     }
     assert(succNum != -1 && succNum <= 1);
@@ -324,7 +323,12 @@ void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb)
 
     // If it's a loop header, have the back-end add it
     if (isHeader) {
-        backEndTranslator->addLoop(NULL);
+        gla::LoopExitType let;
+        if (isExiting && !isLatch)
+            let = gla::ELETTopExit;
+        else
+            let = gla::ELETNeither;
+        backEndTranslator->addLoop(let, false, NULL);
     }
 
     // If the block's neither a latch nor exiting, then we're dealing
@@ -368,8 +372,8 @@ void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb)
         // Add phi copies (if applicable) and close
         if (backEnd->getRemovePhiFunctions()) {
             translator->addPhiCopies(branchInst);
-            backEndTranslator->addContinue();
         }
+        backEndTranslator->addContinue();
     }
 
     // If the block's a header (and all the loop's blocks have been handled),
@@ -506,8 +510,8 @@ bool CodeGeneration::runOnModule(llvm::Module& module)
             translator->setLoopInfo(loopInfo);
 
             // debug stuff
-            // llvm::errs() << "\n\nLoop info:\n";
-            // loopInfo->print(llvm::errs());
+            llvm::errs() << "\n\nLoop info:\n";
+            loopInfo->print(llvm::errs());
 
             // handle function's with bodies
 

@@ -212,15 +212,29 @@ public:
         leaveScope();
     }
 
-    void addLoop(llvm::BasicBlock* headerBB)
+    void addLoop(gla::LoopExitType lt, bool isMultiExit, llvm::BasicBlock* headerBB)
     {
         // llvm::TerminatorInst* term = headerBB->getTerminator();
         // llvm::BranchInst* branch = llvm::dyn_cast<llvm::BranchInst>(term);
+
         // assert(branch && "addLoop called on non-loop header (non-branch)");
 
         newLine();
 
-        shader << "while (true) ";
+        shader << "while (";
+
+        switch (lt) {
+        case ELETTopExit:
+            UnsupportedFunctionality("while loop");
+            break;
+        case ELETBottomExit:
+            UnsupportedFunctionality("bottom exiting loops");
+            break;
+        case ELETNeither:
+            shader << "true";
+            break;
+        }
+        shader << ") ";
         newScope();
     }
 

@@ -27,6 +27,76 @@
 //
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// Description of how flow control is handled:
+//
+// * Flow control is handled on a basic block by basic block level, rather than
+//   on an instruction by instruction level. This is because some constructs
+//   like do-while loops need to know as soon as they begin what kind of flow
+//   control construct they represent.
+//
+// * Each block is passed to handleBlock, which dispatches it depending on
+//   available info. If it's a loop header, latch, or exit, then it will
+//   dispatch it to handleLoopBlock. Otherwise, if it's a branch, dispatch to
+//   handleBranchingBlock. If none of the above apply, then it will get passed
+//   to handleReturnBlock. handleBlock keeps track of blocks it's already seen,
+//   so it wont process the same block twice, allowing it to be called by other
+//   handlers when a certain basic block processing order must be
+//   maintained. This also allows handleBlock to know when it's handling the
+//   last program order (not neccessarily llvm order) block.
+//
+// * Loops in LLVM are a set of blocks, possibly tagged with 3 properties. A
+//   block tagged as a loop header (there is only 1 per loop) has the loop's
+//   backedge branching to it. It also is the first block encountered in program
+//   or LLVM IR order. An exit block is a block that exits the loop. A latch is
+//   a block with a backedge. There may be many exit blocks and many latches,
+//   and any given block could have multiple tags. Any untagged blocks can be
+//   handled normally, as though they weren't even in a loop. For now, loops are
+//   presented to the backends in a very simple form: They are while(true) loops
+//   with breaks inside them. For example, a do-while style construct would be
+//   "while (true) ... do stuff ... if (condition) break;", while a while loop
+//   would have the conditional break be at the beginning. Every exit block's
+//   branch statement turns into an 'if(condition) break;' style of
+//   output. Latches simply end in a continue. Thus all that a backend is
+//   required to support is addLoop (e.g. "while (true) {"), addLoopEnd
+//   (e.g. "}"), addBreak (e.g. "break;"), and addContinue
+//   (e.g. "continue;"). More logic for more specialized constructs could easily
+//   be added, e.g. "if a loop header is an exit, and the back end supports
+//   while loops, then output a while loop with the condition on the exit being
+//   the condition for the loop". Currently nested loops are unsupported, but
+//   could be (moderately easily) added by changing the logic in handleLoopBlock
+//   a little.
+//
+// * handleLoopBlock proceeds as follows for the following loop block types:
+//
+//     - Header:  Tell the backend to add a loop. If the header is not also a
+//                latch or exiting block, then it's the start of some internal
+//                control flow, so pass it off to handleBranchingBlock.
+//                Otherwise handle its instructions, handle it as an exiting
+//                block if it's exiting, and pass every block in the loop to
+//                handleBlock. This is done to make sure that all loop internal
+//                blocks are handled before further loop external blocks are.
+//                If it's also a latch, add phi copies if applicable. Finally,
+//                end the loop.
+//
+//     - Latch:   Handle its instructions, add phi copies if applicable, add
+//                continue.
+//
+//     - Exiting: Handle its instructions, get the exit condition, and add in an
+//                if test for it and a break instruction under the if
+//
+// * handleIfBlock proceeds by having the backend add an if, then finding the
+//   earliest confluence point (see CFG.h) of it's two successors. If the
+//   confluence point is the second successor, then we're dealing with just an
+//   if-then, otherwise we have an if-then-else. handleBlock is called on the
+//   then branch, and if there's an else branch, it's added by the backend and
+//   handleBlock is called on it as well. Finally, the backend adds an endif.
+//
+// * handleReturnBlock handles it's instructions, then has the backend add in
+//   the return instruction.
+//
+//===----------------------------------------------------------------------===//
+
 // LLVM includes
 #include "llvm/DerivedTypes.h"
 #include "llvm/IntrinsicInst.h"
@@ -67,8 +137,6 @@ namespace {
         { }
 
         // Translate from LLVM CFG style to structured style.
-        void addFlowControl(const llvm::Instruction*, bool);
-
         void declarePhiCopies(const llvm::Function*);
 
         void setLoopInfo(llvm::LoopInfo* li) { loopInfo = li; }
@@ -98,7 +166,6 @@ namespace {
         void setBackEnd(gla::BackEnd* be)                      { backEnd = be; }
         void setBottomTranslator(BottomTranslator* bt)         { translator = bt; }
 
-
     private:
         gla::BackEndTranslator* backEndTranslator;
         gla::BackEnd* backEnd;
@@ -109,9 +176,6 @@ namespace {
 
         // Set of blocks belonging to flowcontrol constructs that we've already handled
         llvm::SmallPtrSet<const llvm::BasicBlock*,8> handledBlocks;
-
-        // Stack of confluence points
-        std::stack<llvm::BasicBlock*> confluencePoints;
 
         llvm::LoopInfo* loopInfo;
 
@@ -125,9 +189,6 @@ namespace {
         // backend
         void handleNonTerminatingInstructions(const llvm::BasicBlock*);
 
-        // Handle latch duties, such as phi copies and closing the loop
-        void handleLatch(const llvm::BranchInst*);
-
         // Handle exiting loop duties, such as setting up the condition and
         // adding breaks
         void handleExiting(const llvm::BranchInst*, llvm::Loop*);
@@ -139,9 +200,8 @@ namespace {
         // Given a block ending in return, output it and the return
         void handleReturnBlock(const llvm::BasicBlock*);
 
-        void handleUncondBranch(const llvm::BasicBlock*);
-
-        void handleConditional(const llvm::BasicBlock*);
+        // Handle non-loop control flow
+        void handleBranchingBlock(const llvm::BasicBlock*);
 
 
         ~CodeGeneration()
@@ -151,61 +211,6 @@ namespace {
 
     };
 } // end namespace
-
-void BottomTranslator::addFlowControl(const llvm::Instruction* llvmInstruction, bool removePhiFunctions)
-{
-    assert(!"We shouldn't be here");
-
-    // Translate from LLVM CFG style to structured style. This is done by
-    // identifying and handling loops via LoopInfo, and conditionals are handled
-    // by using a stack to keep track of what is pending. So far nested loops
-    // are not supported
-
-    // Also, translate from SSA form to non-SSA form (remove phi functions).
-    // This is done by looking ahead for phi functions and adding copies in the
-    // phi-predecessor blocks.2
-
-    // Currently, this is done in a fragile way. Only (un-nested) loops are
-    // handled via some form of analysis. For all other LLVM branches found, we
-    // assume they must be representing if-then-else constructs.
-
-    // if (removePhiFunctions) {
-    //     // All branches that branch to a block having phi instructions for that
-    //     // branch need copies inserted.
-    //     addPhiCopies(llvmInstruction);
-    // }
-
-    // // If it's an unconditional branch into a loop header, ignore it and move on
-    // const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(llvmInstruction);
-    // if (branchInst && branchInst->isUnconditional() && loopInfo->isLoopHeader(branchInst->getSuccessor(0))) {
-    //     return;
-    // }
-
-    // switch (llvmInstruction->getNumOperands()) {
-    // case 1:
-    //     // We are doing an unconditional branch
-    //     // Assume it is to the merge of the if-then-else or the if-then
-    //     if (flowControl.back() == llvmInstruction->getOperand(0)) {
-    //         // This must be the end of the if block
-    //         backEndTranslator->addEndif();
-    //         flowControl.pop_back();
-    //     } else {
-    //         // This must be the end of a then that has as else
-    //         backEndTranslator->addElse();
-    //         flowControl.pop_back();
-    //         flowControl.push_back(llvmInstruction->getOperand(0));
-    //     }
-    //     break;
-    // case 3:
-    //     // We are splitting into two children.
-    //     // Assume we are entering an if-then-else statement or if-then statement.
-    //     flowControl.push_back(llvmInstruction->getOperand(1));
-    //     backEndTranslator->addIf(llvmInstruction->getOperand(0));
-    //     break;
-    // default:
-    //     gla::UnsupportedFunctionality("Flow Control in Bottom IR");
-    // }
-}
 
 void BottomTranslator::declarePhiCopies(const llvm::Function* function)
 {
@@ -266,12 +271,6 @@ void CodeGeneration::handleNonTerminatingInstructions(const llvm::BasicBlock* bb
     }
 }
 
-void CodeGeneration::handleLatch(const llvm::BranchInst* branchInst) {
-    // Add phi copies and close
-    translator->addPhiCopies(branchInst);
-    backEndTranslator->addLoopEnd();
-}
-
 void CodeGeneration::handleExiting(const llvm::BranchInst* branchInst, llvm::Loop* loop) {
     llvm::Value* condition = branchInst->getCondition();
     assert(condition && "conditional branch without condition");
@@ -297,7 +296,8 @@ void CodeGeneration::handleExiting(const llvm::BranchInst* branchInst, llvm::Loo
         backEndTranslator->addBreak();
         backEndTranslator->addEndif();
     } else {
-        // invert it then do stuff
+        // Invert it then do stuff. I've not yet seen a situation come up where
+        // we must invert it, however.
         assert(!"condition inversion");
     }
 }
@@ -327,7 +327,7 @@ void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb)
     // If the block's neither a latch nor exiting, then we're dealing
     // with internal flow control.
     if (!isLatch && !isExiting) {
-        handleConditional(bb);
+        handleBranchingBlock(bb);
         handledInternals = true;
     }
 
@@ -349,45 +349,51 @@ void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb)
     // outside the loop (as other blocks may be before the loop blocks in the
     // LLVM-IR's lineralization).
     if (isHeader) {
-        for (llvm::Loop::block_iterator i = loop->block_begin(), e = loop->block_end(); i != e; ++i) {
-            handleBlock(*i);
+        // We want to handle the blocks in LLVM IR order, instead of LoopInfo
+        // order (which may be out of order, e.g. put an else before the if
+        // block).
+        // TODO: Find more cleaver/efficient way to do the below.
+        for (llvm::Function::const_iterator i = bb->getParent()->begin(), e = bb->getParent()->end(); i != e; ++i) {
+            if (loop->contains(i)) {
+                handleBlock(i);
+            }
         }
     }
 
-    // If the block's a latch, handle it
+    // If the block's a latch, add in our phi copies
     if (isLatch) {
-        handleLatch(branchInst);
+        // Add phi copies (if applicable) and close
+        if (backEnd->getRemovePhiFunctions()) {
+            translator->addPhiCopies(branchInst);
+            backEndTranslator->addContinue();
+        }
     }
 
+    // If the block's a header (and all the loop's blocks have been handled),
+    // then close the loop
+    if (isHeader) {
+        backEndTranslator->addLoopEnd();
+    }
 
     return;
 }
 
 void CodeGeneration::handleIfBlock(const llvm::BasicBlock* bb)
 {
-    handleNonTerminatingInstructions(bb);
 
     const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
     assert(branchInst && branchInst->getNumSuccessors() == 2 && "handleIfBlock called with improper terminator");
 
     // Find the earliest confluence point and add it to our stack
     llvm::BasicBlock* cBB = gla::FindEarliestConfluencePoint(branchInst->getSuccessor(0), branchInst->getSuccessor(1));
-    confluencePoints.push(cBB);
-    //llvm::errs() << "confluence: " << *cBB;
-
-    if (backEnd->getRemovePhiFunctions()) {
-        // All branches that branch to a block having phi instructions for that
-        // branch need copies inserted.
-        translator->addPhiCopies(branchInst);
-    }
+    // If we branch to the confluence point, then we're an if-then, else were're
+    // dealing with an if-then-else
+    bool ifThenElse = branchInst->getSuccessor(1) != cBB;
 
     // Create an if, and handle the then
     backEndTranslator->addIf(branchInst->getCondition());
     handleBlock(branchInst->getSuccessor(0));
 
-    // If we branch to the confluence point, then we're an if-then, else were're
-    // dealing with an if-then-else
-    bool ifThenElse = branchInst->getSuccessor(1) != confluencePoints.top();
 
     // If we're an if-then-else, add in the else
     if (ifThenElse) {
@@ -397,9 +403,7 @@ void CodeGeneration::handleIfBlock(const llvm::BasicBlock* bb)
 
     backEndTranslator->addEndif();
 
-    confluencePoints.pop();
     return;
-
 }
 
 void CodeGeneration::handleReturnBlock(const llvm::BasicBlock* bb)
@@ -412,41 +416,31 @@ void CodeGeneration::handleReturnBlock(const llvm::BasicBlock* bb)
     return;
 }
 
-void CodeGeneration::handleUncondBranch(const llvm::BasicBlock* bb)
-{
-    const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
-    assert(branchInst && branchInst->isUnconditional());
-
-    handleNonTerminatingInstructions(bb);
-    if (backEnd->getRemovePhiFunctions()) {
-        // All branches that branch to a block having phi instructions for that
-        // branch need copies inserted.
-        translator->addPhiCopies(branchInst);
-    }
-
-    // If we're going to a confluence block, then end the if, otherwise just proceed
-    if (confluencePoints.size() && confluencePoints.top() == branchInst->getSuccessor(0)) {
-        //backEndTranslator->addEndif();
-    }
-
-    return;
-}
-
-void CodeGeneration::handleConditional(const llvm::BasicBlock* bb)
+void CodeGeneration::handleBranchingBlock(const llvm::BasicBlock* bb)
 {
     const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
     assert(branchInst);
 
+    // Handle it's instructions and do phi node removal if appropriate
+    handleNonTerminatingInstructions(bb);
+    if (backEnd->getRemovePhiFunctions()) {
+        translator->addPhiCopies(branchInst);
+    }
+
+    // If it's unconditional, we're done here.
+    if (branchInst->isUnconditional()) {
+        return;
+    }
+
+    // If it has 2 successors, then it's an if block
     if (branchInst->getNumSuccessors() == 2) {
         handleIfBlock(bb);
         return;
     }
 
-    if (branchInst->isUnconditional()) {
-        handleUncondBranch(bb);
-        return;
-    }
-
+    // We currently do not handle any constructs that are not if-then or
+    // if-then-else
+    gla::UnsupportedFunctionality("Conditional branch in bottom IR with != 2 successors");
 }
 
 void CodeGeneration::handleBlock(const llvm::BasicBlock* bb)
@@ -464,9 +458,9 @@ void CodeGeneration::handleBlock(const llvm::BasicBlock* bb)
         return;
     }
 
-    // If the block's still a branching block, then handle it as a conditional
+    // If the block's still a branching block, then handle it.
     if (llvm::isa<llvm::BranchInst>(bb->getTerminator())) {
-        handleConditional(bb);
+        handleBranchingBlock(bb);
         return;
     }
 

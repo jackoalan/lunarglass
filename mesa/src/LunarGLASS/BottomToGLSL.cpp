@@ -235,6 +235,12 @@ public:
         shader << "break;";
     }
 
+    void addContinue()
+    {
+        newLine();
+        shader << "continue;";
+    }
+
     void print();
 
 protected:
@@ -1101,7 +1107,7 @@ void gla::GlslTarget::add(const llvm::Instruction* llvmInstruction)
         return;
 
     default:
-        UnsupportedFunctionality("Opcode in Bottom IR: ", llvmInstruction->getOpcode(), EATContinue);
+        UnsupportedFunctionality(llvmInstruction->getOpcodeName(), llvmInstruction->getOpcode(), EATContinue);
     }
 }
 

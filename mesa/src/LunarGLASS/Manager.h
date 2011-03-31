@@ -70,6 +70,7 @@ namespace gla {
         virtual void addLoop(llvm::BasicBlock*) = 0;
         virtual void addLoopEnd() = 0;
         virtual void addBreak() = 0;
+        virtual void addContinue() = 0;
 
         virtual void print() = 0;
     };

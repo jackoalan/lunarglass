@@ -172,6 +172,11 @@ public:
         gla::UnsupportedFunctionality("break");
     }
 
+    void addContinue()
+    {
+        gla::UnsupportedFunctionality("continue");
+    }
+
     void addPhiCopy(const llvm::Value* dst, const llvm::Value* src)
     {
         mesaInstruction->Opcode = OPCODE_MOV;

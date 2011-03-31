@@ -51,21 +51,22 @@
 //   or LLVM IR order. An exit block is a block that exits the loop. A latch is
 //   a block with a backedge. There may be many exit blocks and many latches,
 //   and any given block could have multiple tags. Any untagged blocks can be
-//   handled normally, as though they weren't even in a loop. For now, loops are
-//   presented to the backends in a very simple form: They are while(true) loops
-//   with breaks inside them. For example, a do-while style construct would be
-//   "while (true) ... do stuff ... if (condition) break;", while a while loop
-//   would have the conditional break be at the beginning. Every exit block's
-//   branch statement turns into an 'if(condition) break;' style of
-//   output. Latches simply end in a continue. Thus all that a backend is
-//   required to support is addLoop (e.g. "while (true) {"), addLoopEnd
-//   (e.g. "}"), addBreak (e.g. "break;"), and addContinue
+//   handled normally, as though they weren't even in a loop.
+//
+// * For now, loops are presented to the backends in a very simple form: They
+//   are while(true) loops with breaks inside them. For example, a do-while
+//   style construct would be "while (true) ... do stuff ... if (condition)
+//   break;", while a while loop would have the conditional break be at the
+//   beginning. Every exit block's branch statement turns into an 'if(condition)
+//   break;' style of output. Latches simply end in a continue. Thus all that a
+//   backend is required to support is addLoop (e.g. "while (true) {"),
+//   addLoopEnd (e.g. "}"), addBreak (e.g. "break;"), and addContinue
 //   (e.g. "continue;"). More logic for more specialized constructs could easily
-//   be added, e.g. "if a loop header is an exit, and the back end supports
-//   while loops, then output a while loop with the condition on the exit being
-//   the condition for the loop". Currently nested loops are unsupported, but
-//   could be (moderately easily) added by changing the logic in handleLoopBlock
-//   a little.
+//   be added incrementally. For example, "if a loop header is an exit, and the
+//   back end supports while loops, then output a while loop with the condition
+//   on the exit being the condition for the loop". Currently nested loops are
+//   unsupported, but could be (moderately easily) added by changing the logic
+//   in handleLoopBlock a little.
 //
 // * handleLoopBlock proceeds as follows for the following loop block types:
 //
@@ -174,6 +175,8 @@ namespace {
 
         gla::EFlowControlMode flowControlMode;
 
+        bool lastBlock;
+
         // Set of blocks belonging to flowcontrol constructs that we've already handled
         llvm::SmallPtrSet<const llvm::BasicBlock*,8> handledBlocks;
 
@@ -266,7 +269,7 @@ void CodeGeneration::handleNonTerminatingInstructions(const llvm::BasicBlock* bb
             break;
 
         if (! (backEnd->getRemovePhiFunctions() && inst->getOpcode() == llvm::Instruction::PHI))
-            backEndTranslator->add(inst);
+            backEndTranslator->add(inst, lastBlock);
 
     }
 }
@@ -411,7 +414,7 @@ void CodeGeneration::handleReturnBlock(const llvm::BasicBlock* bb)
     assert(llvm::isa<llvm::ReturnInst>(bb->getTerminator()));
 
     handleNonTerminatingInstructions(bb);
-    backEndTranslator->add(bb->getTerminator());
+    backEndTranslator->add(bb->getTerminator(), lastBlock);
 
     return;
 }
@@ -448,6 +451,10 @@ void CodeGeneration::handleBlock(const llvm::BasicBlock* bb)
     if (handledBlocks.count(bb))
         return;
     handledBlocks.insert(bb);
+
+    // Are we on the last block?
+    if (handledBlocks.size() + 1 == bb->getParent()->getBasicBlockList().size())
+        lastBlock = true;
 
     // If the block exhibits loop-relevant control flow,
     // handle it specially
@@ -520,6 +527,8 @@ bool CodeGeneration::runOnModule(llvm::Module& module)
             // Phi declaration pass
             if (backEnd->getDeclarePhiCopies())
                 translator->declarePhiCopies(function);
+
+            lastBlock = false;
 
             // basic blocks
             for (llvm::Function::const_iterator bb = function->begin(), E = function->end(); bb != E; ++bb) {

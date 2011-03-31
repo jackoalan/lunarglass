@@ -68,10 +68,16 @@ namespace gla {
         virtual void addIf(const llvm::Value* cond, bool invert=false) = 0;
         virtual void addElse() = 0;
         virtual void addEndif() = 0;
-        virtual void addLoop(LoopExitType, bool, llvm::BasicBlock*) = 0;
-        virtual void addLoopEnd() = 0;
-        virtual void addBreak() = 0;
-        virtual void addContinue() = 0;
+        virtual void addLoop(LoopExitType, bool, const llvm::BasicBlock*) = 0;
+        virtual void addLoopEnd(const llvm::BasicBlock*) = 0;
+
+        // Exit the loop (e.g. break). This may be conditional or unconditional.
+        // If conditional, then the backend should exit the loop if the
+        // condition succeeds.
+        virtual void addLoopExit(const llvm::BasicBlock*) = 0;
+
+        // Add a loop backedge (e.g. continue).
+        virtual void addLoopBack(const llvm::BasicBlock*) = 0;
 
         virtual void print() = 0;
     };

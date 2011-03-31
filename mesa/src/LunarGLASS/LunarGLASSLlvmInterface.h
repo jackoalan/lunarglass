@@ -36,6 +36,12 @@
 // LLVM includes
 #include "llvm/IntrinsicInst.h"
 
+// Forward decls
+namespace llvm {
+    class BasicBlock;
+    class LoopInfo;
+} // end namespace llvm
+
 namespace gla {
 
     //
@@ -60,24 +66,24 @@ namespace gla {
     public:
 
         // get integer value or assert trying
-        static int Util::getConstantInt(const llvm::Value*);
+        static int getConstantInt(const llvm::Value*);
 
         // get floating point value or assert trying
-        static float Util::GetConstantFloat(const llvm::Value*);
+        static float GetConstantFloat(const llvm::Value*);
 
-        static int Util::isGradientTexInst(const llvm::IntrinsicInst* instruction) {
+        static int isGradientTexInst(const llvm::IntrinsicInst* instruction) {
             return (instruction->getIntrinsicID() == llvm::Intrinsic::gla_fTextureSampleLodOffsetGrad);
         }
 
-        static int Util::getComponentCount(const llvm::Type*);
-        static int Util::getComponentCount(const llvm::Value*);
+        static int getComponentCount(const llvm::Type*);
+        static int getComponentCount(const llvm::Value*);
         static bool isConsecutiveSwizzle(int glaSwizzle, int width);
 
         // Whether the argument is undefined or defined (an undef in llvm)
         static bool isUndef(const llvm::Value* val) {
             return llvm::isa<llvm::UndefValue>(val);
         }
-        static bool Util::isDefined(const llvm::Value* val) {
+        static bool isDefined(const llvm::Value* val) {
             return !isUndef(val);
         }
 
@@ -92,9 +98,17 @@ namespace gla {
         static bool hasAllSet(const llvm::Value*);
 
         // is the name something like "%42"?
-        static bool Util::isTempName(const std::string& name) {
+        static bool isTempName(const std::string& name) {
             return name.length() < 2 || (name[1] >= '0' && name[1] <= '9');
         }
+
+        // Find and return the earliest confluence point in the CFG of the given
+        // basic blocks
+        static llvm::BasicBlock* findEarliestConfluencePoint(llvm::BasicBlock*, llvm::BasicBlock*);
+
+        // true if provided basic block is one of the (possibly many) latches in a loop
+        static bool isLatch(const llvm::BasicBlock* bb, llvm::LoopInfo* loopInfo);
+
     };
 };
 

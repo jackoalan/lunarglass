@@ -31,6 +31,14 @@
 
 #include "LunarGLASSLlvmInterface.h"
 
+// LLVM includes
+#include "llvm/BasicBlock.h"
+#include "llvm/Instructions.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/CFG.h"
+
 namespace gla {
 
 llvm::Value* Top::buildMatrixTimesVector(llvm::Value* lmatrix, llvm::Value* rvector)
@@ -141,4 +149,76 @@ bool Util::hasAllSet(const llvm::Value* value)
     }
 }
 
+// true if provided basic block is one of the (possibly many) latches in a loop
+bool Util::isLatch(const llvm::BasicBlock* bb, llvm::LoopInfo* loopInfo)
+{
+    llvm::Loop* loop = loopInfo->getLoopFor(bb);
+    if (!loop)
+        return false;
+
+    llvm::BasicBlock* header = loop->getHeader();
+    for (llvm::succ_const_iterator sI = succ_begin(bb), sE = succ_end(bb); sI != sE; ++sI) {
+        if (*sI == header)
+            return true;
+    }
+
+    return false;
+}
+
+
 }; // end gla namespace
+
+namespace  {
+    typedef llvm::SmallPtrSet<llvm::BasicBlock*, 8> BBSet;
+    typedef llvm::SmallVector<llvm::BasicBlock*, 8> BBVector;
+
+    // Class for breadth first searches of a control flow graph
+    class BFSCFG {
+    public:
+
+        BFSCFG() { }
+
+        // Do a breadth-first search until some common successor is
+        // found. Return that successor.
+        llvm::BasicBlock* findCommon();
+
+        void addToVisit(llvm::BasicBlock* bb) { toVisit.push_back(bb); }
+
+    private:
+        BBSet visited;
+        BBVector toVisit;
+    };
+} // end namespace
+
+// Do a breadth-first search until some common successor is found. Return that
+// successor.
+llvm::BasicBlock* BFSCFG::findCommon() {
+    BBVector children;
+    for (BBVector::iterator i = toVisit.begin(), e = toVisit.end(); i != e; ++i) {
+        if (visited.count(*i))
+            return *i;
+        visited.insert(*i);
+
+        // Add all the children of each bb, unless the bb ends in a return
+        if (llvm::isa<llvm::ReturnInst>((*i)->getTerminator()))
+            continue;
+        for (llvm::succ_iterator sI = succ_begin(*i), sE = succ_end(*i); sI != sE; ++sI) {
+            children.push_back(*sI);
+        }
+    }
+
+    toVisit.clear();
+    toVisit = children;
+    return findCommon();
+}
+
+// Find and return the earliest confluence point in the CFG
+llvm::BasicBlock* gla::Util::findEarliestConfluencePoint(llvm::BasicBlock* leftBB, llvm::BasicBlock* rightBB)
+{
+    BFSCFG bfsCfg;
+
+    bfsCfg.addToVisit(leftBB);
+    bfsCfg.addToVisit(rightBB);
+
+    return bfsCfg.findCommon();
+}

@@ -211,24 +211,24 @@ public:
         leaveScope();
     }
 
-    void addLoop(gla::LoopExitType lt, bool isMultiExit, llvm::BasicBlock* headerBB)
+    void addLoop(gla::LoopExitType let, bool isMultiExit, const llvm::BasicBlock* headerBB)
     {
-        // llvm::TerminatorInst* term = headerBB->getTerminator();
-        // llvm::BranchInst* branch = llvm::dyn_cast<llvm::BranchInst>(term);
-
-        // assert(branch && "addLoop called on non-loop header (non-branch)");
+        assert(headerBB);
+        const llvm::TerminatorInst* term = headerBB->getTerminator();
+        const llvm::BranchInst* branch = llvm::dyn_cast<llvm::BranchInst>(term);
+        llvm::Value* cond = branch->getCondition();
+        assert(term && branch && "addLoop called on non-loop header (non-branch)");
+        assert(cond && "unconditional should not arise");
 
         newLine();
 
         shader << "while (";
 
-        switch (lt) {
-        case ELETTopExit:
-            UnsupportedFunctionality("while loop");
-            break;
+        switch (let) {
         case ELETBottomExit:
             UnsupportedFunctionality("bottom exiting loops");
             break;
+        case ELETTopExit:
         case ELETNeither:
             shader << "true";
             break;
@@ -237,18 +237,34 @@ public:
         newScope();
     }
 
-    void addLoopEnd()
+    void addLoopEnd(const llvm::BasicBlock*)
     {
         leaveScope();
     }
 
-    void addBreak()
+    void addLoopExit(const llvm::BasicBlock* bb)
     {
+        const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
+        assert(branchInst && "addBreak called with non-branch terminator");
+
+        newLine();
+
+        // If it's unconditional, we have to just spit out the break
+        if (branchInst->isUnconditional()) {
+            shader << "break;";
+            return;
+        }
+
+        // Otherwise, get the condition, and set it up. We're assuming that we
+        // want to break if the condition succeeds
+        llvm::Value* condition = branchInst->getCondition();
+        addIf(condition);
         newLine();
         shader << "break;";
+        addEndif();
     }
 
-    void addContinue()
+    void addLoopBack(const llvm::BasicBlock*)
     {
         newLine();
         shader << "continue;";

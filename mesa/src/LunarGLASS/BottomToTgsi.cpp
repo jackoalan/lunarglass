@@ -155,22 +155,22 @@ public:
         incrementMesaInstruction();
     }
 
-    void addLoop(gla::LoopExitType lt, bool isMultiExit, llvm::BasicBlock* headerBB)
+    void addLoop(gla::LoopExitType lt, bool isMultiExit, const llvm::BasicBlock* headerBB)
     {
         gla::UnsupportedFunctionality("Loops");
     }
 
-    void addLoopEnd()
+    void addLoopEnd(const llvm::BasicBlock*)
     {
         gla::UnsupportedFunctionality("Loops");
     }
 
-    void addBreak()
+    void addLoopExit(const llvm::BasicBlock*)
     {
         gla::UnsupportedFunctionality("break");
     }
 
-    void addContinue()
+    void addLoopBack(const llvm::BasicBlock*)
     {
         gla::UnsupportedFunctionality("continue");
     }

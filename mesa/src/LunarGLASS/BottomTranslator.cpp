@@ -120,9 +120,9 @@
 #include <stack>
 
 // LunarGLASS includes
-#include "CFG.h"
 #include "Exceptions.h"
 #include "LunarGLASSBackend.h"
+#include "LunarGLASSLlvmInterface.h"
 #include "Manager.h"
 
 namespace {
@@ -191,10 +191,6 @@ namespace {
         // Send off all the non-terminating instructions in a basic block to the
         // backend
         void handleNonTerminatingInstructions(const llvm::BasicBlock*);
-
-        // Handle exiting loop duties, such as setting up the condition and
-        // adding breaks
-        void handleExiting(const llvm::BranchInst*, llvm::Loop*);
 
         // Given a loop block, handle it. Dispatches to other methods and ends
         // up handling all blocks in the loop.
@@ -274,36 +270,6 @@ void CodeGeneration::handleNonTerminatingInstructions(const llvm::BasicBlock* bb
     }
 }
 
-void CodeGeneration::handleExiting(const llvm::BranchInst* branchInst, llvm::Loop* loop) {
-    llvm::Value* condition = branchInst->getCondition();
-    assert(condition && "conditional branch without condition");
-
-    // Find the successor that exits the loop
-    llvm::SmallVector<llvm::BasicBlock*, 8> exitBlocks;
-    loop->getExitBlocks(exitBlocks);
-    int succNum = -1;
-    // Find the first successor that the loop doesn't contain
-    for (int i = 0; i < branchInst->getNumSuccessors(); ++i) {
-        if (!loop->contains(branchInst->getSuccessor(i))) {
-            succNum = i;
-            break;
-        }
-    }
-    assert(succNum != -1 && succNum <= 1);
-
-    // if it's the first guy, just pass the condition on, otherwise we have
-    // to invert it
-    if (succNum == 0) {
-        backEndTranslator->addIf(condition);
-        backEndTranslator->addBreak();
-        backEndTranslator->addEndif();
-    } else {
-        // Invert it then do stuff. I've not yet seen a situation come up where
-        // we must invert it, however.
-        assert(!"condition inversion");
-    }
-}
-
 void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb)
 {
     llvm::Loop* loop = loopInfo->getLoopFor(bb);
@@ -319,20 +285,21 @@ void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb)
 
     bool isHeader  = loop->getHeader() == bb;
     bool isExiting = loop->isLoopExiting(bb);
-    bool isLatch   = loop->getLoopLatch() == bb;
+    bool isLatch   = gla::Util::isLatch(bb, loopInfo);
 
     // If it's a loop header, have the back-end add it
     if (isHeader) {
         gla::LoopExitType let;
-        if (isExiting && !isLatch)
+        if (isExiting && !isLatch) {
             let = gla::ELETTopExit;
-        else
+        } else {
             let = gla::ELETNeither;
-        backEndTranslator->addLoop(let, false, NULL);
+        }
+        backEndTranslator->addLoop(let, false, bb);
     }
 
-    // If the block's neither a latch nor exiting, then we're dealing
-    // with internal flow control.
+    // If the block's neither a latch nor exiting, then we're dealing with
+    // internal flow control.
     if (!isLatch && !isExiting) {
         handleBranchingBlock(bb);
         handledInternals = true;
@@ -345,9 +312,11 @@ void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb)
     const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
     assert(branchInst && "handleLoopsBlock called with non-branch terminator");
 
-    // If the block's an exit, handle it
+    // If the block's an exit, pass it on to the back end.
     if (isExiting) {
-        handleExiting(branchInst, loop);
+        // TODO: add internal consistency check to make sure that in the event
+        // of a conditional exit, the exit occurs when the condition holds
+        backEndTranslator->addLoopExit(bb);
     }
 
 
@@ -373,13 +342,13 @@ void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb)
         if (backEnd->getRemovePhiFunctions()) {
             translator->addPhiCopies(branchInst);
         }
-        backEndTranslator->addContinue();
+        backEndTranslator->addLoopBack(bb);
     }
 
     // If the block's a header (and all the loop's blocks have been handled),
     // then close the loop
     if (isHeader) {
-        backEndTranslator->addLoopEnd();
+        backEndTranslator->addLoopEnd(bb);
     }
 
     return;
@@ -391,8 +360,8 @@ void CodeGeneration::handleIfBlock(const llvm::BasicBlock* bb)
     const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
     assert(branchInst && branchInst->getNumSuccessors() == 2 && "handleIfBlock called with improper terminator");
 
-    // Find the earliest confluence point and add it to our stack
-    llvm::BasicBlock* cBB = gla::FindEarliestConfluencePoint(branchInst->getSuccessor(0), branchInst->getSuccessor(1));
+    // Get the conflunece BB
+    llvm::BasicBlock* cBB = gla::Util::findEarliestConfluencePoint(branchInst->getSuccessor(0), branchInst->getSuccessor(1));
     // If we branch to the confluence point, then we're an if-then, else were're
     // dealing with an if-then-else
     bool ifThenElse = branchInst->getSuccessor(1) != cBB;

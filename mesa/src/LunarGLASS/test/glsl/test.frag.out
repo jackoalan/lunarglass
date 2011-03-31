@@ -258,5 +258,5 @@ void main()
     float temp27 = blend * const28;
     vec4 mix_retval4 = mix(temp26, u, temp27);
     gl_FragColor = mix_retval4;
-    return;
+    
 }

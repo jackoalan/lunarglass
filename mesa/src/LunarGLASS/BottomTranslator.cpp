@@ -416,7 +416,7 @@ void CodeGeneration::handleBlock(const llvm::BasicBlock* bb)
     handledBlocks.insert(bb);
 
     // Are we on the last block?
-    if (handledBlocks.size() + 1 == bb->getParent()->getBasicBlockList().size())
+    if (handledBlocks.size() == bb->getParent()->getBasicBlockList().size())
         lastBlock = true;
 
     // If the block exhibits loop-relevant control flow,
@@ -469,8 +469,8 @@ bool CodeGeneration::runOnModule(llvm::Module& module)
             translator->setLoopInfo(loopInfo);
 
             // debug stuff
-            llvm::errs() << "\n\nLoop info:\n";
-            loopInfo->print(llvm::errs());
+            // llvm::errs() << "\n\nLoop info:\n";
+            // loopInfo->print(llvm::errs());
 
             // handle function's with bodies
 

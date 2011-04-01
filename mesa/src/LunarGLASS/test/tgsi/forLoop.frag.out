@@ -1,13 +1,25 @@
 ; ModuleID = 'Top'
 
+@gl_MaxLights = internal constant i32 8
+@gl_MaxClipPlanes = internal constant i32 8
+@gl_MaxTextureUnits = internal constant i32 2
+@gl_MaxTextureCoords = internal constant i32 4
+@gl_MaxVertexAttribs = internal constant i32 16
+@gl_MaxVertexUniformComponents = internal constant i32 512
+@gl_MaxVaryingFloats = internal constant i32 32
+@gl_MaxVertexTextureImageUnits = internal constant i32 0
+@gl_MaxCombinedTextureImageUnits = internal constant i32 2
+@gl_MaxTextureImageUnits = internal constant i32 2
+@gl_MaxFragmentUniformComponents = internal constant i32 64
+@gl_MaxDrawBuffers = internal constant i32 2
 @Count = external addrspace(1) constant i32
 @bigColor = external addrspace(1) constant <4 x float>
 @gl_FragColor = internal global <4 x float> zeroinitializer
 
 define void @main() {
 entry:
-  %i = alloca i32
   %color = alloca <4 x float>
+  %i = alloca i32
   %BaseColor = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 0, i32 0)
   store <4 x float> %BaseColor, <4 x float>* %color
   store i32 0, i32* %i
@@ -22,24 +34,24 @@ loop-header:                                      ; preds = %ifmerge, %entry
 then:                                             ; preds = %loop-header
   br label %loop-merge
 
-post-break:                                       ; No predecessors!
+post-loopjump:                                    ; No predecessors!
   br label %ifmerge
 
-ifmerge:                                          ; preds = %post-break, %loop-header
+ifmerge:                                          ; preds = %post-loopjump, %loop-header
   %3 = load <4 x float>* %color
   %4 = load <4 x float> addrspace(1)* @bigColor
-  %5 = fadd <4 x float> %3, %4
-  store <4 x float> %5, <4 x float>* %color
-  %6 = load i32* %i
-  %7 = add i32 %6, 1
-  store i32 %7, i32* %i
+  %color1 = fadd <4 x float> %3, %4
+  store <4 x float> %color1, <4 x float>* %color
+  %5 = load i32* %i
+  %i2 = add i32 %5, 1
+  store i32 %i2, i32* %i
   br label %loop-header
 
 loop-merge:                                       ; preds = %then
-  %8 = load <4 x float>* %color
-  store <4 x float> %8, <4 x float>* @gl_FragColor
-  %9 = load <4 x float>* @gl_FragColor
-  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %9)
+  %gl_FragColor = load <4 x float>* %color
+  store <4 x float> %gl_FragColor, <4 x float>* @gl_FragColor
+  %6 = load <4 x float>* @gl_FragColor
+  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %6)
   ret void
 }
 
@@ -48,6 +60,18 @@ declare <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32, i32) nounwind readonly
 declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
 ; ModuleID = 'Top'
 
+@gl_MaxLights = internal constant i32 8
+@gl_MaxClipPlanes = internal constant i32 8
+@gl_MaxTextureUnits = internal constant i32 2
+@gl_MaxTextureCoords = internal constant i32 4
+@gl_MaxVertexAttribs = internal constant i32 16
+@gl_MaxVertexUniformComponents = internal constant i32 512
+@gl_MaxVaryingFloats = internal constant i32 32
+@gl_MaxVertexTextureImageUnits = internal constant i32 0
+@gl_MaxCombinedTextureImageUnits = internal constant i32 2
+@gl_MaxTextureImageUnits = internal constant i32 2
+@gl_MaxFragmentUniformComponents = internal constant i32 64
+@gl_MaxDrawBuffers = internal constant i32 2
 @Count = external addrspace(1) constant i32
 @bigColor = external addrspace(1) constant <4 x float>
 
@@ -57,8 +81,8 @@ entry:
   br label %loop-header
 
 loop-header:                                      ; preds = %ifmerge, %entry
-  %color.0 = phi <4 x float> [ %BaseColor, %entry ], [ %3, %ifmerge ]
-  %i.0 = phi i32 [ 0, %entry ], [ %4, %ifmerge ]
+  %i.0 = phi i32 [ 0, %entry ], [ %i2, %ifmerge ]
+  %color.0 = phi <4 x float> [ %BaseColor, %entry ], [ %color1, %ifmerge ]
   %0 = load i32 addrspace(1)* @Count
   %1 = icmp sge i32 %i.0, %0
   br i1 %1, label %then, label %ifmerge
@@ -69,8 +93,8 @@ then:                                             ; preds = %loop-header
 
 ifmerge:                                          ; preds = %loop-header
   %2 = load <4 x float> addrspace(1)* @bigColor
-  %3 = fadd <4 x float> %color.0, %2
-  %4 = add i32 %i.0, 1
+  %color1 = fadd <4 x float> %color.0, %2
+  %i2 = add i32 %i.0, 1
   br label %loop-header
 }
 

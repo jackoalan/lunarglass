@@ -1,5 +1,17 @@
 ; ModuleID = 'Top'
 
+@gl_MaxLights = internal constant i32 8
+@gl_MaxClipPlanes = internal constant i32 8
+@gl_MaxTextureUnits = internal constant i32 2
+@gl_MaxTextureCoords = internal constant i32 4
+@gl_MaxVertexAttribs = internal constant i32 16
+@gl_MaxVertexUniformComponents = internal constant i32 512
+@gl_MaxVaryingFloats = internal constant i32 32
+@gl_MaxVertexTextureImageUnits = internal constant i32 0
+@gl_MaxCombinedTextureImageUnits = internal constant i32 2
+@gl_MaxTextureImageUnits = internal constant i32 2
+@gl_MaxFragmentUniformComponents = internal constant i32 64
+@gl_MaxDrawBuffers = internal constant i32 2
 @d = external addrspace(1) constant float
 @bigColor = external addrspace(1) constant <4 x float>
 @gl_FragColor = internal global <4 x float> zeroinitializer
@@ -21,21 +33,21 @@ loop-header:                                      ; preds = %ifmerge, %entry
 then:                                             ; preds = %loop-header
   br label %loop-merge
 
-post-break:                                       ; No predecessors!
+post-loopjump:                                    ; No predecessors!
   br label %ifmerge
 
-ifmerge:                                          ; preds = %post-break, %loop-header
+ifmerge:                                          ; preds = %post-loopjump, %loop-header
   %4 = load <4 x float>* %color
   %5 = load <4 x float> addrspace(1)* @bigColor
-  %6 = fadd <4 x float> %4, %5
-  store <4 x float> %6, <4 x float>* %color
+  %color1 = fadd <4 x float> %4, %5
+  store <4 x float> %color1, <4 x float>* %color
   br label %loop-header
 
 loop-merge:                                       ; preds = %then
-  %7 = load <4 x float>* %color
-  store <4 x float> %7, <4 x float>* @gl_FragColor
-  %8 = load <4 x float>* @gl_FragColor
-  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %8)
+  %gl_FragColor = load <4 x float>* %color
+  store <4 x float> %gl_FragColor, <4 x float>* @gl_FragColor
+  %6 = load <4 x float>* @gl_FragColor
+  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %6)
   ret void
 }
 
@@ -44,6 +56,18 @@ declare <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32, i32) nounwind readonly
 declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
 ; ModuleID = 'Top'
 
+@gl_MaxLights = internal constant i32 8
+@gl_MaxClipPlanes = internal constant i32 8
+@gl_MaxTextureUnits = internal constant i32 2
+@gl_MaxTextureCoords = internal constant i32 4
+@gl_MaxVertexAttribs = internal constant i32 16
+@gl_MaxVertexUniformComponents = internal constant i32 512
+@gl_MaxVaryingFloats = internal constant i32 32
+@gl_MaxVertexTextureImageUnits = internal constant i32 0
+@gl_MaxCombinedTextureImageUnits = internal constant i32 2
+@gl_MaxTextureImageUnits = internal constant i32 2
+@gl_MaxFragmentUniformComponents = internal constant i32 64
+@gl_MaxDrawBuffers = internal constant i32 2
 @d = external addrspace(1) constant float
 @bigColor = external addrspace(1) constant <4 x float>
 
@@ -53,7 +77,7 @@ entry:
   br label %loop-header
 
 loop-header:                                      ; preds = %ifmerge, %entry
-  %color.0 = phi <4 x float> [ %BaseColor, %entry ], [ %4, %ifmerge ]
+  %color.0 = phi <4 x float> [ %BaseColor, %entry ], [ %color1, %ifmerge ]
   %0 = extractelement <4 x float> %color.0, i32 0
   %1 = load float addrspace(1)* @d
   %2 = fcmp oge float %0, %1
@@ -65,7 +89,7 @@ then:                                             ; preds = %loop-header
 
 ifmerge:                                          ; preds = %loop-header
   %3 = load <4 x float> addrspace(1)* @bigColor
-  %4 = fadd <4 x float> %color.0, %3
+  %color1 = fadd <4 x float> %color.0, %3
   br label %loop-header
 }
 

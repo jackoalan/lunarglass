@@ -26,6 +26,7 @@
 //
 // Author: John Kessenich, LunarG
 // Author: Cody Northrop, LunarG
+// Author: Michael Ilseman, LunarG
 //
 //===----------------------------------------------------------------------===//
 

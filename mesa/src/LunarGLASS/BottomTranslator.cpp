@@ -332,7 +332,7 @@ void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb)
         if (backEnd->getRemovePhiFunctions()) {
             translator->addPhiCopies(branchInst);
         }
-        backEndTranslator->addLoopBack(bb, getNumLatches(bb, loop) == 0);
+        backEndTranslator->addLoopBack(bb, gla::Util::getNumLatches(loop) == 1);
     }
 
     // If the block's a header (meaning by now that all the loop's blocks have

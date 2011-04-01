@@ -109,8 +109,8 @@ namespace gla {
         // true if provided basic block is one of the (possibly many) latches in the provided loop
         static bool isLatch(const llvm::BasicBlock* bb, llvm::Loop* loop);
 
-        // Return the number of latches in the inner-most loop that bb belongs to
-        static int getNumLatches(const llvm::BasicBlock* bb, llvm::Loop* loop);
+        // Return the number of latches in a loop
+        static int getNumLatches(llvm::Loop* loop);
 
     };
 };

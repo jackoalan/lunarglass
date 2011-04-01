@@ -164,16 +164,15 @@ bool Util::isLatch(const llvm::BasicBlock* bb, llvm::Loop* loop)
     return false;
 }
 
-// Return the number of latches in the inner-most loop that bb belongs to
-int getNumLatches(llvm::Loop* loop)
+// Return the number of latches in a loop
+int Util::getNumLatches(llvm::Loop* loop)
 {
     if (!loop)
         return 0;
 
-    llvm::BasicBlock* header = loop->getHeader();
     int count = 0;
     for (llvm::Loop::block_iterator bbI = loop->block_begin(), bbE = loop->block_end(); bbI != bbE; ++bbI) {
-        if (isLatch(bbI, loop)) {
+        if (isLatch(*bbI, loop)) {
             count++;
         }
     }

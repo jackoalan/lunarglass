@@ -110,7 +110,6 @@ void gla::PrivateManager::runLLVMOptimizations1()
         while (passMan.run(*function))
             continue;
     }
-    passMan.doFinalization();
 
     // Set up the module-level optimizations we want
     llvm::PassManager modulePassManager;
@@ -142,4 +141,11 @@ void gla::PrivateManager::runLLVMOptimizations1()
         }
         memoryPassManager.doFinalization();
     }
+
+    // After global optimizations have been run, repeat sipmlifycfg and adce until we reach a fixed point
+    for (function = module->begin(), lastFunction = module->end(); function != lastFunction; ++function) {
+        while (passMan.run(*function))
+            continue;
+    }
+    passMan.doFinalization();
 }

@@ -39,7 +39,7 @@
 // Forward decls
 namespace llvm {
     class BasicBlock;
-    class LoopInfo;
+    class Loop;
 } // end namespace llvm
 
 namespace gla {
@@ -106,8 +106,11 @@ namespace gla {
         // basic blocks
         static llvm::BasicBlock* findEarliestConfluencePoint(llvm::BasicBlock*, llvm::BasicBlock*);
 
-        // true if provided basic block is one of the (possibly many) latches in a loop
-        static bool isLatch(const llvm::BasicBlock* bb, llvm::LoopInfo* loopInfo);
+        // true if provided basic block is one of the (possibly many) latches in the provided loop
+        static bool isLatch(const llvm::BasicBlock* bb, llvm::Loop* loop);
+
+        // Return the number of latches in the inner-most loop that bb belongs to
+        static int getNumLatches(const llvm::BasicBlock* bb, llvm::Loop* loop);
 
     };
 };

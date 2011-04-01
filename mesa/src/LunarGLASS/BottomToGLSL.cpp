@@ -222,18 +222,16 @@ public:
 
         newLine();
 
-        shader << "while (";
-
         switch (let) {
         case ELETBottomExit:
-            UnsupportedFunctionality("bottom exiting loops");
-            break;
         case ELETTopExit:
         case ELETNeither:
+            shader << "while (";
             shader << "true";
+            shader << ") ";
             break;
         }
-        shader << ") ";
+
         newScope();
     }
 
@@ -264,10 +262,15 @@ public:
         addEndif();
     }
 
-    void addLoopBack(const llvm::BasicBlock*)
+    void addLoopBack(const llvm::BasicBlock*, bool singleLatch)
     {
         newLine();
-        shader << "continue;";
+
+        // If it's a single latch, we're assuming we don't have to output
+        // continue
+        if (!singleLatch) {
+            shader << "continue;";
+        }
     }
 
     void print();

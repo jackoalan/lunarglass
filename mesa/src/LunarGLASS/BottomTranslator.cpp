@@ -53,48 +53,38 @@
 //   and any given block could have multiple tags. Any untagged blocks can be
 //   handled normally, as though they weren't even in a loop.
 //
-// * For now, loops are presented to the backends in a very simple form: They
-//   are while(true) loops with breaks inside them. For example, a do-while
-//   style construct would be "while (true) ... do stuff ... if (condition)
-//   break;", while a while loop would have the conditional break be at the
-//   beginning. Every exit block's branch statement turns into an 'if(condition)
-//   break;' style of output. Latches simply end in a continue. Thus all that a
-//   backend is required to support is addLoop (e.g. "while (true) {"),
-//   addLoopEnd (e.g. "}"), addBreak (e.g. "break;"), and addContinue
-//   (e.g. "continue;"). More logic for more specialized constructs could easily
-//   be added incrementally. For example, "if a loop header is an exit, and the
-//   back end supports while loops, then output a while loop with the condition
-//   on the exit being the condition for the loop". Currently nested loops are
-//   unsupported, but could be (moderately easily) added by changing the logic
-//   in handleLoopBlock a little.
+// * Loops are presented to the backend using the addLoop, addLoopEnd,
+//   addLoopExit, and addLoopBack interfaces. It is then up to the backends to
+//   decide through these interfaces how they want to construct the resulting
+//   loop. Unnested loops are currently not supported.
 //
 // * handleLoopBlock proceeds as follows for the following loop block types:
 //
-//     - Header:  Tell the backend to add a loop. If the header is not also a
-//                latch or exiting block, then it's the start of some internal
-//                control flow, so pass it off to handleBranchingBlock.
-//                Otherwise handle its instructions, handle it as an exiting
-//                block if it's exiting, and pass every block in the loop to
+//     - Header:  Call addLoop interface. If the header is not also a latch or
+//                exiting block, then it's the start of some internal control
+//                flow, so pass it off to handleBranchingBlock.  Otherwise
+//                handle its instructions, call addLoopExit interface if it's an
+//                exit block as well, and pass every block in the loop to
 //                handleBlock. This is done to make sure that all loop internal
 //                blocks are handled before further loop external blocks are.
-//                If it's also a latch, add phi copies if applicable. Finally,
-//                end the loop.
+//                If it's also a latch, add phi copies if applicable and call
+//                addLoopBack interface. Finally, end the loop.
 //
-//     - Latch:   Handle its instructions, add phi copies if applicable, add
-//                continue.
+//     - Latch:   Handle its instructions, add phi copies if applicable, call
+//                addLoopBack interface.
 //
-//     - Exiting: Handle its instructions, get the exit condition, and add in an
-//                if test for it and a break instruction under the if
+//     - Exiting: Handle its instructions, call addLoopExit interface
 //
-// * handleIfBlock proceeds by having the backend add an if, then finding the
-//   earliest confluence point (see CFG.h) of it's two successors. If the
-//   confluence point is the second successor, then we're dealing with just an
-//   if-then, otherwise we have an if-then-else. handleBlock is called on the
-//   then branch, and if there's an else branch, it's added by the backend and
-//   handleBlock is called on it as well. Finally, the backend adds an endif.
+// * handleBranching handles it's instructions. On an unconditional branch, it
+//   then does nothing. On a conditional branch with 2 successors, it will find
+//   the earliest confluce point, determine if it's an if-then-else construct,
+//   call the addIf interface, and handle the then block. If the construct is an
+//   if-then-else construct, it will then call the addElse interface and handle
+//   the else block. Finally, it calls the addEndIf interface. A conditional
+//   branch that does not have 2 successors would be unhandled control flow.
 //
-// * handleReturnBlock handles it's instructions, then has the backend add in
-//   the return instruction.
+// * handleReturnBlock handles it's instructions, and calls the
+//   handleReturnBlock interface
 //
 //===----------------------------------------------------------------------===//
 
@@ -285,7 +275,7 @@ void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb)
 
     bool isHeader  = loop->getHeader() == bb;
     bool isExiting = loop->isLoopExiting(bb);
-    bool isLatch   = gla::Util::isLatch(bb, loopInfo);
+    bool isLatch   = gla::Util::isLatch(bb, loop);
 
     // If it's a loop header, have the back-end add it
     if (isHeader) {
@@ -342,11 +332,11 @@ void CodeGeneration::handleLoopBlock(const llvm::BasicBlock* bb)
         if (backEnd->getRemovePhiFunctions()) {
             translator->addPhiCopies(branchInst);
         }
-        backEndTranslator->addLoopBack(bb);
+        backEndTranslator->addLoopBack(bb, getNumLatches(bb, loop) == 0);
     }
 
-    // If the block's a header (and all the loop's blocks have been handled),
-    // then close the loop
+    // If the block's a header (meaning by now that all the loop's blocks have
+    // been handled), then close the loop
     if (isHeader) {
         backEndTranslator->addLoopEnd(bb);
     }
@@ -432,7 +422,7 @@ void CodeGeneration::handleBlock(const llvm::BasicBlock* bb)
     // If the block exhibits loop-relevant control flow,
     // handle it specially
     llvm::Loop* loop = loopInfo->getLoopFor(bb);
-    if (loop && (loop->getHeader() == bb || loop->getLoopLatch() == bb || loop->isLoopExiting(bb))
+    if (loop && (loop->getHeader() == bb || gla::Util::isLatch(bb, loop) || loop->isLoopExiting(bb))
              && flowControlMode == gla::EFcmStructuredOpCodes) {
         handleLoopBlock(bb);
         return;

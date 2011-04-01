@@ -170,7 +170,7 @@ public:
         gla::UnsupportedFunctionality("break");
     }
 
-    void addLoopBack(const llvm::BasicBlock*)
+    void addLoopBack(const llvm::BasicBlock*, bool)
     {
         gla::UnsupportedFunctionality("continue");
     }

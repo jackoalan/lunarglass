@@ -149,10 +149,9 @@ bool Util::hasAllSet(const llvm::Value* value)
     }
 }
 
-// true if provided basic block is one of the (possibly many) latches in a loop
-bool Util::isLatch(const llvm::BasicBlock* bb, llvm::LoopInfo* loopInfo)
+// true if provided basic block is one of the (possibly many) latches in the provided loop
+bool Util::isLatch(const llvm::BasicBlock* bb, llvm::Loop* loop)
 {
-    llvm::Loop* loop = loopInfo->getLoopFor(bb);
     if (!loop)
         return false;
 
@@ -163,6 +162,23 @@ bool Util::isLatch(const llvm::BasicBlock* bb, llvm::LoopInfo* loopInfo)
     }
 
     return false;
+}
+
+// Return the number of latches in the inner-most loop that bb belongs to
+int getNumLatches(llvm::Loop* loop)
+{
+    if (!loop)
+        return 0;
+
+    llvm::BasicBlock* header = loop->getHeader();
+    int count = 0;
+    for (llvm::Loop::block_iterator bbI = loop->block_begin(), bbE = loop->block_end(); bbI != bbE; ++bbI) {
+        if (isLatch(bbI, loop)) {
+            count++;
+        }
+    }
+
+    return count;
 }
 
 

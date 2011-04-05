@@ -27,6 +27,8 @@ TESTS=(test.frag \
        syntaxError.frag \
        depthOut.frag \
        dataOut.frag \
+       varyingArray.frag \
+	   uniformArray.frag \
        matrix.frag \
        newTexture.frag \
        structure.frag \
@@ -101,17 +103,17 @@ function runTests {
         cat $t.stdout > glsl/$t.out.de-obfuscated
 
         # Diff them
-        printf "    Diffing rerun and de-obfuscate:      "
-        printf "        GLSL "
-        (diff --side-by-side --suppress-common-lines glsl/$t.out.rerun glsl/$t.out.de-obfuscated > $t.diff \
-            && echo "[OK]") \
-            || (echo "[FAIL]" ; cat $t.diff)
+        # printf "    Diffing rerun and de-obfuscate:      "
+        # printf "        GLSL "
+        # (diff --side-by-side --suppress-common-lines glsl/$t.out.rerun glsl/$t.out.de-obfuscated > $t.diff \
+        #     && echo "[OK]") \
+        #     || (echo "[FAIL]" ; cat $t.diff)
 
-        echo
+        # echo
         rm $t.stdout.obfuscated.frag
         rm $t.stdout.frag
         rm $t.stdout $t.errout
-        rm $t.diff
+        # rm $t.diff
     done
 }
 

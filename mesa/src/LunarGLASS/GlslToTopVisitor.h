@@ -51,6 +51,7 @@
 #include "glsl_parser_extras.h"
 
 #include "LunarGLASSTopIR.h"
+#include "LunarGLASSLlvmInterface.h"
 
 void GlslToTop(struct gl_shader*, llvm::Module*);
 
@@ -98,9 +99,10 @@ public:
     // help functions to build LLVM
     llvm::Value* createLLVMVariable(ir_variable*);
     const char* getSamplerDeclaration(ir_variable*);
-    llvm::Value* expandGLSLOp(ir_expression_operation, llvm::Value**);
+    gla::Builder::SuperValue expandGLSLOp(ir_expression_operation, gla::Builder::SuperValue*);
     llvm::Value* expandGLSLSwizzle(ir_swizzle*);
-    llvm::Value* createLLVMIntrinsic(ir_call*, llvm::Value**, int);
+    llvm::Value* createLLVMIntrinsic(ir_call*, gla::Builder::SuperValue*, int);
+    llvm::Value* createPipelineRead(ir_variable*, int);
     llvm::Constant* createLLVMConstant(ir_constant*);
     llvm::Type*  convertGLSLToLLVMType(const glsl_type*);
     llvm::Function* getLLVMIntrinsicFunction1(llvm::Intrinsic::ID, const llvm::Type*);
@@ -108,14 +110,15 @@ public:
     llvm::Function* getLLVMIntrinsicFunction3(llvm::Intrinsic::ID, const llvm::Type*, const llvm::Type*, const llvm::Type*);
     llvm::Function* getLLVMIntrinsicFunction4(llvm::Intrinsic::ID, const llvm::Type*, const llvm::Type*, const llvm::Type*, const llvm::Type*);
 
-    void createLLVMTextureIntrinsic(llvm::Function* &, int &, llvm::Value**, llvm::Value**, llvm::Type*, llvm::Intrinsic::ID,  gla::ESamplerType, gla::ETextureFlags);
-    void findAndSmearScalars(llvm::Value**, int);
+    void createLLVMTextureIntrinsic(llvm::Function* &, int &, gla::Builder::SuperValue*, gla::Builder::SuperValue*, llvm::Type*, llvm::Intrinsic::ID,  gla::ESamplerType, gla::ETextureFlags);
+    void findAndSmearScalars(gla::Builder::SuperValue*, int);
     void writePipelineOuts(void);
+    void appendArrayIndexToName(std::string &, int);
 
     llvm::Type::TypeID getLLVMBaseType(llvm::Value*);
-    llvm::Type::TypeID getLLVMBaseType(llvm::Type*);
+    llvm::Type::TypeID getLLVMBaseType(const llvm::Type*);
 
-    int getNextInterpIndex(ir_variable*);
+    int getNextInterpIndex(std::string);
 
 protected:
     llvm::BasicBlock* getShaderEntry();
@@ -127,13 +130,13 @@ protected:
     struct gl_shader* glShader;
 
     std::map<ir_variable*, llvm::Value*> namedValues;
-    std::map<ir_variable*, int> interpMap;
+    std::map<std::string, int> interpMap;
     std::map<ir_function_signature *, llvm::Function*> functionMap;
 
     std::list<llvm::Value*> glslOuts;
 
-    llvm::Value *lastValue;
-    llvm::Value *lValue;
+    gla::Builder::SuperValue lastValue;
+    gla::Builder::SuperValue lValue;
 
     int interpIndex;
     bool inMain;

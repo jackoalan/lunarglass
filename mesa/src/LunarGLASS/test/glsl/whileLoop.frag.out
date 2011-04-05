@@ -87,10 +87,7 @@ then:                                             ; preds = %loop-header
   call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %color.0)
   ret void
 
-post-loopjump:                                    ; No predecessors!
-  br label %ifmerge
-
-ifmerge:                                          ; preds = %post-loopjump, %loop-header
+ifmerge:                                          ; preds = %loop-header
   %3 = load <4 x float> addrspace(1)* @bigColor
   %color1 = fadd <4 x float> %color.0, %3
   br label %loop-header
@@ -219,5 +216,5 @@ void main()
     }
     
     gl_FragColor = color_0;
-    return;
+    
 }

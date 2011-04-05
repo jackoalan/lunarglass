@@ -92,10 +92,7 @@ then:                                             ; preds = %loop-header
   call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %assignment_tmp1)
   ret void
 
-post-loopjump:                                    ; No predecessors!
-  br label %ifmerge
-
-ifmerge:                                          ; preds = %post-loopjump, %loop-header
+ifmerge:                                          ; preds = %loop-header
   br label %loop-header
 }
 
@@ -224,5 +221,5 @@ void main()
     }
     
     gl_FragColor = assignment_tmp1;
-    return;
+    
 }

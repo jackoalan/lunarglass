@@ -79,18 +79,24 @@ entry:
   %BaseColor = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 0, i32 0)
   br label %loop-header
 
-loop-header:                                      ; preds = %loop-header, %entry
-  %color.0 = phi <4 x float> [ %BaseColor, %entry ], [ %assignment_tmp1, %loop-header ]
+loop-header:                                      ; preds = %ifmerge, %entry
+  %color.0 = phi <4 x float> [ %BaseColor, %entry ], [ %assignment_tmp1, %ifmerge ]
   %0 = load <4 x float> addrspace(1)* @bigColor
   %assignment_tmp1 = fadd <4 x float> %color.0, %0
   %1 = extractelement <4 x float> %assignment_tmp1, i32 0
   %2 = load float addrspace(1)* @d
   %3 = fcmp oge float %1, %2
-  br i1 %3, label %then, label %loop-header
+  br i1 %3, label %then, label %ifmerge
 
 then:                                             ; preds = %loop-header
   call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %assignment_tmp1)
   ret void
+
+post-loopjump:                                    ; No predecessors!
+  br label %ifmerge
+
+ifmerge:                                          ; preds = %post-loopjump, %loop-header
+  br label %loop-header
 }
 
 declare <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32, i32) nounwind readonly

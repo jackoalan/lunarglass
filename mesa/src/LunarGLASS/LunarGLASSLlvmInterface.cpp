@@ -36,6 +36,7 @@
 #include "llvm/BasicBlock.h"
 #include "llvm/Instructions.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CFG.h"
@@ -189,52 +190,77 @@ namespace  {
     typedef llvm::SmallVector<llvm::BasicBlock*, 8> BBVector;
 
     // Class for breadth first searches of a control flow graph
-    class BFSCFG {
+    class BfsCfg {
     public:
 
-        BFSCFG() { }
+        BfsCfg(llvm::PostDominatorTree* d) : postDomTree(d)
+        { }
 
-        // Do a breadth-first search until some common successor is
+        // Do a breadth-first search until some common successor of ref is
         // found. Return that successor.
-        llvm::BasicBlock* findCommon();
+        llvm::BasicBlock* findCommon(const llvm::BasicBlock* ref);
 
         void addToVisit(llvm::BasicBlock* bb) { toVisit.push_back(bb); }
 
     private:
         BBSet visited;
         BBVector toVisit;
+
+        llvm::PostDominatorTree* postDomTree;
     };
 } // end namespace
 
-// Do a breadth-first search until some common successor is found. Return that
-// successor.
-llvm::BasicBlock* BFSCFG::findCommon() {
+// Do a breadth-first search until some common successor of ref is found. Return
+// that successor. Returns null if there's no common successor.
+llvm::BasicBlock* BfsCfg::findCommon(const llvm::BasicBlock* ref) {
     BBVector children;
-    for (BBVector::iterator i = toVisit.begin(), e = toVisit.end(); i != e; ++i) {
-        if (visited.count(*i))
-            return *i;
-        visited.insert(*i);
+    llvm::BasicBlock* unconstRef = const_cast<llvm::BasicBlock*>(ref); // Necessary
+    for (int i = 0, e = toVisit.size(); i != e; ++i) {
+
+        llvm::BasicBlock* bb = toVisit[i];
+        // If we've seen him before, and it properly post-dominates ref, then
+        // we're done.
+        if (visited.count(bb)) {
+            if (postDomTree->properlyDominates(bb, unconstRef)) {
+                return bb;
+            } else {
+                continue;
+            }
+        }
+        visited.insert(bb);
 
         // Add all the children of each bb, unless the bb ends in a return
-        if (llvm::isa<llvm::ReturnInst>((*i)->getTerminator()))
+        assert((bb)->getTerminator() && "Ill-formed basicblock");
+        if (llvm::isa<llvm::ReturnInst>((bb)->getTerminator()))
             continue;
-        for (llvm::succ_iterator sI = succ_begin(*i), sE = succ_end(*i); sI != sE; ++sI) {
-            children.push_back(*sI);
+        for (llvm::succ_iterator sI = succ_begin(bb), sE = succ_end(bb); sI != sE; ++sI) {
+            toVisit.push_back(*sI);
         }
+        // Reset the end point
+        e = toVisit.size();
     }
 
-    toVisit.clear();
-    toVisit = children;
-    return findCommon();
+    return NULL;
 }
 
-// Find and return the earliest confluence point in the CFG
-llvm::BasicBlock* gla::Util::findEarliestConfluencePoint(llvm::BasicBlock* leftBB, llvm::BasicBlock* rightBB)
+// Find and return the earliest confluence point in the CFG that is dominated by
+// ref. Returns null if ref is not a branching basicblock, or if there's no
+// conflunce point.
+llvm::BasicBlock* gla::Util::findEarliestConfluencePoint(const llvm::BasicBlock* ref, llvm::PostDominatorTree* postDomTree)
 {
-    BFSCFG bfsCfg;
+    const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(ref->getTerminator());
+    if (!branchInst)
+        return NULL;
 
-    bfsCfg.addToVisit(leftBB);
-    bfsCfg.addToVisit(rightBB);
+    // if (branchInst->isUnconditional()) {
+    //     return ref;
+    // }
 
-    return bfsCfg.findCommon();
+    BfsCfg bfsCfg(postDomTree);
+
+    for (int i = 0; i < branchInst->getNumSuccessors(); ++i) {
+        bfsCfg.addToVisit(branchInst->getSuccessor(i));
+    }
+
+    return bfsCfg.findCommon(ref);
 }

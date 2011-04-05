@@ -165,12 +165,12 @@ public:
         gla::UnsupportedFunctionality("Loops");
     }
 
-    void addLoopExit(const llvm::BasicBlock*)
+    void addLoopExit(const llvm::BasicBlock*, bool invert=false)
     {
         gla::UnsupportedFunctionality("break");
     }
 
-    void addLoopBack(const llvm::BasicBlock*, bool)
+    void addLoopBack(const llvm::BasicBlock*, bool, bool invert=false)
     {
         gla::UnsupportedFunctionality("continue");
     }

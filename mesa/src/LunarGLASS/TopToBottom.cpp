@@ -90,6 +90,8 @@ void gla::PrivateManager::runLLVMOptimizations1()
     if (Options.optimizations.mem2reg)     passManager.add(llvm::createPromoteMemoryToRegisterPass());
     if (Options.optimizations.reassociate) passManager.add(llvm::createReassociatePass());
     if (Options.optimizations.gvn)         passManager.add(llvm::createGVNPass());
+    passManager.add(llvm::createSinkingPass());
+    passManager.add(llvm::createSCCPPass());
     if (Options.optimizations.coalesce)    passManager.add(llvm::createCoalesceInsertsPass());
     if (Options.optimizations.verify)      passManager.add(llvm::createVerifierPass());
     llvm::Module::iterator function, lastFunction;
@@ -103,7 +105,7 @@ void gla::PrivateManager::runLLVMOptimizations1()
 
     // Repeat sipmlifycfg and adce until we reach a fixed point
     llvm::FunctionPassManager passMan(module);
-    passMan.add(llvm::createCFGSimplificationPass());
+    //    passMan.add(llvm::createCFGSimplificationPass());
     passMan.add(llvm::createAggressiveDCEPass());
     passMan.doInitialization();
     for (function = module->begin(), lastFunction = module->end(); function != lastFunction; ++function) {

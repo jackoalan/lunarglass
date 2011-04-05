@@ -74,12 +74,12 @@ namespace gla {
         // Exit the loop (e.g. break). This may be conditional or unconditional.
         // If conditional, then the backend should exit the loop if the
         // condition succeeds.
-        virtual void addLoopExit(const llvm::BasicBlock*) = 0;
+        virtual void addLoopExit(const llvm::BasicBlock*, bool invert=false) = 0;
 
         // Add a loop backedge (e.g. continue). Receives the basic block the
         // loop is in, and a bool donoting whether there is only one latch in
-        // the entire loop
-        virtual void addLoopBack(const llvm::BasicBlock*, bool) = 0;
+        // the entire loop.
+        virtual void addLoopBack(const llvm::BasicBlock*, bool, bool invert=false) = 0;
 
         virtual void print() = 0;
     };

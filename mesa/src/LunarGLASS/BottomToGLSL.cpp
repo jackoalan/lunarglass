@@ -194,6 +194,10 @@ public:
     {
         newLine();
         shader << "if (";
+
+        if (invert)
+            shader << "!";
+
         mapGlaOperand(cond);
         shader << ") ";
         newScope();
@@ -240,7 +244,7 @@ public:
         leaveScope();
     }
 
-    void addLoopExit(const llvm::BasicBlock* bb)
+    void addLoopExit(const llvm::BasicBlock* bb, bool invert=false)
     {
         const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
         assert(branchInst && "addBreak called with non-branch terminator");
@@ -256,21 +260,36 @@ public:
         // Otherwise, get the condition, and set it up. We're assuming that we
         // want to break if the condition succeeds
         llvm::Value* condition = branchInst->getCondition();
-        addIf(condition);
+        addIf(condition, invert);
         newLine();
         shader << "break;";
         addEndif();
     }
 
-    void addLoopBack(const llvm::BasicBlock*, bool singleLatch)
+    void addLoopBack(const llvm::BasicBlock* bb, bool singleLatch, bool invert=false)
     {
+        // If we're a single latch, then no need to spit anything out
+        if (singleLatch)
+            return;
+
+        const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
+        assert(branchInst && "addLoopBack called with non-branch terminator");
+
         newLine();
 
-        // If it's a single latch, we're assuming we don't have to output
-        // continue
-        if (!singleLatch) {
+        // If it's unconditional, we have to just spit out the break
+        if (branchInst->isUnconditional()) {
             shader << "continue;";
+            return;
         }
+
+        // Otherwise, get the condition, and set it up. We're assuming that we
+        // want to break if the condition succeeds
+        llvm::Value* condition = branchInst->getCondition();
+        addIf(condition, invert);
+        newLine();
+        shader << "continue;";
+        addEndif();
     }
 
     void print();

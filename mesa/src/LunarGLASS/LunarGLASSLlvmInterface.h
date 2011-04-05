@@ -40,6 +40,7 @@
 namespace llvm {
     class BasicBlock;
     class Loop;
+    class PostDominatorTree;
 } // end namespace llvm
 
 namespace gla {
@@ -102,9 +103,10 @@ namespace gla {
             return name.length() < 2 || (name[1] >= '0' && name[1] <= '9');
         }
 
-        // Find and return the earliest confluence point in the CFG of the given
-        // basic blocks
-        static llvm::BasicBlock* findEarliestConfluencePoint(llvm::BasicBlock*, llvm::BasicBlock*);
+        // Find and return the earliest confluence point in the CFG that is
+        // dominated by ref. Returns null if ref is not a branching basicblock,
+        // or if there's no conflunce point.
+        static llvm::BasicBlock* findEarliestConfluencePoint(const llvm::BasicBlock* ref, llvm::PostDominatorTree* domTree);
 
         // true if provided basic block is one of the (possibly many) latches in the provided loop
         static bool isLatch(const llvm::BasicBlock* bb, llvm::Loop* loop);

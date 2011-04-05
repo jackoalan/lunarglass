@@ -55,6 +55,9 @@ bool CanonicalizeCFG::runOnFunction(Function& F)
 
         // If the block has no predecessors, remove it from the function
         if (pred_begin(bbI) == pred_end(bbI)) {
+            for (succ_iterator sI = succ_begin(bbI), sE = succ_end(bbI); sI != sE; ++sI) {
+                (*sI)->removePredecessor(bbI);
+            }
             bbI->dropAllReferences();
             bbI = F.getBasicBlockList().erase(bbI);
         }

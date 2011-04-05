@@ -75,13 +75,15 @@
 //
 //     - Exiting: Handle its instructions, call addLoopExit interface
 //
-// * handleBranching handles it's instructions. On an unconditional branch, it
-//   then does nothing. On a conditional branch with 2 successors, it will find
-//   the earliest confluce point, determine if it's an if-then-else construct,
-//   call the addIf interface, and handle the then block. If the construct is an
-//   if-then-else construct, it will then call the addElse interface and handle
-//   the else block. Finally, it calls the addEndIf interface. A conditional
-//   branch that does not have 2 successors would be unhandled control flow.
+// * handleBranching handles it's instructions, and adds phi nodes if specified
+//   by the backend. On an unconditional branch, it checks to see if the block
+//   being branched is a subtree of the cfg and if so handles it, otherwise it
+//   does nothing. On a conditional branch, it will find the earliest confluce
+//   point, determine if it's an if-then-else construct, call the addIf
+//   interface, and handle the then block. It also takes care of condition
+//   inversion when the then branch is the confluence point. If the construct is
+//   an if-then-else construct, it will then call the addElse interface and
+//   handle the else block. Finally, it calls the addEndIf interface.
 //
 // * handleReturnBlock handles it's instructions, and calls the
 //   handleReturnBlock interface
@@ -151,6 +153,7 @@ namespace {
         llvm::LoopInfo* loopInfo;
         llvm::DominatorTree* domTree;
         llvm::PostDominatorTree* postDomTree;
+        llvm::DominanceFrontier* domFrontier;
 
         bool lastBlock;
 
@@ -338,9 +341,23 @@ void BottomTranslator::handleIfBlock(const llvm::BasicBlock* bb)
     const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
     assert(branchInst && branchInst->getNumSuccessors() == 2 && "handleIfBlock called with improper terminator");
 
+    //    llvm::BasicBlock* unconstBB = const_cast<llvm::BasicBlock*>(bb); //
+    //    Necessary
+    llvm::BasicBlock* left  = branchInst->getSuccessor(0);
+    llvm::BasicBlock* right = branchInst->getSuccessor(1);
+
+    llvm::DominanceFrontier::DomSetType leftDomFront  = (*domFrontier->find(left)).second;
+    llvm::DominanceFrontier::DomSetType rightDomFront = (*domFrontier->find(right)).second;
+
+    bool ifThen         = leftDomFront.count(right);
+    bool invertedIfThen = rightDomFront.count(left);
+    bool ifThenElse     = !(ifThen || invertedIfThen);
+
+    assert(!(ifThen && invertedIfThen) && "Noncanonical control flow: cross edges");
+
     // Get the conflunece BB
-    llvm::BasicBlock* cBB = gla::Util::findEarliestConfluencePoint(bb, postDomTree);
-    assert(cBB && "Conditional without confluence point");
+    // llvm::BasicBlock* cBB = gla::Util::findEarliestConfluencePoint(bb, postDomTree);
+    // assert(cBB && "Conditional without confluence point");
 
     // Whether we're branching to the confluence point in the then or else
     // branch. If we're branching to it in the then branch, we should invert the
@@ -348,27 +365,31 @@ void BottomTranslator::handleIfBlock(const llvm::BasicBlock* bb)
     // branch, we have an if-then-else construct on our hands. If both
     // successors are the confluence point, then we have a malformed (or at least
     // unsimplified) cfg.
-    bool invertedThen = branchInst->getSuccessor(0) == cBB;
-    bool ifThenElse   = (branchInst->getSuccessor(1) != cBB) && !invertedThen;
-    assert(!(invertedThen && (branchInst->getSuccessor(1) == cBB)) && "malformed or unsimplified cfg");
+    // bool invertedThen = branchInst->getSuccessor(0) == cBB;
+    // bool ifThenElse   = (branchInst->getSuccessor(1) != cBB) && !invertedThen;
+    // assert(!(invertedThen && (branchInst->getSuccessor(1) == cBB)) && "malformed or unsimplified cfg");
 
     // Add an if
-    backEndTranslator->addIf(branchInst->getCondition(), invertedThen);
+    backEndTranslator->addIf(branchInst->getCondition(), invertedIfThen);
 
-    // Add the then block
-    if (invertedThen) {
-        handleBlock(branchInst->getSuccessor(1));
+    // Add the then block, flipping it if we're inverted
+    if (invertedIfThen) {
+        handleBlock(right);
     } else {
-        handleBlock(branchInst->getSuccessor(0));
+        handleBlock(left);
     }
 
     // Add the else block, if we're an if-then-else.
     if (ifThenElse) {
+        assert(!(ifThen || invertedIfThen));
         backEndTranslator->addElse();
         handleBlock(branchInst->getSuccessor(1));
     }
 
     backEndTranslator->addEndif();
+
+    //todo: we'd like to now shedule the handling the merge block, just incase
+    //the order we get the blocks in doesn't have it next.
 
     return;
 }
@@ -401,15 +422,10 @@ void BottomTranslator::handleBranchingBlock(const llvm::BasicBlock* bb)
         return;
     }
 
-    // If it has 2 successors, then it's an if block
-    if (branchInst->getNumSuccessors() == 2) {
-        handleIfBlock(bb);
-        return;
-    }
+    assert(branchInst->getNumSuccessors() == 2 && "Ill-formed conditional branch");
 
-    // We currently do not handle any constructs that are not if-then or
-    // if-then-else
-    gla::UnsupportedFunctionality("Conditional branch in bottom IR with != 2 successors");
+    handleIfBlock(bb);
+    return;
 }
 
 void BottomTranslator::handleBlock(const llvm::BasicBlock* bb)
@@ -471,6 +487,7 @@ bool BottomTranslator::runOnModule(llvm::Module& module)
             loopInfo    = &getAnalysis<llvm::LoopInfo>(*function);
             domTree     = &getAnalysis<llvm::DominatorTree>(*function);
             postDomTree = &getAnalysis<llvm::PostDominatorTree>(*function);
+            domFrontier = &getAnalysis<llvm::DominanceFrontier>(*function);
 
             // debug stuff
             // llvm::errs() << "\n\nLoop info:\n";
@@ -517,6 +534,7 @@ void BottomTranslator::getAnalysisUsage(llvm::AnalysisUsage& AU) const
     AU.addRequired<llvm::LoopInfo>();
     AU.addRequired<llvm::DominatorTree>();
     AU.addRequired<llvm::PostDominatorTree>();
+    AU.addRequired<llvm::DominanceFrontier>();
     return;
 }
 

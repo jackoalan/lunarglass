@@ -371,7 +371,8 @@ namespace  {
 } // end namespace
 
 // Do a breadth-first search until some common successor of ref is found. Return
-// that successor. Returns null if there's no common successor.
+// that successor. Returns null if there's no common successor. Note that this
+// still needs to be refined and thought about in the presense of backedges.
 llvm::BasicBlock* BfsCfg::findCommon(const llvm::BasicBlock* ref) {
     BBVector children;
     llvm::BasicBlock* unconstRef = const_cast<llvm::BasicBlock*>(ref); // Necessary

@@ -91,9 +91,12 @@ void gla::PrivateManager::runLLVMOptimizations1()
     if (Options.optimizations.mem2reg)     passManager.add(llvm::createPromoteMemoryToRegisterPass());
     if (Options.optimizations.reassociate) passManager.add(llvm::createReassociatePass());
     if (Options.optimizations.gvn)         passManager.add(llvm::createGVNPass());
-    passManager.add(llvm::createSinkingPass());
-    passManager.add(llvm::createSCCPPass());
     if (Options.optimizations.coalesce)    passManager.add(llvm::createCoalesceInsertsPass());
+    // passManager.add(llvm::createInstructionCombiningPass());
+    // passManager.add(llvm::createSinkingPass());
+    // passManager.add(llvm::createSCCPPass());
+    // passManager.add(llvm::createCFGSimplificationPass());
+
     passManager.add(llvm::createAggressiveDCEPass());
     if (Options.optimizations.verify)      passManager.add(llvm::createVerifierPass());
     llvm::Module::iterator function, lastFunction;

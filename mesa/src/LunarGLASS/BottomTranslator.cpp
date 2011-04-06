@@ -112,6 +112,7 @@
 #include <map>
 #include <vector>
 #include <stack>
+#include <algorithm>
 
 // LunarGLASS includes
 #include "Exceptions.h"
@@ -346,28 +347,12 @@ void BottomTranslator::handleIfBlock(const llvm::BasicBlock* bb)
     llvm::BasicBlock* left  = branchInst->getSuccessor(0);
     llvm::BasicBlock* right = branchInst->getSuccessor(1);
 
-    llvm::DominanceFrontier::DomSetType leftDomFront  = (*domFrontier->find(left)).second;
-    llvm::DominanceFrontier::DomSetType rightDomFront = (*domFrontier->find(right)).second;
+    llvm::BasicBlock* merge = gla::Util::getSingleMergePoint(bb, domFrontier);
+    assert(merge && "Non unique merge point");
 
-    bool ifThen         = leftDomFront.count(right);
-    bool invertedIfThen = rightDomFront.count(left);
+    bool ifThen         = right == merge;
+    bool invertedIfThen = left  == merge;
     bool ifThenElse     = !(ifThen || invertedIfThen);
-
-    assert(!(ifThen && invertedIfThen) && "Noncanonical control flow: cross edges");
-
-    // Get the conflunece BB
-    // llvm::BasicBlock* cBB = gla::Util::findEarliestConfluencePoint(bb, postDomTree);
-    // assert(cBB && "Conditional without confluence point");
-
-    // Whether we're branching to the confluence point in the then or else
-    // branch. If we're branching to it in the then branch, we should invert the
-    // condition. If we're not branching to it in either the then or else
-    // branch, we have an if-then-else construct on our hands. If both
-    // successors are the confluence point, then we have a malformed (or at least
-    // unsimplified) cfg.
-    // bool invertedThen = branchInst->getSuccessor(0) == cBB;
-    // bool ifThenElse   = (branchInst->getSuccessor(1) != cBB) && !invertedThen;
-    // assert(!(invertedThen && (branchInst->getSuccessor(1) == cBB)) && "malformed or unsimplified cfg");
 
     // Add an if
     backEndTranslator->addIf(branchInst->getCondition(), invertedIfThen);
@@ -388,8 +373,9 @@ void BottomTranslator::handleIfBlock(const llvm::BasicBlock* bb)
 
     backEndTranslator->addEndif();
 
-    //todo: we'd like to now shedule the handling the merge block, just incase
-    //the order we get the blocks in doesn't have it next.
+    // We'd like to now shedule the handling of the merge block, just in case
+    // the order we get the blocks in doesn't have it next.
+    handleBlock(merge);
 
     return;
 }
@@ -494,6 +480,10 @@ bool BottomTranslator::runOnModule(llvm::Module& module)
             // loopInfo->print(llvm::errs());
 
             // handle function's with bodies
+
+            // fast HACK for LunarGOO to not emit functions, because they were all inlined, but still lying around
+            if (function->getNameStr() != std::string("main"))
+                continue;
 
             backEndTranslator->startFunctionDeclaration(function->getFunctionType(), function->getNameStr());
 

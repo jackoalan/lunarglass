@@ -42,6 +42,7 @@ namespace llvm {
     class BasicBlock;
     class Loop;
     class PostDominatorTree;
+    class DominanceFrontier;
 } // end namespace llvm
 
 namespace gla {
@@ -200,17 +201,23 @@ namespace gla {
             return name.length() < 2 || (name[1] >= '0' && name[1] <= '9');
         }
 
-        // Find and return the earliest confluence point in the CFG that is
-        // dominated by ref. Returns null if ref is not a branching basicblock,
-        // or if there's no conflunce point.
-        static llvm::BasicBlock* findEarliestConfluencePoint(const llvm::BasicBlock* ref, llvm::PostDominatorTree* domTree);
+        // // Find and return the earliest confluence point in the CFG that is
+        // // dominated by ref. Returns null if ref is not a branching basicblock,
+        // // or if there's no conflunce point.
+        // static llvm::BasicBlock* findEarliestConfluencePoint(const llvm::BasicBlock* ref, llvm::PostDominatorTree* domTree);
 
-        // true if provided basic block is one of the (possibly many) latches in the provided loop
+        // true if provided basic block is one of the (possibly many) latches in
+        // the provided loop
         static bool isLatch(const llvm::BasicBlock* bb, llvm::Loop* loop);
 
         // Return the number of latches in a loop
         static int getNumLatches(llvm::Loop* loop);
 
+        // Return the single merge point of the given conditional basic block. Returns
+        // null if there is no merge point, or if there are more than 1 merge
+        // points. Note that the presense of backedges or exitedges in the then and else
+        // branchs' subgraphs may cause there to be multiple potential merge points.
+        static llvm::BasicBlock* getSingleMergePoint(const llvm::BasicBlock* condBB, llvm::DominanceFrontier* domFront);
     };
 };
 

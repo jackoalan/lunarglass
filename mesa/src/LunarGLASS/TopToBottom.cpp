@@ -51,6 +51,7 @@
 // LunarGLASS Passes
 #include "Passes/Transforms/CoalesceInserts/CoalesceInserts.h"
 #include "Passes/Transforms/CanonicalizeCFG/CanonicalizeCFG.h"
+#include "Passes/Transforms/FlattenConditionalAssignments/FlattenConditionalAssignments.h"
 
 void gla::PrivateManager::translateTopToBottom()
 {
@@ -98,6 +99,7 @@ void gla::PrivateManager::runLLVMOptimizations1()
     // passManager.add(llvm::createCFGSimplificationPass());
 
     passManager.add(llvm::createAggressiveDCEPass());
+    passManager.add(llvm::createFlattenConditionalAssignmentsPass());
     if (Options.optimizations.verify)      passManager.add(llvm::createVerifierPass());
     llvm::Module::iterator function, lastFunction;
 

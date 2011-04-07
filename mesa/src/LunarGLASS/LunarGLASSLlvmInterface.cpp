@@ -347,7 +347,7 @@ int Util::getNumLatches(llvm::Loop* loop)
 // null if there is no merge point, or if there are more than 1 merge
 // points. Note that the presense of backedges or exitedges in the then and else
 // branchs' subgraphs may cause there to be multiple potential merge points.
-llvm::BasicBlock* Util::getSingleMergePoint(const llvm::BasicBlock* condBB, llvm::DominanceFrontier* domFront)
+llvm::BasicBlock* Util::getSingleMergePoint(const llvm::BasicBlock* condBB, llvm::DominanceFrontier& domFront)
 {
     const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(condBB->getTerminator());
     assert(branchInst && branchInst->getNumSuccessors() == 2 && "writeMergePoints called with improper terminator");
@@ -355,8 +355,8 @@ llvm::BasicBlock* Util::getSingleMergePoint(const llvm::BasicBlock* condBB, llvm
     llvm::BasicBlock* left  = branchInst->getSuccessor(0);
     llvm::BasicBlock* right = branchInst->getSuccessor(1);
 
-    llvm::DominanceFrontier::DomSetType leftDomFront  = (*domFront->find(left)).second;
-    llvm::DominanceFrontier::DomSetType rightDomFront = (*domFront->find(right)).second;
+    llvm::DominanceFrontier::DomSetType leftDomFront  = (*domFront.find(left)).second;
+    llvm::DominanceFrontier::DomSetType rightDomFront = (*domFront.find(right)).second;
 
     bool isLeft  = rightDomFront.count(left);
     bool isRight = leftDomFront.count(right);
@@ -381,84 +381,3 @@ llvm::BasicBlock* Util::getSingleMergePoint(const llvm::BasicBlock* condBB, llvm
 
 
 }; // end gla namespace
-
-// namespace  {
-//     typedef llvm::SmallPtrSet<llvm::BasicBlock*, 8> BBSet;
-//     typedef llvm::SmallVector<llvm::BasicBlock*, 8> BBVector;
-
-//     // Class for breadth first searches of a control flow graph
-//     class BfsCfg {
-//     public:
-
-//         BfsCfg(llvm::PostDominatorTree* d) : postDomTree(d)
-//         { }
-
-//         // Do a breadth-first search until some common successor of ref is
-//         // found. Return that successor.
-//         llvm::BasicBlock* findCommon(const llvm::BasicBlock* ref);
-
-//         void addToVisit(llvm::BasicBlock* bb) { toVisit.push_back(bb); }
-
-//     private:
-//         BBSet visited;
-//         BBVector toVisit;
-
-//         llvm::PostDominatorTree* postDomTree;
-//     };
-// } // end namespace
-
-// // Do a breadth-first search until some common successor of ref is found. Return
-// // that successor. Returns null if there's no common successor. Note that this
-// // still needs to be refined and thought about in the presense of backedges.
-// llvm::BasicBlock* BfsCfg::findCommon(const llvm::BasicBlock* ref) {
-//     BBVector children;
-//     llvm::BasicBlock* unconstRef = const_cast<llvm::BasicBlock*>(ref); // Necessary
-//     for (int i = 0, e = toVisit.size(); i != e; ++i) {
-
-//         llvm::BasicBlock* bb = toVisit[i];
-//         // If we've seen him before, and it properly post-dominates ref, then
-//         // we're done.
-//         if (visited.count(bb)) {
-//             if (postDomTree->properlyDominates(bb, unconstRef)) {
-//                 return bb;
-//             } else {
-//                 continue;
-//             }
-//         }
-//         visited.insert(bb);
-
-//         // Add all the children of each bb, unless the bb ends in a return
-//         assert((bb)->getTerminator() && "Ill-formed basicblock");
-//         if (llvm::isa<llvm::ReturnInst>((bb)->getTerminator()))
-//             continue;
-//         for (llvm::succ_iterator sI = succ_begin(bb), sE = succ_end(bb); sI != sE; ++sI) {
-//             toVisit.push_back(*sI);
-//         }
-//         // Reset the end point
-//         e = toVisit.size();
-//     }
-
-//     return NULL;
-// }
-
-// // Find and return the earliest confluence point in the CFG that is dominated by
-// // ref. Returns null if ref is not a branching basicblock, or if there's no
-// // conflunce point.
-// llvm::BasicBlock* gla::Util::findEarliestConfluencePoint(const llvm::BasicBlock* ref, llvm::PostDominatorTree* postDomTree)
-// {
-//     const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(ref->getTerminator());
-//     if (!branchInst)
-//         return NULL;
-
-//     // if (branchInst->isUnconditional()) {
-//     //     return ref;
-//     // }
-
-//     BfsCfg bfsCfg(postDomTree);
-
-//     for (int i = 0; i < branchInst->getNumSuccessors(); ++i) {
-//         bfsCfg.addToVisit(branchInst->getSuccessor(i));
-//     }
-
-//     return bfsCfg.findCommon(ref);
-// }

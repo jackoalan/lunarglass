@@ -217,7 +217,7 @@ namespace gla {
         // null if there is no merge point, or if there are more than 1 merge
         // points. Note that the presense of backedges or exitedges in the then and else
         // branchs' subgraphs may cause there to be multiple potential merge points.
-        static llvm::BasicBlock* getSingleMergePoint(const llvm::BasicBlock* condBB, llvm::DominanceFrontier* domFront);
+        static llvm::BasicBlock* getSingleMergePoint(const llvm::BasicBlock* condBB, llvm::DominanceFrontier& domFront);
     };
 };
 

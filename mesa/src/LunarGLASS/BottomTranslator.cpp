@@ -120,6 +120,10 @@
 #include "LunarGLASSLlvmInterface.h"
 #include "Manager.h"
 
+// LunarGLASS Passes
+#include "Passes/Analysis/IdentifyConditionals/IdentifyConditionals.h"
+
+
 namespace {
 
     class BottomTranslator : public llvm::ModulePass {
@@ -153,8 +157,9 @@ namespace {
 
         llvm::LoopInfo* loopInfo;
         llvm::DominatorTree* domTree;
-        llvm::PostDominatorTree* postDomTree;
-        llvm::DominanceFrontier* domFrontier;
+        // llvm::PostDominatorTree* postDomTree;
+        // llvm::DominanceFrontier* domFrontier;
+        llvm::IdConditionals* idConds;
 
         bool lastBlock;
 
@@ -339,43 +344,31 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
 
 void BottomTranslator::handleIfBlock(const llvm::BasicBlock* bb)
 {
-    const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
-    assert(branchInst && branchInst->getNumSuccessors() == 2 && "handleIfBlock called with improper terminator");
+    const llvm::Conditional* cond = idConds->getConditional(bb);
 
-    //    llvm::BasicBlock* unconstBB = const_cast<llvm::BasicBlock*>(bb); //
-    //    Necessary
-    llvm::BasicBlock* left  = branchInst->getSuccessor(0);
-    llvm::BasicBlock* right = branchInst->getSuccessor(1);
-
-    llvm::BasicBlock* merge = gla::Util::getSingleMergePoint(bb, domFrontier);
-    assert(merge && "Non unique merge point");
-
-    bool ifThen         = right == merge;
-    bool invertedIfThen = left  == merge;
-    bool ifThenElse     = !(ifThen || invertedIfThen);
+    bool invert = cond->isIfElse();
 
     // Add an if
-    backEndTranslator->addIf(branchInst->getCondition(), invertedIfThen);
+    backEndTranslator->addIf(cond->getCondition(), invert);
 
     // Add the then block, flipping it if we're inverted
-    if (invertedIfThen) {
-        handleBlock(right);
+    if (invert) {
+        handleBlock(cond->getElseBlock());
     } else {
-        handleBlock(left);
+        handleBlock(cond->getThenBlock());
     }
 
     // Add the else block, if we're an if-then-else.
-    if (ifThenElse) {
-        assert(!(ifThen || invertedIfThen));
+    if (cond->isIfThenElse()) {
         backEndTranslator->addElse();
-        handleBlock(branchInst->getSuccessor(1));
+        handleBlock(cond->getElseBlock());
     }
 
     backEndTranslator->addEndif();
 
     // We'd like to now shedule the handling of the merge block, just in case
     // the order we get the blocks in doesn't have it next.
-    handleBlock(merge);
+    handleBlock(cond->getMergePoint());
 
     return;
 }
@@ -472,8 +465,7 @@ bool BottomTranslator::runOnModule(llvm::Module& module)
             // Get/set the loop info
             loopInfo    = &getAnalysis<llvm::LoopInfo>(*function);
             domTree     = &getAnalysis<llvm::DominatorTree>(*function);
-            postDomTree = &getAnalysis<llvm::PostDominatorTree>(*function);
-            domFrontier = &getAnalysis<llvm::DominanceFrontier>(*function);
+            idConds     = &getAnalysis<llvm::IdConditionals>(*function);
 
             // debug stuff
             // llvm::errs() << "\n\nLoop info:\n";
@@ -525,6 +517,7 @@ void BottomTranslator::getAnalysisUsage(llvm::AnalysisUsage& AU) const
     AU.addRequired<llvm::DominatorTree>();
     AU.addRequired<llvm::PostDominatorTree>();
     AU.addRequired<llvm::DominanceFrontier>();
+    AU.addRequired<llvm::IdConditionals>();
     return;
 }
 

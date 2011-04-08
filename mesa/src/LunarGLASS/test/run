@@ -102,7 +102,7 @@ function runTests {
             || (echo "[FAIL] " ; tail -n 1 $t.errout)
         cat $t.stdout > glsl/$t.out.de-obfuscated
 
-        # Diff them
+        # # Diff them
         # printf "    Diffing rerun and de-obfuscate:      "
         # printf "        GLSL "
         # (diff --side-by-side --suppress-common-lines glsl/$t.out.rerun glsl/$t.out.de-obfuscated > $t.diff \

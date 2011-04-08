@@ -121,7 +121,7 @@
 #include "Manager.h"
 
 // LunarGLASS Passes
-#include "Passes/Analysis/IdentifyConditionals/IdentifyConditionals.h"
+#include "Passes/Analysis/IdentifyConditionals.h"
 
 
 namespace {
@@ -157,9 +157,7 @@ namespace {
 
         llvm::LoopInfo* loopInfo;
         llvm::DominatorTree* domTree;
-        // llvm::PostDominatorTree* postDomTree;
-        // llvm::DominanceFrontier* domFrontier;
-        llvm::IdConditionals* idConds;
+        llvm::IdentifyConditionals* idConds;
 
         bool lastBlock;
 
@@ -344,6 +342,7 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
 
 void BottomTranslator::handleIfBlock(const llvm::BasicBlock* bb)
 {
+
     const llvm::Conditional* cond = idConds->getConditional(bb);
 
     bool invert = cond->isIfElse();
@@ -368,7 +367,7 @@ void BottomTranslator::handleIfBlock(const llvm::BasicBlock* bb)
 
     // We'd like to now shedule the handling of the merge block, just in case
     // the order we get the blocks in doesn't have it next.
-    handleBlock(cond->getMergePoint());
+    handleBlock(cond->getMergeBlock());
 
     return;
 }
@@ -465,7 +464,7 @@ bool BottomTranslator::runOnModule(llvm::Module& module)
             // Get/set the loop info
             loopInfo    = &getAnalysis<llvm::LoopInfo>(*function);
             domTree     = &getAnalysis<llvm::DominatorTree>(*function);
-            idConds     = &getAnalysis<llvm::IdConditionals>(*function);
+            idConds     = &getAnalysis<llvm::IdentifyConditionals>(*function);
 
             // debug stuff
             // llvm::errs() << "\n\nLoop info:\n";
@@ -515,9 +514,7 @@ void BottomTranslator::getAnalysisUsage(llvm::AnalysisUsage& AU) const
 {
     AU.addRequired<llvm::LoopInfo>();
     AU.addRequired<llvm::DominatorTree>();
-    AU.addRequired<llvm::PostDominatorTree>();
-    AU.addRequired<llvm::DominanceFrontier>();
-    AU.addRequired<llvm::IdConditionals>();
+    AU.addRequired<llvm::IdentifyConditionals>();
     return;
 }
 

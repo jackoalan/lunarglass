@@ -49,9 +49,9 @@
 #include "Options.h"
 
 // LunarGLASS Passes
-#include "Passes/Transforms/CoalesceInserts/CoalesceInserts.h"
-#include "Passes/Transforms/CanonicalizeCFG/CanonicalizeCFG.h"
-#include "Passes/Transforms/FlattenConditionalAssignments/FlattenConditionalAssignments.h"
+#include "Passes/Transforms/CoalesceInserts.h"
+#include "Passes/Transforms/CanonicalizeCFG.h"
+#include "Passes/Transforms/FlattenConditionalAssignments.h"
 
 void gla::PrivateManager::translateTopToBottom()
 {
@@ -97,9 +97,10 @@ void gla::PrivateManager::runLLVMOptimizations1()
     // passManager.add(llvm::createSinkingPass());
     // passManager.add(llvm::createSCCPPass());
     // passManager.add(llvm::createCFGSimplificationPass());
-
-    passManager.add(llvm::createAggressiveDCEPass());
+    if (Options.optimizations.adce)        passManager.add(llvm::createAggressiveDCEPass());
     passManager.add(llvm::createFlattenConditionalAssignmentsPass());
+    if (Options.optimizations.adce)        passManager.add(llvm::createAggressiveDCEPass());
+
     if (Options.optimizations.verify)      passManager.add(llvm::createVerifierPass());
     llvm::Module::iterator function, lastFunction;
 
@@ -109,16 +110,6 @@ void gla::PrivateManager::runLLVMOptimizations1()
         passManager.run(*function);
     }
     passManager.doFinalization();
-
-    // Repeat sipmlifycfg and adce until we reach a fixed point
-    // llvm::FunctionPassManager passMan(module);
-    // passMan.add(llvm::createCFGSimplificationPass());
-    // passMan.add(llvm::createAggressiveDCEPass());
-    // passMan.doInitialization();
-    // for (function = module->begin(), lastFunction = module->end(); function != lastFunction; ++function) {
-    //     while (passMan.run(*function))
-    //         continue;
-    // }
 
     // Set up the module-level optimizations we want
     llvm::PassManager modulePassManager;
@@ -150,13 +141,6 @@ void gla::PrivateManager::runLLVMOptimizations1()
         }
         memoryPassManager.doFinalization();
     }
-
-    // After global optimizations have been run, repeat sipmlifycfg and adce until we reach a fixed point
-    // for (function = module->begin(), lastFunction = module->end(); function != lastFunction; ++function) {
-    //     while (passMan.run(*function))
-    //         continue;
-    // }
-    // passMan.doFinalization();
 
     llvm::PassManager canonicalize;
     canonicalize.add(llvm::createCanonicalizeCFGPass());

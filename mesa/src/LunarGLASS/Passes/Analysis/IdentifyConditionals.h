@@ -24,9 +24,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Identify the conditional expressions, and collect information about them,
-// including their classification (e.g. if they're an if-then-else), and their
-// merge points.
+// Identify the structured conditional expressions, and collect information
+// about them, including their classification (e.g. if they're an if-then-else),
+// and their merge points.
 //
 //===----------------------------------------------------------------------===//
 
@@ -42,16 +42,23 @@ namespace llvm {
 
     class Conditional;
 
-    class IdConditionals : public FunctionPass {
+    class IdentifyConditionals : public FunctionPass {
     private:
-        DenseMap<const BasicBlock*, const Conditional*> map;
+        DenseMap<const BasicBlock*, const Conditional*> conditionals;
     public:
+        // Iterators for this class provide a pair of <entryBlock*, Conditional*>
+        typedef DenseMap<const BasicBlock*, const Conditional*>::const_iterator const_iterator;
+        const_iterator begin() const { return conditionals.begin(); }
+        const_iterator end()   const { return conditionals.end(); }
+        bool           empty() const { return conditionals.empty(); }
+
         // Returns the Conditional that the passed BasicBlock is the entry for
-        const Conditional* getConditional(const BasicBlock* entry) { return map.lookup(entry); }
+        const Conditional* getConditional(const BasicBlock* entry) const { return conditionals.lookup(entry); }
+        const Conditional* operator[](const BasicBlock* entry)     const { return getConditional(entry); }
 
         // Standard pass stuff
         static char ID;
-        IdConditionals() : FunctionPass(ID) {}
+        IdentifyConditionals() : FunctionPass(ID) {}
         virtual bool runOnFunction(Function&);
         void print(raw_ostream&, const Module* = 0) const;
         virtual void getAnalysisUsage(AnalysisUsage&) const;
@@ -61,40 +68,40 @@ namespace llvm {
     // Class providing analysis inquiries about a conditional expression.
     class Conditional {
     private:
-        // IdConditionals is the only one allowed to construct a Conditional
-        friend class IdConditionals;
+        // IdentifyConditionals is the only one allowed to construct a Conditional
+        friend class IdentifyConditionals;
 
-        Conditional(const BasicBlock* entryBlock, const BasicBlock* mergeBlock,
-                    const BasicBlock* thenBlock, const BasicBlock* elseBlock)
+        Conditional(BasicBlock* entryBlock, BasicBlock* mergeBlock,
+                    BasicBlock* thenBlock, BasicBlock* elseBlock)
             : entry(entryBlock)
             , merge(mergeBlock)
             , left(thenBlock)
             , right(elseBlock)
         { }
 
-        const BasicBlock* entry;
-        const BasicBlock* merge;
-        const BasicBlock* left;
-        const BasicBlock* right;
+        BasicBlock* entry;
+        BasicBlock* merge;
+        BasicBlock* left;
+        BasicBlock* right;
 
     public:
         // Whether there is no "then" block, only an "else" one. This may be
         // useful information, e.g. if a transformation wishes to invert a
         // condition and flip branches around.
-        bool isIfElse()   const { return left == merge; }
+        bool isIfElse() const { return left == merge; }
 
-        bool isIfThen()     const { return right == merge; }
+        bool isIfThen() const { return right == merge; }
 
         bool isIfThenElse() const { return !(isIfElse() || isIfThen()); }
 
-        const BasicBlock* getEntryPoint() const { return entry; }
-        const BasicBlock* getMergePoint() const { return merge; }
-        const BasicBlock* getThenBlock()  const { return left; }
-        const BasicBlock* getElseBlock()  const { return right; }
+        BasicBlock* getEntryBlock() const { return entry; }
+        BasicBlock* getMergeBlock() const { return merge; }
+        BasicBlock* getThenBlock()  const { return left; }
+        BasicBlock* getElseBlock()  const { return right; }
 
-        const BranchInst* getBranchInst() const { return dyn_cast<BranchInst>(entry->getTerminator()); }
+        BranchInst* getBranchInst() const { return dyn_cast<BranchInst>(entry->getTerminator()); }
 
-        const Value* getCondition() const { return getBranchInst()->getCondition(); };
+        Value* getCondition() const { return getBranchInst()->getCondition(); };
     };
 
 

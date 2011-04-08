@@ -39,11 +39,11 @@
 
 using namespace llvm;
 
-bool IdConditionals::runOnFunction(Function &F)
+bool IdentifyConditionals::runOnFunction(Function &F)
 {
     DominanceFrontier& domFront = getAnalysis<DominanceFrontier>();
 
-    for (Function::const_iterator bb = F.begin(), e = F.end(); bb != e; ++bb) {
+    for (Function::iterator bb = F.begin(), e = F.end(); bb != e; ++bb) {
 
         // First, exclude all the non conditional branches
         const BranchInst* branchInst = dyn_cast<BranchInst>(bb->getTerminator());
@@ -62,35 +62,35 @@ bool IdConditionals::runOnFunction(Function &F)
 
         std::pair<const BasicBlock*, const Conditional*> pair(bb, new Conditional(bb, merge, left, right));
 
-        map.insert(pair).second;
+        conditionals.insert(pair);
     }
 
     return false;
 }
 
 
-void IdConditionals::getAnalysisUsage(AnalysisUsage& AU) const
+void IdentifyConditionals::getAnalysisUsage(AnalysisUsage& AU) const
 {
     AU.addRequired<DominanceFrontier>();
     AU.setPreservesAll();
     return;
 }
 
-void IdConditionals::print(raw_ostream&, const Module*) const
+void IdentifyConditionals::print(raw_ostream&, const Module*) const
 {
     return;
 }
 
-void IdConditionals::releaseMemory()
+void IdentifyConditionals::releaseMemory()
 {
-    for (DenseMap<const BasicBlock*, const Conditional*>::iterator i = map.begin(), e = map.end(); i != e; ++i) {
+    for (DenseMap<const BasicBlock*, const Conditional*>::iterator i = conditionals.begin(), e = conditionals.end(); i != e; ++i) {
         delete i->second;
     }
-    map.clear();
+    conditionals.clear();
 }
 
-char IdConditionals::ID = 0;
-INITIALIZE_PASS(IdConditionals,
+char IdentifyConditionals::ID = 0;
+INITIALIZE_PASS(IdentifyConditionals,
                 "identify-conditionals",
                 "Identify the conditional expressions",
                 true,  // Whether it preserves the CFG

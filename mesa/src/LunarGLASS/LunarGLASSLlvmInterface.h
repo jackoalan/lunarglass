@@ -201,11 +201,6 @@ namespace gla {
             return name.length() < 2 || (name[1] >= '0' && name[1] <= '9');
         }
 
-        // // Find and return the earliest confluence point in the CFG that is
-        // // dominated by ref. Returns null if ref is not a branching basicblock,
-        // // or if there's no conflunce point.
-        // static llvm::BasicBlock* findEarliestConfluencePoint(const llvm::BasicBlock* ref, llvm::PostDominatorTree* domTree);
-
         // true if provided basic block is one of the (possibly many) latches in
         // the provided loop
         static bool isLatch(const llvm::BasicBlock* bb, llvm::Loop* loop);
@@ -218,6 +213,7 @@ namespace gla {
         // points. Note that the presense of backedges or exitedges in the then and else
         // branchs' subgraphs may cause there to be multiple potential merge points.
         static llvm::BasicBlock* getSingleMergePoint(const llvm::BasicBlock* condBB, llvm::DominanceFrontier& domFront);
+
     };
 };
 

@@ -41,6 +41,7 @@
 namespace llvm {
 
     class Conditional;
+    class DominanceFrontier;
 
     class IdentifyConditionals : public FunctionPass {
     private:
@@ -72,17 +73,21 @@ namespace llvm {
         friend class IdentifyConditionals;
 
         Conditional(BasicBlock* entryBlock, BasicBlock* mergeBlock,
-                    BasicBlock* thenBlock, BasicBlock* elseBlock)
+                    BasicBlock* thenBlock, BasicBlock* elseBlock,
+                    DominanceFrontier* frontiers)
             : entry(entryBlock)
             , merge(mergeBlock)
             , left(thenBlock)
             , right(elseBlock)
+            , domFront(frontiers)
         { }
 
         BasicBlock* entry;
         BasicBlock* merge;
         BasicBlock* left;
         BasicBlock* right;
+
+        DominanceFrontier* domFront;
 
     public:
         // Whether there is no "then" block, only an "else" one. This may be
@@ -93,6 +98,17 @@ namespace llvm {
         bool isIfThen() const { return right == merge; }
 
         bool isIfThenElse() const { return !(isIfElse() || isIfThen()); }
+
+        // Whether the conditional is self-contained. This means that each the
+        // then and else blocks, if they are distinct from the merge block,
+        // point to subgraphs whose only exit is the merge block.
+        bool isSelfContained() const;
+
+        // Whether the conditional is empty. An empty conditional is a
+        // self-contained conditional in which the then and else subgraphs, if
+        // they exist, are all empty blocks. Currently unimplemented in the case
+        // of then or else subgraphs, for which is currently will return false.
+        bool isEmptyConditional() const;
 
         BasicBlock* getEntryBlock() const { return entry; }
         BasicBlock* getMergeBlock() const { return merge; }

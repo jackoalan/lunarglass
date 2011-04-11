@@ -194,13 +194,13 @@ void main()
     color_0 = BaseColor;
     while (true) {
         bool temp22 = color_0.x >= d;
-        
         if (temp22) {
             break;
         }
         
         vec4 color1 = color_0 + bigColor;
         color_0 = color1;
+        continue;
     }
     
     gl_FragColor = color_0;

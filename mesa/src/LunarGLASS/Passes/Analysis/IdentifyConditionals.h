@@ -57,6 +57,12 @@ namespace llvm {
         const Conditional* getConditional(const BasicBlock* entry) const { return conditionals.lookup(entry); }
         const Conditional* operator[](const BasicBlock* entry)     const { return getConditional(entry); }
 
+        // Erase the conditional from our analysis. Does not modify the actual program.
+        void eraseConditional(const BasicBlock* bb) { conditionals.erase(bb); }
+
+        // Set the underlying conditional to NULL (so as to potentially keep iterators valid)
+        void nullConditional(const BasicBlock* bb) { conditionals[bb] = NULL; }
+
         // Standard pass stuff
         static char ID;
         IdentifyConditionals() : FunctionPass(ID) {}

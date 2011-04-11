@@ -43,11 +43,14 @@
 
 
 #include "llvm/BasicBlock.h"
+#include "llvm/Instructions.h"
 #include "llvm/Pass.h"
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 #include "LunarGLASSLlvmInterface.h"
 #include "FlattenConditionalAssignments.h"
@@ -73,6 +76,8 @@ namespace  {
         bool moveCondAssns(const Conditional*);
         bool removeDeadCode(const Conditional*);
         bool removeEmptyConditional(const Conditional*);
+
+        bool flattenConds();
     };
 } // end namespace
 
@@ -83,8 +88,22 @@ bool FlattenCondAssn::runOnFunction(Function& F)
 
     bool changed = false;
 
+    while (flattenConds())
+        changed = true;
+
+    return changed;
+}
+
+bool FlattenCondAssn::flattenConds()
+{
+    bool changed = false;
+
     for (IdentifyConditionals::const_iterator i = idConds->begin(), e = idConds->end(); i != e; ++i) {
         const Conditional* cond = i->second;
+
+        if (!cond)
+            continue;
+
         BasicBlock* entry = cond->getEntryBlock();
 
         // See if the then, else, and merge blocks are all dominated by the
@@ -96,13 +115,18 @@ bool FlattenCondAssn::runOnFunction(Function& F)
 
         // Move all the conditional assignments out, iteratively in case of some
         // interdependence
-        while (changed |= moveCondAssns(cond));
+        while (moveCondAssns(cond))
+            changed = true;
 
         // Eliminate any and all remaining dead code in the branches
-        while (changed |= removeDeadCode(cond));
+        while (removeDeadCode(cond))
+            changed = true;
 
         // Remove empty conditionals.
-        changed |= removeEmptyConditional(cond);
+        if (removeEmptyConditional(cond)) {
+            changed = true;
+            idConds->nullConditional(entry);
+        };
 
     }
 
@@ -124,14 +148,48 @@ bool FlattenCondAssn::moveCondAssns(const Conditional* cond)
 
 bool FlattenCondAssn::removeDeadCode(const Conditional* cond)
 {
+    bool changed = false;
+    changed |= SimplifyInstructionsInBlock(cond->getEntryBlock());
+    changed |= SimplifyInstructionsInBlock(cond->getThenBlock());
+    changed |= SimplifyInstructionsInBlock(cond->getElseBlock());
+
+    // TODO: Remove dead code in the then and else subgraphs
+
     // <do stuff>
     return false;
 }
 
 bool FlattenCondAssn::removeEmptyConditional(const Conditional* cond)
 {
-    // <do stuff>
-    return false;
+    if (!cond->isSelfContained() || !cond->isEmptyConditional())
+        return false;
+
+    BasicBlock* left  = cond->getThenBlock();
+    BasicBlock* right = cond->getElseBlock();
+    BasicBlock* merge = cond->getMergeBlock();
+    BasicBlock* entry = cond->getEntryBlock();
+
+    BranchInst* entryBranch = dyn_cast<BranchInst>(entry->getTerminator());
+    assert(entryBranch);
+
+    bool changed = true;
+
+    if (left != merge)
+        changed &= TryToSimplifyUncondBranchFromEmptyBlock(left);
+
+    if (right != merge)
+        changed &= TryToSimplifyUncondBranchFromEmptyBlock(right);
+
+    assert(changed);
+    assert((merge == entryBranch->getSuccessor(0)) && (merge == entryBranch->getSuccessor(1)));
+
+    ReplaceInstWithInst(entryBranch, BranchInst::Create(merge));
+
+    // Future work: merge the block into the predecessor, and update any
+    // affected conditionals
+    // MergeBasicBlockIntoOnlyPred(merge);
+
+    return changed;
 }
 
 void FlattenCondAssn::getAnalysisUsage(AnalysisUsage& AU) const

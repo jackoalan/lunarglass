@@ -277,34 +277,20 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
     else
         handleNonTerminatingInstructions(bb);
 
+    // Add phi copies (if applicable)
+    if ((isExiting || isLatch) && backEnd->getRemovePhiFunctions())
+        addPhiCopies(branchInst);
+
     // If we're exiting, add the (possibly conditional) exit.
     if (isExiting) {
-        // Add phi copies (if applicable)
-        if (backEnd->getRemovePhiFunctions())
-            addPhiCopies(branchInst);
-
-        if (condition)
-            backEndTranslator->addIf(condition, branchInst->getSuccessor(1) == exit);
-
-        backEndTranslator->addLoopExit();
-
-        if (condition)
-            backEndTranslator->addEndif();
+        backEndTranslator->addLoopExit(condition, branchInst->getSuccessor(0) != exit);
+        assert((branchInst->getSuccessor(0) == exit) || (condition && (branchInst->getSuccessor(1) == exit)));
     }
 
     // If it's a latch, add the (possibly conditional) loop-back
     if (isLatch) {
-        // Add phi copies (if applicable)
-        if (backEnd->getRemovePhiFunctions())
-            addPhiCopies(branchInst);
-
-        if (condition)
-            backEndTranslator->addIf(condition, branchInst->getSuccessor(1) == header);
-
-        backEndTranslator->addLoopBack();
-
-        if (condition)
-            backEndTranslator->addEndif();
+        backEndTranslator->addLoopBack(condition, branchInst->getSuccessor(0) != header);
+        assert((branchInst->getSuccessor(0) == header) || (condition && (branchInst->getSuccessor(1) == header)));
     }
 
     // If it's header, then add all of the other blocks in the loop. This is

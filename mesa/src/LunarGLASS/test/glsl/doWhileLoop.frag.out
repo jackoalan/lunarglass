@@ -200,12 +200,12 @@ void main()
     while (true) {
         vec4 assignment_tmp1 = color_0 + bigColor;
         bool temp23 = assignment_tmp1.x >= d;
-        
         if (temp23) {
             break;
         }
         
         color_0 = assignment_tmp1;
+        continue;
     }
     
     gl_FragColor = assignment_tmp1;

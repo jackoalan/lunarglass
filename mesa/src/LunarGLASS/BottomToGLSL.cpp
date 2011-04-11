@@ -228,7 +228,7 @@ public:
     void beginLoop()
     {
         newLine();
-        shader << "while (true)";
+        shader << "while (true) ";
 
         newScope();
     }
@@ -238,18 +238,28 @@ public:
         leaveScope();
     }
 
-    void addLoopExit()
+    void addLoopExit(const llvm::Value* condition=NULL, bool invert=false)
     {
+        if (condition)
+            addIf(condition, invert);
+
         newLine();
         shader << "break;";
-        return;
+
+        if (condition)
+            addEndif();
     }
 
-    void addLoopBack()
+    void addLoopBack(const llvm::Value* condition=NULL, bool invert=false)
     {
+        if (condition)
+            addIf(condition, invert);
+
         newLine();
         shader << "continue;";
-        return;
+
+        if (condition)
+            addEndif();
     }
 
     void print();

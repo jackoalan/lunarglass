@@ -31,6 +31,7 @@
 
 #include "llvm/Pass.h"
 #include "llvm/Support/CFG.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #include "CanonicalizeCFG.h"
 

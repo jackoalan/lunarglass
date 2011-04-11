@@ -206,7 +206,6 @@ void main()
     color_0 = BaseColor;
     while (true) {
         bool temp24 = i_0 >= Count;
-        
         if (temp24) {
             break;
         }
@@ -215,6 +214,7 @@ void main()
         int temp26 = i_0 + const27;
         i_0 = temp26;
         color_0 = color1;
+        continue;
     }
     
     gl_FragColor = color_0;

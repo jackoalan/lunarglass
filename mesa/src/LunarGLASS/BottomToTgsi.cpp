@@ -178,12 +178,12 @@ public:
         gla::UnsupportedFunctionality("Loops");
     }
 
-    void addLoopExit()
+    void addLoopExit(const llvm::Value* condition=NULL, bool invert=false)
     {
         gla::UnsupportedFunctionality("break");
     }
 
-    void addLoopBack()
+    void addLoopBack(const llvm::Value* condition=NULL, bool invert=false)
     {
         gla::UnsupportedFunctionality("continue");
     }

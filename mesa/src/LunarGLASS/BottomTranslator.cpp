@@ -53,22 +53,19 @@
 //   and any given block could have multiple tags. Any untagged blocks can be
 //   handled normally, as though they weren't even in a loop.
 //
-// * Loops are presented to the backend using the addLoop, addLoopEnd,
-//   addLoopExit, and addLoopBack interfaces. It is then up to the backends to
-//   decide through these interfaces how they want to construct the resulting
-//   loop. Unnested loops are currently not supported.
+// * Loops are presented to the backend using the loop interfaces present in
+//   Manager.h. Unnested loops are currently not supported.
 //
 // * handleLoopBlock proceeds as follows for the following loop block types:
 //
-//     - Header:  Call addLoop interface. If the header is not also a latch or
+//     - Header:  Call beginLoop interface. If the header is not also a latch or
 //                exiting block, then it's the start of some internal control
 //                flow, so pass it off to handleBranchingBlock.  Otherwise
-//                handle its instructions, call addLoopExit interface if it's an
-//                exit block as well, and pass every block in the loop to
+//                handle its instructions, handle it as a latch or exit if it's
+//                also a latch or exit, and pass every block in the loop to
 //                handleBlock. This is done to make sure that all loop internal
 //                blocks are handled before further loop external blocks are.
-//                If it's also a latch, add phi copies if applicable and call
-//                addLoopBack interface. Finally, end the loop.
+//                Finally, end the loop.
 //
 //     - Latch:   Handle its instructions, add phi copies if applicable, call
 //                addLoopBack interface.
@@ -278,7 +275,7 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
         handleNonTerminatingInstructions(bb);
 
     // Add phi copies (if applicable)
-    if ((isExiting || isLatch) && backEnd->getRemovePhiFunctions())
+    if (isLatch && backEnd->getRemovePhiFunctions())
         addPhiCopies(branchInst);
 
     // If we're exiting, add the (possibly conditional) exit.
@@ -317,6 +314,7 @@ void BottomTranslator::handleIfBlock(const llvm::BasicBlock* bb)
 {
 
     const llvm::Conditional* cond = idConds->getConditional(bb);
+    assert(cond);
 
     bool invert = cond->isIfElse();
 
@@ -398,7 +396,7 @@ void BottomTranslator::handleBlock(const llvm::BasicBlock* bb)
         return;
     }
 
-    // If the block's still a branching block, then handle it.
+    // If the block's a branching block, handle it specially.
     if (llvm::isa<llvm::BranchInst>(bb->getTerminator())) {
         handleBranchingBlock(bb);
         return;

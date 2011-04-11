@@ -42,7 +42,6 @@ namespace gla {
 
     class BackEndTranslator {
     public:
-        typedef std::vector<llvm::Instruction*> InstVec;
 
         BackEndTranslator() { }
         virtual ~BackEndTranslator() { }
@@ -79,6 +78,8 @@ namespace gla {
 
         // Add an inductive loop (e.g. for). Currently unimplemented.
         virtual void beginInductiveLoop(/* TBD */) = 0;
+
+        // Future work: Implement the above, comparison-based breaks,
 
 
         // Generic loop constructs

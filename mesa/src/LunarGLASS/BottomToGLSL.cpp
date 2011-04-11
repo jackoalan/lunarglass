@@ -196,7 +196,7 @@ public:
         shader << "if (";
 
         if (invert)
-            shader << "!";
+            shader << "! ";
 
         emitGlaOperand(cond);
         shader << ") ";
@@ -1138,7 +1138,7 @@ void gla::GlslTarget::add(const llvm::Instruction* llvmInstruction, bool lastBlo
         return;
 
     default:
-        UnsupportedFunctionality(llvmInstruction->getOpcodeName(), llvmInstruction->getOpcode(), EATContinue);
+        UnsupportedFunctionality("Opcode in Bottom IR: ", llvmInstruction->getOpcode(), EATContinue);
     }
 }
 

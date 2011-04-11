@@ -215,81 +215,41 @@ public:
         leaveScope();
     }
 
-    void addLoop(gla::LoopExitType let, bool isMultiExit, const llvm::BasicBlock* headerBB)
+    void beginConditionalLoop()
     {
-        assert(headerBB);
-        const llvm::TerminatorInst* term = headerBB->getTerminator();
-        const llvm::BranchInst* branch = llvm::dyn_cast<llvm::BranchInst>(term);
-        llvm::Value* cond = branch->getCondition();
-        assert(term && branch && "addLoop called on non-loop header (non-branch)");
-        assert(cond && "unconditional should not arise");
+        UnsupportedFunctionality("conditional loops");
+    }
 
+    void beginInductiveLoop()
+    {
+        UnsupportedFunctionality("conditional loops");
+    }
+
+    void beginLoop()
+    {
         newLine();
-
-        switch (let) {
-        case ELETBottomExit:
-        case ELETTopExit:
-        case ELETNeither:
-            shader << "while (";
-            shader << "true";
-            shader << ") ";
-            break;
-        }
+        shader << "while (true)";
 
         newScope();
     }
 
-    void addLoopEnd(const llvm::BasicBlock*)
+    void endLoop()
     {
         leaveScope();
     }
 
-    void addLoopExit(const llvm::BasicBlock* bb, bool invert=false)
+    void addLoopExit()
     {
-        const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
-        assert(branchInst && "addBreak called with non-branch terminator");
-
-        newLine();
-
-        // If it's unconditional, we have to just spit out the break
-        if (branchInst->isUnconditional()) {
-            shader << "break;";
-            return;
-        }
-
-        // Otherwise, get the condition, and set it up. We're assuming that we
-        // want to break if the condition succeeds
-        llvm::Value* condition = branchInst->getCondition();
-        addIf(condition, invert);
         newLine();
         shader << "break;";
-        addEndif();
+        return;
     }
 
-    void addLoopBack(const llvm::BasicBlock* bb, bool singleLatch, bool invert=false)
+    void addLoopBack()
     {
-        // If we're a single latch, then no need to spit anything out
-        if (singleLatch)
-            return;
-
-        const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
-        assert(branchInst && "addLoopBack called with non-branch terminator");
-
-        newLine();
-
-        // If it's unconditional, we have to just spit out the break
-        if (branchInst->isUnconditional()) {
-            shader << "continue;";
-            return;
-        }
-
-        // Otherwise, get the condition, and set it up. We're assuming that we
-        // want to break if the condition succeeds
-        llvm::Value* condition = branchInst->getCondition();
-        addIf(condition, invert);
         newLine();
         shader << "continue;";
-        addEndif();
+        return;
     }
 
     void print();

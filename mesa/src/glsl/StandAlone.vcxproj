@@ -86,10 +86,14 @@
     <ClInclude Include="..\LunarGLASS\GlslToTop.h" />
     <ClInclude Include="..\LunarGLASS\LunarGLASSBackend.h" />
     <ClInclude Include="..\LunarGLASS\LunarGLASSBottomIR.h" />
+    <ClInclude Include="..\LunarGLASS\LunarGLASSLlvmInterface.h" />
     <ClInclude Include="..\LunarGLASS\LunarGLASSTopIR.h" />
     <ClInclude Include="..\LunarGLASS\Manager.h" />
     <ClInclude Include="..\LunarGLASS\OptionParse.h" />
-    <ClInclude Include="..\LunarGLASS\Passes\Transforms\CoalesceInserts\CoalesceInserts.h" />
+    <ClInclude Include="..\LunarGLASS\Passes\Analysis\IdentifyConditionals.h" />
+    <ClInclude Include="..\LunarGLASS\Passes\Transforms\CanonicalizeCFG.h" />
+    <ClInclude Include="..\LunarGLASS\Passes\Transforms\CoalesceInserts.h" />
+    <ClInclude Include="..\LunarGLASS\Revision.h" />
     <ClInclude Include="..\LunarGLASS\TGSITarget.h" />
     <ClInclude Include="..\mesa\program\ir_to_mesa.h" />
     <ClInclude Include="ast.h" />
@@ -125,8 +129,11 @@
     <ClCompile Include="..\LunarGLASS\Exceptions.cpp" />
     <ClCompile Include="..\LunarGLASS\LunarGLASS.cpp" />
     <ClCompile Include="..\LunarGLASS\LunarGLASSBottomIR.cpp" />
+    <ClCompile Include="..\LunarGLASS\LunarGLASSLlvmInterface.cpp" />
     <ClCompile Include="..\LunarGLASS\Options.cpp" />
-    <ClCompile Include="..\LunarGLASS\Passes\Transforms\CoalesceInserts\CoalesceInserts.cpp" />
+    <ClCompile Include="..\LunarGLASS\Passes\Analysis\IdentifyConditionals.cpp" />
+    <ClCompile Include="..\LunarGLASS\Passes\Transforms\CanonicalizeCFG.cpp" />
+    <ClCompile Include="..\LunarGLASS\Passes\Transforms\CoalesceInserts.cpp" />
     <ClCompile Include="..\LunarGLASS\TopToBottom.cpp" />
     <ClCompile Include="..\mesa\program\ir_to_mesa.cpp" />
     <ClCompile Include="..\mesa\program\prog_print.c" />
@@ -202,6 +209,18 @@
     <ClCompile Include="..\mesa\program\symbol_table.c" />
     <ClCompile Include="..\LunarGLASS\GlslToTop.cpp" />
     <ClCompile Include="..\LunarGLASS\GlslToTopVisitor.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\LunarGLASS\RevisionPrefix">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">type ..\LunarGLASS\RevisionPrefix &gt; ..\LunarGLASS\Revision.h &amp; type ..\..\..\LastKnownGood &gt;&gt; ..\LunarGLASS\Revision.h</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building Revision.h</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\LunarGLASS\Revision.h</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\..\LastKnownGood</AdditionalInputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\LastKnownGood" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

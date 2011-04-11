@@ -38,10 +38,11 @@
 #include "LunarGLASSTopIR.h"
 
 namespace gla {
-    enum LoopExitType { ELETTopExit, ELETBottomExit, ELETNeither };
 
     class BackEndTranslator {
     public:
+        typedef std::vector<llvm::Instruction*> InstVec;
+
         BackEndTranslator() { }
         virtual ~BackEndTranslator() { }
         virtual void addGlobal(const llvm::GlobalVariable*) { }
@@ -68,18 +69,31 @@ namespace gla {
         virtual void addIf(const llvm::Value* cond, bool invert=false) = 0;
         virtual void addElse() = 0;
         virtual void addEndif() = 0;
-        virtual void addLoop(LoopExitType, bool, const llvm::BasicBlock*) = 0;
-        virtual void addLoopEnd(const llvm::BasicBlock*) = 0;
 
-        // Exit the loop (e.g. break). This may be conditional or unconditional.
-        // If conditional, then the backend should exit the loop if the
-        // condition succeeds.
-        virtual void addLoopExit(const llvm::BasicBlock*, bool invert=false) = 0;
 
-        // Add a loop backedge (e.g. continue). Receives the basic block the
-        // loop is in, and a bool donoting whether there is only one latch in
-        // the entire loop.
-        virtual void addLoopBack(const llvm::BasicBlock*, bool, bool invert=false) = 0;
+        // Specialized loop constructs
+
+        // Add a conditional (e.g. while) loop. Currently unimplemented.
+        virtual void beginConditionalLoop(/* TBD */) = 0;
+
+        // Add an inductive loop (e.g. for). Currently unimplemented
+        virtual void beginInductiveLoop(/* TBD */) = 0;
+
+
+        // Generic loop constructs
+
+        // Add a generic looping construct (e.g. while (true))
+        virtual void beginLoop() = 0;
+
+        // Add an end of the loop (e.g. closing bracket)
+        virtual void endLoop() = 0;
+
+        // Exit the loop (e.g. break).
+        virtual void addLoopExit() = 0;
+
+        // Add a loop backedge (e.g. continue).
+        virtual void addLoopBack() = 0;
+
 
         virtual void print() = 0;
     };

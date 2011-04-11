@@ -123,7 +123,6 @@
 // LunarGLASS Passes
 #include "Passes/Analysis/IdentifyConditionals.h"
 
-
 namespace {
 
     class BottomTranslator : public llvm::ModulePass {
@@ -245,79 +244,67 @@ void BottomTranslator::handleNonTerminatingInstructions(const llvm::BasicBlock* 
 void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
 {
     llvm::Loop* loop = loopInfo->getLoopFor(bb);
-    assert(loop && "handleLoopBlock called on non-loop");
-
     const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
+    assert(loop && "handleLoopBlock called on non-loop");
     assert(branchInst && "handleLoopsBlock called with non-branch terminator");
 
+    llvm::BasicBlock* exit = loop->getExitBlock();
+    assert(exit && "unstructured control flow");
 
-    // Helper bool for whether the internals have already been handled
-    bool handledInternals = false;
+    llvm::BasicBlock* header = loop->getHeader();
+
+    llvm::Value* condition = branchInst->isConditional() ? branchInst->getCondition() : NULL;
 
     // We don't handle nested loops yet
     if (loop->getLoopDepth() > 1) {
         gla::UnsupportedFunctionality("Nested loops");
     }
 
-    bool isHeader  = loop->getHeader() == bb;
+    bool isHeader  = header == bb;
     bool isExiting = loop->isLoopExiting(bb);
     bool isLatch   = gla::Util::isLatch(bb, loop);
 
-    bool singleLatch = gla::Util::getNumLatches(loop) == 1;
-
     // If it's a loop header, have the back-end add it
     if (isHeader) {
-        gla::LoopExitType let;
-        if (isExiting && !isLatch) {
-            let = gla::ELETTopExit;
-        } else if (!isExiting || isLatch) {
-            let = gla::ELETBottomExit;
-        } else {
-            let = gla::ELETNeither;
-        }
-        //todo: multiexit
-        backEndTranslator->addLoop(let, false, bb);
+        backEndTranslator->beginLoop();
     }
 
     // If the branch is conditional and not a latch or exiting, we're dealing
-    // with conditional (e.g. if-then-else) flow control.
-    if (branchInst->isConditional() && !isLatch && !isExiting) {
+    // with conditional (e.g. if-then-else) flow control. Otherwise handle it's
+    // instructions ourselves.
+    if (condition && !isLatch && !isExiting)
             handleBranchingBlock(bb);
-            handledInternals = true;
-    }
-
-    // handle the internals
-    if (!handledInternals) {
+    else
         handleNonTerminatingInstructions(bb);
-        handledInternals = true;
-    }
 
-    // if we're exiting, find the branch that exits and add an exit. Note that
-    // getSuccessor(0) is safe w.r.t. unconditional branches as well.
+    // If we're exiting, add the (possibly conditional) exit.
     if (isExiting) {
-        llvm::BasicBlock* exit = loop->getExitBlock();
-        assert(exit && "unstructured control flow");
+        // Add phi copies (if applicable)
+        if (backEnd->getRemovePhiFunctions())
+            addPhiCopies(branchInst);
 
-        if (branchInst->getSuccessor(0) == exit) {
-            backEndTranslator->addLoopExit(bb);
-        } else {
-            backEndTranslator->addLoopExit(bb, true);
-        }
+        if (condition)
+            backEndTranslator->addIf(condition, branchInst->getSuccessor(1) == exit);
+
+        backEndTranslator->addLoopExit();
+
+        if (condition)
+            backEndTranslator->addEndif();
     }
 
-    // if it's a conditional latch, find the backedge and add a latch. Note that
-    // getSuccessor(0) is safe w.r.t. unconditional branches as well.
+    // If it's a latch, add the (possibly conditional) loop-back
     if (isLatch) {
         // Add phi copies (if applicable)
-        if (backEnd->getRemovePhiFunctions()) {
+        if (backEnd->getRemovePhiFunctions())
             addPhiCopies(branchInst);
-        }
 
-        if (branchInst->getSuccessor(0) == bb) {
-            backEndTranslator->addLoopBack(bb, singleLatch);
-        } else {
-            backEndTranslator->addLoopBack(bb, singleLatch, true);
-        }
+        if (condition)
+            backEndTranslator->addIf(condition, branchInst->getSuccessor(1) == header);
+
+        backEndTranslator->addLoopBack();
+
+        if (condition)
+            backEndTranslator->addEndif();
     }
 
     // If it's header, then add all of the other blocks in the loop. This is
@@ -334,7 +321,7 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
                 handleBlock(i);
             }
         }
-        backEndTranslator->addLoopEnd(bb);
+        backEndTranslator->endLoop();
     }
 
     return;

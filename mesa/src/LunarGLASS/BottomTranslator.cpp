@@ -54,7 +54,7 @@
 //   handled normally, as though they weren't even in a loop.
 //
 // * Loops are presented to the backend using the loop interfaces present in
-//   Manager.h. Unnested loops are currently not supported.
+//   Manager.h. Nested loops are currently not supported.
 //
 // * handleLoopBlock proceeds as follows for the following loop block types:
 //
@@ -87,6 +87,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: - test for multi-exit loops.
+//       - test for return statements inside a loop.
+//       - see if we need phi copies for (multiple) breaks
+
 // LLVM includes
 #include "llvm/DerivedTypes.h"
 #include "llvm/IntrinsicInst.h"
@@ -116,6 +120,7 @@
 #include "LunarGLASSBackend.h"
 #include "LunarGLASSLlvmInterface.h"
 #include "Manager.h"
+#include "Options.h"
 
 // LunarGLASS Passes
 #include "Passes/Analysis/IdentifyConditionals.h"
@@ -245,7 +250,7 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
     assert(loop && "handleLoopBlock called on non-loop");
     assert(branchInst && "handleLoopsBlock called with non-branch terminator");
 
-    llvm::BasicBlock* exit = loop->getExitBlock();
+    llvm::BasicBlock* exit = loop->getUniqueExitBlock();
     assert(exit && "unstructured control flow");
 
     llvm::BasicBlock* header = loop->getHeader();
@@ -269,13 +274,14 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
     // If the branch is conditional and not a latch or exiting, we're dealing
     // with conditional (e.g. if-then-else) flow control. Otherwise handle it's
     // instructions ourselves.
-    if (condition && !isLatch && !isExiting)
-            handleBranchingBlock(bb);
-    else
+    if (condition && !isLatch && !isExiting) {
+        assert(isHeader);
+        handleBranchingBlock(bb);
+    } else
         handleNonTerminatingInstructions(bb);
 
     // Add phi copies (if applicable)
-    if (isLatch && backEnd->getRemovePhiFunctions())
+    if ((isLatch || isExiting) && backEnd->getRemovePhiFunctions())
         addPhiCopies(branchInst);
 
     // If we're exiting, add the (possibly conditional) exit.
@@ -290,7 +296,7 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
         assert((branchInst->getSuccessor(0) == header) || (condition && (branchInst->getSuccessor(1) == header)));
     }
 
-    // If it's header, then add all of the other blocks in the loop. This is
+    // If it's a header, then add all of the other blocks in the loop. This is
     // because we want to finish the entire loop before we consider any blocks
     // outside the loop (as other blocks may be before the loop blocks in the
     // LLVM-IR's lineralization).
@@ -438,8 +444,10 @@ bool BottomTranslator::runOnModule(llvm::Module& module)
             idConds     = &getAnalysis<llvm::IdentifyConditionals>(*function);
 
             // debug stuff
-            // llvm::errs() << "\n\nLoop info:\n";
-            // loopInfo->print(llvm::errs());
+            if (gla::Options.debug) {
+                llvm::errs() << "\n\nLoop info:\n";
+                loopInfo->print(llvm::errs());
+            }
 
             // handle function's with bodies
 

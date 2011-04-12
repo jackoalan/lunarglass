@@ -207,6 +207,14 @@ namespace gla {
         // Return the number of latches in a loop
         static int getNumLatches(llvm::Loop* loop);
 
+        // Whether a basic block has no constituent instructions, other than
+        // it's phi-nodes and terminator.
+        static bool isEmptyBB(const llvm::BasicBlock* bb)
+        {
+            return bb->getFirstNonPHIOrDbg() == bb->getTerminator();
+        }
+
+
         // Return the single merge point of the given conditional basic block. Returns
         // null if there is no merge point, or if there are more than 1 merge
         // points. Note that the presense of backedges or exitedges in the then and else

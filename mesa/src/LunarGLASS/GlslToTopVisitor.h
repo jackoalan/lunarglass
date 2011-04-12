@@ -143,15 +143,12 @@ protected:
     bool inMain;
     bool localScope;
 
-    typedef std::stack<llvm::BasicBlock*> LoopExitStack;
-    typedef std::stack<llvm::BasicBlock*> LoopHeaderStack;
-
-    // Stack of the exit blocks of loops, so that 'break' knows where to go.
-    LoopExitStack exitStack;
-
     // Stack of the header blocks of loops, so that 'continue' knows where to
     // go.
-    LoopHeaderStack headerStack;
+    std::stack<llvm::BasicBlock*> headerStack;
+
+    // Stack of the exit blocks of loops, so that 'break' knows where to go.
+    std::stack<llvm::BasicBlock*> exitStack;
 
     llvm::BasicBlock* shaderEntry;
 };

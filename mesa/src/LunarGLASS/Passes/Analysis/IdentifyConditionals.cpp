@@ -97,14 +97,6 @@ inline static bool uncondBranchesTo(BasicBlock* from, BasicBlock* to)
     return bi && bi->isUnconditional() && (bi->getSuccessor(0) == to);
 }
 
-// Whether a basic block has no constituent instructions, other than
-// it's phi-nodes and terminator.
-inline static bool isEmptyBB(const llvm::BasicBlock* bb)
-{
-    return bb->getFirstNonPHIOrDbg() == bb->getTerminator();
-}
-
-
 bool Conditional::isEmptyConditional() const
 {
     if (!isSelfContained())
@@ -112,8 +104,8 @@ bool Conditional::isEmptyConditional() const
 
     // Todo: test the case when the then or else have underlying subgraphs
 
-    bool isLeftEmpty  = (left  == merge) || (uncondBranchesTo(left, merge)  && isEmptyBB(left));
-    bool isRightEmpty = (right == merge) || (uncondBranchesTo(right, merge) && isEmptyBB(right));
+    bool isLeftEmpty  = (left  == merge) || (uncondBranchesTo(left, merge)  && gla::Util::isEmptyBB(left));
+    bool isRightEmpty = (right == merge) || (uncondBranchesTo(right, merge) && gla::Util::isEmptyBB(right));
 
     return isLeftEmpty && isRightEmpty;
 }

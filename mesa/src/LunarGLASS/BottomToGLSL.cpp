@@ -222,7 +222,7 @@ public:
 
     void beginInductiveLoop()
     {
-        UnsupportedFunctionality("conditional loops");
+        UnsupportedFunctionality("inductive loops");
     }
 
     void beginLoop()

@@ -36,6 +36,7 @@
 // LLVM includes
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/IRBuilder.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/IntrinsicInst.h"
 
 // Forward decls
@@ -221,7 +222,7 @@ namespace gla {
         {
             // We need to typedef it (with a typename) to access its iterator
             for (typename llvm::SmallVectorImpl<T>::iterator i = vec.begin(), e = vec.end(); i != e; ++i) {
-                if (*i == val)
+                if (&**i == &*val)
                     return true;
             }
 

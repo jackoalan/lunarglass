@@ -267,6 +267,9 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
 
     // If it's a loop header, have the back-end add it
     if (isHeader) {
+        llvm::PHINode* pn = loop->getCanonicalInductionVariable();
+        if (pn)
+            backEndTranslator->beginInductiveLoop();
         backEndTranslator->beginLoop();
     }
 
@@ -285,7 +288,7 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
 
     // If we're exiting, add the (possibly conditional) exit.
     if (isExiting) {
-        backEndTranslator->addLoopExit(condition, gla::Util::smallVectorContains(exits, branchInst->getSuccessor(0)));
+        backEndTranslator->addLoopExit(condition, ! gla::Util::smallVectorContains(exits, branchInst->getSuccessor(0)));
         assert(   gla::Util::smallVectorContains(exits, branchInst->getSuccessor(0))
                || (condition && (gla::Util::smallVectorContains(exits, branchInst->getSuccessor(1)))));
     }

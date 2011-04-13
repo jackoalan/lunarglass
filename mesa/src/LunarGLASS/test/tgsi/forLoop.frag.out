@@ -69,20 +69,20 @@ entry:
   br label %loop-header
 
 loop-header:                                      ; preds = %ifmerge, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %i2, %ifmerge ]
+  %0 = phi i32 [ 0, %entry ], [ %i2, %ifmerge ]
   %color.0 = phi <4 x float> [ %BaseColor, %entry ], [ %color1, %ifmerge ]
-  %0 = load i32 addrspace(1)* @Count
-  %1 = icmp sge i32 %i.0, %0
-  br i1 %1, label %then, label %ifmerge
+  %1 = load i32 addrspace(1)* @Count
+  %2 = icmp sge i32 %0, %1
+  br i1 %2, label %then, label %ifmerge
 
 then:                                             ; preds = %loop-header
   call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %color.0)
   ret void
 
 ifmerge:                                          ; preds = %loop-header
-  %2 = load <4 x float> addrspace(1)* @bigColor
-  %color1 = fadd <4 x float> %color.0, %2
-  %i2 = add i32 %i.0, 1
+  %3 = load <4 x float> addrspace(1)* @bigColor
+  %color1 = fadd <4 x float> %color.0, %3
+  %i2 = add i32 %0, 1
   br label %loop-header
 }
 

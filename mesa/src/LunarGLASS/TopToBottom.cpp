@@ -99,11 +99,11 @@ void gla::PrivateManager::runLLVMOptimizations1()
     // passManager.add(llvm::createCFGSimplificationPass());
     if (Options.optimizations.adce)        passManager.add(llvm::createAggressiveDCEPass());
     passManager.add(llvm::createFlattenConditionalAssignmentsPass());
-    if (Options.optimizations.adce)        passManager.add(llvm::createAggressiveDCEPass());
 
-    passManager.add(llvm::createLoopSimplifyPass());
-    // passManager.add(llvm::createIndVarSimplifyPass());
-    // passManager.add(llvm::createLoopStrengthRedictionPass());
+    passManager.add(llvm::createIndVarSimplifyPass());
+    //passManager.add(llvm::createLoopStrengthReducePass());
+
+    if (Options.optimizations.adce)        passManager.add(llvm::createAggressiveDCEPass());
 
     if (Options.optimizations.verify)      passManager.add(llvm::createVerifierPass());
     llvm::Module::iterator function, lastFunction;

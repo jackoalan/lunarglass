@@ -214,6 +214,34 @@ namespace gla {
             return bb->getFirstNonPHIOrDbg() == bb->getTerminator();
         }
 
+        // // Get the single, unique exit block that is not in the loop
+        // // itself. Returns NULL if there is zero or more than 1 such blocks
+        // static llvm::BasicBlock* getUniqueNonLoopExitBlock(llvm::Loop* loop)
+        // {
+        //     llvm::SmallVector<llvm::BasicBlock*, 4> exits;
+        //     loop->getUniqueExitBlocks(exits);
+
+        //     // If the exit block is part of the loop, and is a return
+        //     // statements, then that's ok too.
+
+        //     int exits = 0;
+        //     llvm::BasicBlock* bb = NULL;
+
+        //     for (llvm::SmallVector<llvm::BasicBlock*,4>::iterator i = exits.begin(), e = exits.end(); i != e; ++i) {
+        //         if (loop->contains(*i)) {
+
+        //         } else {
+        //             ++exits;
+        //         }
+        //             if (branches != 1)
+        //                 return NULL;
+        //             bb = *i;
+        //         }
+        //     }
+
+        //     return bb;
+        // }
+
 
         // Return the single merge point of the given conditional basic block. Returns
         // null if there is no merge point, or if there are more than 1 merge

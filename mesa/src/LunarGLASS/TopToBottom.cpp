@@ -100,7 +100,6 @@ void gla::PrivateManager::runLLVMOptimizations1()
     if (Options.optimizations.adce)        passManager.add(llvm::createAggressiveDCEPass());
     passManager.add(llvm::createFlattenConditionalAssignmentsPass());
     if (Options.optimizations.adce)        passManager.add(llvm::createAggressiveDCEPass());
-
     if (Options.optimizations.verify)      passManager.add(llvm::createVerifierPass());
     llvm::Module::iterator function, lastFunction;
 

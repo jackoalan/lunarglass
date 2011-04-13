@@ -87,9 +87,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: - test for multi-exit loops.
-//       - test for return statements inside a loop.
-//       - see if we need phi copies for (multiple) breaks
+// TODO: - test for return statements inside a loop.
+// Unimplemented: - loops with return statements inside them
 
 // LLVM includes
 #include "llvm/DerivedTypes.h"
@@ -444,7 +443,7 @@ bool BottomTranslator::runOnModule(llvm::Module& module)
             idConds     = &getAnalysis<llvm::IdentifyConditionals>(*function);
 
             // debug stuff
-            if (gla::Options.debug) {
+            if (gla::Options.debug && loopInfo->begin() != loopInfo->end()) {
                 llvm::errs() << "\n\nLoop info:\n";
                 loopInfo->print(llvm::errs());
             }

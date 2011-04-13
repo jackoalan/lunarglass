@@ -36,7 +36,9 @@
 #include "Exceptions.h"
 #include "Options.h"
 
+#include "llvm/Support/CFG.h"
 #include "llvm/Support/raw_ostream.h"
+
 
 void GlslToTop(struct gl_shader* glShader, llvm::Module* module)
 {
@@ -372,20 +374,31 @@ ir_visitor_status
     if (!sig->is_builtin) {
 
         llvm::BasicBlock* BB = builder.GetInsertBlock();
-        assert(BB);
+        llvm::Function* F = builder.GetInsertBlock()->getParent();
+        assert(BB && F);
 
         // If our function did not contain a return,
         // return void now
         if (0 == BB->getTerminator()) {
 
-            if (inMain) {
+            // Whether we're in an unreachable (non-entry) block
+            bool unreachable = &*F->begin() != BB && pred_begin(BB) == pred_end(BB);
+
+            if (inMain && !unreachable) {
                 // If we're leaving main and it is not terminated,
                 // generate our pipeline writes
                 writePipelineOuts();
                 inMain = false;
             }
 
-            builder.CreateRet(0);
+            // If we're not the entry block, and we have no predecessors, we're
+            // unreachable, so don't bother adding a return instruction in
+            // (e.g. we're in a post-return block). Otherwise add a ret void.
+            if (unreachable)
+                builder.CreateUnreachable();
+            else
+                builder.CreateRet(0);
+
         }
     }
 
@@ -962,6 +975,12 @@ ir_visitor_status
         builder.CreateRet(0);
     }
 
+    llvm::Function *function = builder.GetInsertBlock()->getParent();
+    llvm::BasicBlock* postRet = llvm::BasicBlock::Create(context, "post-ret", function);
+    builder.SetInsertPoint(postRet);
+
+    // lastValue.clear();
+
     return visit_continue;
 }
 
@@ -1137,7 +1156,7 @@ llvm::Value* GlslToTopVisitor::createLLVMVariable(ir_variable* var)
             name = var->name;
 
         //
-        // The GLSL2 front-end confusingly writes to constants, so we can't 
+        // The GLSL2 front-end confusingly writes to constants, so we can't
         // actually declare the llvm variable to be a constant.
         //
         llvm::GlobalVariable* globalValue = new llvm::GlobalVariable(llvmVarType, false /* constant */, linkage,

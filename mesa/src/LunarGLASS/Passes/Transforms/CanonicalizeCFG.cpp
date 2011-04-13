@@ -54,7 +54,7 @@ namespace  {
     protected:
         bool removeNoPredecessorBlocks(Function& F);
 
-        bool removeIndirectExits(Function& F);
+        // bool removeIndirectExits(Function& F);
 
         LoopInfo* loopInfo;
 
@@ -67,9 +67,9 @@ bool CanonicalizeCFG::runOnFunction(Function& F)
 
     loopInfo = &getAnalysis<LoopInfo>();
 
-    while (removeIndirectExits(F)) {
-        changed = true;
-    }
+    // while (removeIndirectExits(F)) {
+    //     changed = true;
+    // }
 
     while (removeNoPredecessorBlocks(F)) {
         changed = true;
@@ -83,11 +83,19 @@ bool CanonicalizeCFG::removeNoPredecessorBlocks(Function& F)
     bool changed = false;
 
     // Loop over all but the entry block
-    for (Function::iterator bbI = ++F.begin(), bbE = F.end(); bbI != bbE; ++bbI) {
+    for (Function::iterator bbI = F.begin(), bbE = F.end(); bbI != bbE; ++bbI) {
+
+        // For some reason, iterating with "bbI = ++F.begin()" instead of
+        // testing against "front()" can fail to skip the entry block with the
+        // presence of loop-simplify, so make sure we're never deleting the
+        // entry block
+        if (&F.getEntryBlock() == &*bbI)
+            continue;
 
         // If the block has no predecessors, remove it from the function
         if (pred_begin(bbI) == pred_end(bbI)) {
             changed = true;
+
             for (succ_iterator sI = succ_begin(bbI), sE = succ_end(bbI); sI != sE; ++sI) {
                 (*sI)->removePredecessor(bbI);
             }
@@ -99,57 +107,57 @@ bool CanonicalizeCFG::removeNoPredecessorBlocks(Function& F)
     return changed;
 }
 
-// Returns true if exits is size 1, or if all the blocks in exits are empty
-// unconditionally branching blocks that branch to the same destination.
-static bool AllProperExits(SmallVector<BasicBlock*, 4>& exits)
-{
-    if (exits.size() == 1)
-        return true;
+// // Returns true if exits is size 1, or if all the blocks in exits are empty
+// // unconditionally branching blocks that branch to the same destination.
+// static bool AllProperExits(SmallVector<BasicBlock*, 4>& exits)
+// {
+//     if (exits.size() == 1)
+//         return true;
 
-    BranchInst* bi = dyn_cast<BranchInst>(exits[0]->getTerminator());
-    if (!bi)
-        return false;
+//     BranchInst* bi = dyn_cast<BranchInst>(exits[0]->getTerminator());
+//     if (!bi)
+//         return false;
 
-    BasicBlock* target = bi->getSuccessor(0);
+//     BasicBlock* target = bi->getSuccessor(0);
 
-    for (SmallVector<BasicBlock*,4>::iterator bbI = exits.begin(), bbE = exits.end(); bbI != bbE; ++bbI) {
-        BranchInst* bi = dyn_cast<BranchInst>((*bbI)->getTerminator());
-        if (!bi || bi->isConditional() || (bi->getSuccessor(0) != target))
-            return false;
-    }
+//     for (SmallVector<BasicBlock*,4>::iterator bbI = exits.begin(), bbE = exits.end(); bbI != bbE; ++bbI) {
+//         BranchInst* bi = dyn_cast<BranchInst>((*bbI)->getTerminator());
+//         if (!bi || bi->isConditional() || (bi->getSuccessor(0) != target))
+//             return false;
+//     }
 
-    return true;
-}
+//     return true;
+// }
 
-bool CanonicalizeCFG::removeIndirectExits(Function& F)
-{
-    bool changed = false;
+// bool CanonicalizeCFG::removeIndirectExits(Function& F)
+// {
+//     bool changed = false;
 
-    SmallVector<BasicBlock*, 4> exits;
+//     SmallVector<BasicBlock*, 4> exits;
 
-    // TODO: traverse the loopInfo structure instead of F
-    for (Function::iterator bbI = F.begin(), bbE = F.end(); bbI != bbE; ++bbI) {
-        Loop* loop = loopInfo->getLoopFor(bbI);
-        if (!loop || !loop->hasDedicatedExits())
-            continue;
+//     // TODO: traverse the loopInfo structure instead of F
+//     for (Function::iterator bbI = F.begin(), bbE = F.end(); bbI != bbE; ++bbI) {
+//         Loop* loop = loopInfo->getLoopFor(bbI);
+//         if (!loop || !loop->hasDedicatedExits())
+//             continue;
 
-        exits.clear();
+//         exits.clear();
 
-        loop->getUniqueExitBlocks(exits);
+//         loop->getUniqueExitBlocks(exits);
 
-        if (!AllProperExits(exits))
-            continue;
+//         if (!AllProperExits(exits))
+//             continue;
 
-        for (SmallVector<BasicBlock*, 4>::iterator i = exits.begin(), e = exits.end(); i != e; ++i) {
-            if (isa<BranchInst>((*i)->getTerminator())) {
-                changed |= TryToSimplifyUncondBranchFromEmptyBlock(*i);
-            }
-        }
+//         for (SmallVector<BasicBlock*, 4>::iterator i = exits.begin(), e = exits.end(); i != e; ++i) {
+//             if (isa<BranchInst>((*i)->getTerminator())) {
+//                 changed |= TryToSimplifyUncondBranchFromEmptyBlock(*i);
+//             }
+//         }
 
-    }
+//     }
 
-    return changed;
-}
+//     return changed;
+// }
 
 
 void CanonicalizeCFG::getAnalysisUsage(AnalysisUsage& AU) const

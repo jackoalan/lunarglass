@@ -343,6 +343,45 @@ int Util::getNumLatches(llvm::Loop* loop)
     return count;
 }
 
+// // Returns true if exits is size 1, or if all the blocks in exits are empty
+// // unconditionally branching blocks that branch to the same
+// // destination. Currently does not support early returns inside loops (returns
+// // false in those cases)
+// static bool AllProperExits(SmallVector<BasicBlock*, 4>& exits)
+// {
+//     if (exits.size() == 1)
+//         return true;
+
+//     BranchInst* bi = dyn_cast<BranchInst>(exits[0]->getTerminator());
+//     if (!bi)
+//         return false;
+
+//     BasicBlock* target = bi->getSuccessor(0);
+
+//     for (SmallVector<BasicBlock*,4>::iterator bbI = exits.begin(), bbE = exits.end(); bbI != bbE; ++bbI) {
+//         BranchInst* bi = dyn_cast<BranchInst>((*bbI)->getTerminator());
+//         if (!bi || bi->isConditional() || (bi->getSuccessor(0) != target))
+//             return false;
+//     }
+
+//     return true;
+// }
+
+// // Returns the single exit merge point of a loop, if it exists, or NULL
+// // otherwise. For a single exit merge point to exist, if there are
+// // multiple exit blocks they must all be empty blocks with unconditional
+// // branches to the same point. Currently does not support early returns
+// // inside loops (returns NULL in that case)
+// static llvm::BasicBlock* getSingleExitMergePoint(llvm::Loop* loop);
+// {
+//     llvm::SmallVector<llvm::BasicBlock*, 4> exits;
+//     loop->getUniqueExitBlocks(exits);
+
+//     if (AllProperExits(exits))
+//         return exits[0];
+// }
+
+
 // Return the single merge point of the given conditional basic block. Returns
 // null if there is no merge point, or if there are more than 1 merge
 // points. Note that the presense of backedges or exitedges in the then and else

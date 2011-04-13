@@ -41,9 +41,6 @@ entry:
   %6 = load <4 x float>* @gl_FragColor
   call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %6)
   ret void
-
-post-ret:                                         ; No predecessors!
-  unreachable
 }
 
 define fastcc void @foo() {
@@ -52,9 +49,6 @@ foo:
   %bar = fadd float %0, 1.000000e+00
   store float %bar, float* @bar
   ret void
-
-post-ret:                                         ; No predecessors!
-  unreachable
 }
 
 define fastcc void @foo2() {
@@ -71,9 +65,26 @@ declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
 @bar = internal global float 0.000000e+00
 @bigColor = external addrspace(1) global <4 x float>
 
-declare void @main()
+define void @main() {
+entry:
+  store float 2.000000e+00, float* @bar
+  %outColor1 = load <4 x float> addrspace(1)* @bigColor
+  %assignment_tmp2 = fadd float 2.000000e+00, 2.000000e+00
+  store float %assignment_tmp2, float* @bar
+  %0 = extractelement <4 x float> %outColor1, i32 0
+  %1 = fadd float %0, %assignment_tmp2
+  %2 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> %outColor1, i32 1, float %1, i32 -1, float 0.000000e+00, i32 -1, float 0.000000e+00, i32 -1, float 0.000000e+00, i32 -1)
+  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %2)
+  ret void
+}
 
-declare fastcc void @foo()
+define fastcc void @foo() {
+foo:
+  %0 = load float* @bar
+  %bar = fadd float %0, 1.000000e+00
+  store float %bar, float* @bar
+  ret void
+}
 
 define fastcc void @foo2() {
 foo2:
@@ -86,13 +97,8 @@ foo2:
 declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
 
 declare <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float>, i32, float, i32, float, i32, float, i32, float, i32) nounwind readnone
-# Fragment Program/Shader 0
-  0: MOV TEMP[1], UNIFORM[0];
-  1: ADD TEMP[2].x, UNIFORM[0].xxxx, CONST[1].xxxx;
-  2: MOV TEMP[1].x, TEMP[2].xxxx;
-  3: MOV OUTPUT[2], TEMP[1];
-  4: RET (TR.xxxx);
-  5: END
+
+***Unsupported functionality: opcode in Bottom IR: 50
 compiling voidFunction.frag...
 uniform vec4 bigColor ; 
 varying vec4 BaseColor ; 
@@ -216,10 +222,3 @@ vec4 outColor = bigColor ; foo ( ) ; foo2 ( ) ; outColor . x += bar ; gl_FragCol
 
 
 )
-Mesa program before mesa optimizations
-
-Mesa program after mesa optimizations
-
-===========================================
-
-Optimized Mesa IR without GLA for linked fragment program 0:

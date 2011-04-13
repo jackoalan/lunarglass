@@ -27,9 +27,6 @@ define fastcc <4 x float> @foo() {
 foo:
   %BaseColor = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 0, i32 0)
   ret <4 x float> %BaseColor
-
-post-ret:                                         ; No predecessors!
-  unreachable
 }
 
 declare <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32, i32) nounwind readonly
@@ -44,7 +41,11 @@ entry:
   ret void
 }
 
-declare fastcc <4 x float> @foo()
+define fastcc <4 x float> @foo() {
+foo:
+  %BaseColor = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 0, i32 0)
+  ret <4 x float> %BaseColor
+}
 
 declare <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32, i32) nounwind readonly
 

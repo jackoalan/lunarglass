@@ -249,8 +249,8 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
     assert(loop && "handleLoopBlock called on non-loop");
     assert(branchInst && "handleLoopsBlock called with non-branch terminator");
 
-    llvm::BasicBlock* exit = loop->getUniqueExitBlock();
-    assert(exit && "unstructured control flow");
+    llvm::SmallVector<llvm::BasicBlock*, 8> exits;
+    loop->getUniqueExitBlocks(exits);
 
     llvm::BasicBlock* header = loop->getHeader();
 
@@ -285,8 +285,9 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
 
     // If we're exiting, add the (possibly conditional) exit.
     if (isExiting) {
-        backEndTranslator->addLoopExit(condition, branchInst->getSuccessor(0) != exit);
-        assert((branchInst->getSuccessor(0) == exit) || (condition && (branchInst->getSuccessor(1) == exit)));
+        backEndTranslator->addLoopExit(condition, gla::Util::smallVectorContains(exits, branchInst->getSuccessor(0)));
+        assert(   gla::Util::smallVectorContains(exits, branchInst->getSuccessor(0))
+               || (condition && (gla::Util::smallVectorContains(exits, branchInst->getSuccessor(1)))));
     }
 
     // If it's a latch, add the (possibly conditional) loop-back

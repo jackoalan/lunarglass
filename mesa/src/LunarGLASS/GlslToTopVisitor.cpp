@@ -975,9 +975,9 @@ ir_visitor_status
         builder.CreateRet(0);
     }
 
-    llvm::Function *function = builder.GetInsertBlock()->getParent();
-    llvm::BasicBlock* postRet = llvm::BasicBlock::Create(context, "post-ret", function);
-    builder.SetInsertPoint(postRet);
+    // llvm::Function *function = builder.GetInsertBlock()->getParent();
+    // llvm::BasicBlock* postRet = llvm::BasicBlock::Create(context, "post-ret", function);
+    // builder.SetInsertPoint(postRet);
 
     // lastValue.clear();
 

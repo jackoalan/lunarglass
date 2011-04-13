@@ -34,6 +34,7 @@
 #define LunarGLASSLlvmInterface_H
 
 // LLVM includes
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/IntrinsicInst.h"
 
@@ -213,6 +214,27 @@ namespace gla {
         {
             return bb->getFirstNonPHIOrDbg() == bb->getTerminator();
         }
+
+        // Whether a SmallVector contains the given element
+        template<typename T>
+        static bool smallVectorContains(llvm::SmallVectorImpl<T>& vec, T val)
+        {
+            // We need to typedef it (with a typename) to access its iterator
+            for (typename llvm::SmallVectorImpl<T>::iterator i = vec.begin(), e = vec.end(); i != e; ++i) {
+                if (*i == val)
+                    return true;
+            }
+
+            return false;
+        }
+
+
+        // // Returns the single exit merge point of a loop, if it exists, or NULL
+        // // otherwise. For a single exit merge point to exist, if there are
+        // // multiple exit blocks they must all be empty blocks with unconditional
+        // // branches to the same point. Currently does not support early returns
+        // // inside loops (returns NULL in that case)
+        // static llvm::BasicBlock* getSingleExitMergePoint(llvm::Loop* loop);
 
         // // Get the single, unique exit block that is not in the loop
         // // itself. Returns NULL if there is zero or more than 1 such blocks

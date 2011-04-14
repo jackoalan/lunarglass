@@ -1137,135 +1137,66 @@ entry:
   %clamp_retval169170 = call i32 @llvm.gla.sClamp.i32.i32.i32.i32(i32 %assignment_tmp166167, i32 %6, i32 %6)
   %i171 = add i32 %clamp_retval169170, %assignment_tmp166167
   %any_retval173 = call i1 @llvm.gla.any.v4i1(<4 x i1> zeroinitializer)
-  br i1 %any_retval173, label %then, label %else
+  br i1 %any_retval173, label %then, label %ifmerge238
 
 then:                                             ; preds = %entry
   %lessThanEqual_retval175 = fcmp ole <4 x float> %v153, %v153
   %any_retval176177 = call i1 @llvm.gla.any.v4i1(<4 x i1> %lessThanEqual_retval175)
-  br label %ifmerge
+  br i1 %any_retval176177, label %then181, label %ifmerge238
 
-else:                                             ; preds = %entry
-  br label %ifmerge
-
-ifmerge:                                          ; preds = %else, %then
-  %and_tmp.0 = phi i1 [ %any_retval176177, %then ], [ false, %else ]
-  br i1 %and_tmp.0, label %then181, label %else186
-
-then181:                                          ; preds = %ifmerge
+then181:                                          ; preds = %then
   %any_retval183184 = call i1 @llvm.gla.any.v4i1(<4 x i1> zeroinitializer)
-  br label %ifmerge187
+  br i1 %any_retval183184, label %then190, label %ifmerge238
 
-else186:                                          ; preds = %ifmerge
-  br label %ifmerge187
-
-ifmerge187:                                       ; preds = %else186, %then181
-  %and_tmp180.0 = phi i1 [ %any_retval183184, %then181 ], [ false, %else186 ]
-  br i1 %and_tmp180.0, label %then190, label %else195
-
-then190:                                          ; preds = %ifmerge187
+then190:                                          ; preds = %then181
   %greaterThanEqual_retval191 = fcmp oge <4 x float> %v153, %v153
   %any_retval192193 = call i1 @llvm.gla.any.v4i1(<4 x i1> %greaterThanEqual_retval191)
-  br label %ifmerge196
+  br i1 %any_retval192193, label %then199, label %ifmerge238
 
-else195:                                          ; preds = %ifmerge187
-  br label %ifmerge196
-
-ifmerge196:                                       ; preds = %else195, %then190
-  %and_tmp189.0 = phi i1 [ %any_retval192193, %then190 ], [ false, %else195 ]
-  br i1 %and_tmp189.0, label %then199, label %else204
-
-then199:                                          ; preds = %ifmerge196
+then199:                                          ; preds = %then190
   %7 = load <4 x i1> addrspace(1)* @ub41
   %8 = load <4 x i1> addrspace(1)* @ub42
   %equal_retval200 = icmp eq <4 x i1> %7, %8
   %any_retval201202 = call i1 @llvm.gla.any.v4i1(<4 x i1> %equal_retval200)
-  br label %ifmerge205
+  br i1 %any_retval201202, label %then208, label %ifmerge238
 
-else204:                                          ; preds = %ifmerge196
-  br label %ifmerge205
-
-ifmerge205:                                       ; preds = %else204, %then199
-  %and_tmp198.0 = phi i1 [ %any_retval201202, %then199 ], [ false, %else204 ]
-  br i1 %and_tmp198.0, label %then208, label %else213
-
-then208:                                          ; preds = %ifmerge205
+then208:                                          ; preds = %then199
   %9 = load <4 x i1> addrspace(1)* @ub41
   %10 = load <4 x i1> addrspace(1)* @ub42
   %notEqual_retval209 = icmp ne <4 x i1> %9, %10
   %any_retval210211 = call i1 @llvm.gla.any.v4i1(<4 x i1> %notEqual_retval209)
-  br label %ifmerge214
+  br i1 %any_retval210211, label %then217, label %ifmerge238
 
-else213:                                          ; preds = %ifmerge205
-  br label %ifmerge214
-
-ifmerge214:                                       ; preds = %else213, %then208
-  %and_tmp207.0 = phi i1 [ %any_retval210211, %then208 ], [ false, %else213 ]
-  br i1 %and_tmp207.0, label %then217, label %else221
-
-then217:                                          ; preds = %ifmerge214
+then217:                                          ; preds = %then208
   %11 = load <4 x i1> addrspace(1)* @ub41
   %any_retval218219 = call i1 @llvm.gla.any.v4i1(<4 x i1> %11)
-  br label %ifmerge222
+  br i1 %any_retval218219, label %then225, label %ifmerge238
 
-else221:                                          ; preds = %ifmerge214
-  br label %ifmerge222
-
-ifmerge222:                                       ; preds = %else221, %then217
-  %and_tmp216.0 = phi i1 [ %any_retval218219, %then217 ], [ false, %else221 ]
-  br i1 %and_tmp216.0, label %then225, label %else228
-
-then225:                                          ; preds = %ifmerge222
+then225:                                          ; preds = %then217
   %12 = load <4 x i1> addrspace(1)* @ub41
   %all_retval226 = call i1 @llvm.gla.all.v4i1(<4 x i1> %12)
-  br label %ifmerge229
+  br i1 %all_retval226, label %then232, label %ifmerge238
 
-else228:                                          ; preds = %ifmerge222
-  br label %ifmerge229
-
-ifmerge229:                                       ; preds = %else228, %then225
-  %and_tmp224.0 = phi i1 [ %all_retval226, %then225 ], [ false, %else228 ]
-  br i1 %and_tmp224.0, label %then232, label %else237
-
-then232:                                          ; preds = %ifmerge229
+then232:                                          ; preds = %then225
   %13 = load <4 x i1> addrspace(1)* @ub41
   %not_retval233 = xor <4 x i1> %13, <i1 true, i1 true, i1 true, i1 true>
   %any_retval234235 = call i1 @llvm.gla.any.v4i1(<4 x i1> %not_retval233)
   br label %ifmerge238
 
-else237:                                          ; preds = %ifmerge229
-  br label %ifmerge238
-
-ifmerge238:                                       ; preds = %else237, %then232
-  %and_tmp231.0 = phi i1 [ %any_retval234235, %then232 ], [ false, %else237 ]
+ifmerge238:                                       ; preds = %then225, %then208, %then190, %then, %entry, %then181, %then199, %then217, %then232
+  %and_tmp231.0 = phi i1 [ %any_retval234235, %then232 ], [ false, %then217 ], [ false, %then199 ], [ false, %then181 ], [ false, %entry ], [ false, %then ], [ false, %then190 ], [ false, %then208 ], [ false, %then225 ]
   %14 = add i32 %6, %i171
   %15 = mul i32 %14, %i171
   %16 = sub i32 %15, %6
   %17 = sdiv i32 %16, %i171
   %assignment_tmp240241 = srem i32 %17, %6
   %18 = icmp eq i32 %assignment_tmp240241, %6
-  br i1 %18, label %then243, label %else244
-
-then243:                                          ; preds = %ifmerge238
-  br label %ifmerge251
-
-else244:                                          ; preds = %ifmerge238
-  br label %ifmerge249
-
-ifmerge249:                                       ; preds = %else244
   %19 = icmp ne i32 %assignment_tmp240241, 2
   %or_tmp250 = xor i1 false, %19
-  br label %ifmerge251
-
-ifmerge251:                                       ; preds = %ifmerge249, %then243
-  %or_tmp.0 = phi i1 [ true, %then243 ], [ %or_tmp250, %ifmerge249 ]
-  br i1 %or_tmp.0, label %then252, label %ifmerge254
-
-then252:                                          ; preds = %ifmerge251
   %i253 = add i32 %assignment_tmp240241, 1
-  br label %ifmerge254
-
-ifmerge254:                                       ; preds = %then252, %ifmerge251
-  %i.0 = phi i32 [ %i253, %then252 ], [ %assignment_tmp240241, %ifmerge251 ]
+  %or.cond311 = or i1 %18, %or_tmp250
+  %i253.assignment_tmp240241 = select i1 %or.cond311, i32 %i253, i32 %assignment_tmp240241
+  %i.0 = select i1 %or.cond311, i32 %i253.assignment_tmp240241, i32 %i253.assignment_tmp240241
   %20 = fadd float %5, %5
   %21 = fmul float %20, %5
   %22 = fsub float %21, %5
@@ -1281,47 +1212,31 @@ ifmerge254:                                       ; preds = %then252, %ifmerge25
   %24 = extractelement <3 x float> %cross_retval262, i32 0
   %assignment_tmp263264 = fadd float %f261, %24
   %25 = fcmp oeq float %assignment_tmp263264, %5
-  br i1 %25, label %then267, label %else268
+  br i1 %25, label %then276, label %else268
 
-then267:                                          ; preds = %ifmerge254
-  br label %ifmerge275
-
-else268:                                          ; preds = %ifmerge254
+else268:                                          ; preds = %ifmerge238
   %26 = fcmp one float %assignment_tmp263264, %5
-  br i1 %26, label %then270, label %else272
-
-then270:                                          ; preds = %else268
   %and_tmp269271 = fcmp one float %assignment_tmp263264, 2.000000e+00
-  br label %ifmerge273
+  %or.cond = and i1 %26, %and_tmp269271
+  br i1 %or.cond, label %then276, label %ifmerge278
 
-else272:                                          ; preds = %else268
-  br label %ifmerge273
-
-ifmerge273:                                       ; preds = %else272, %then270
-  %and_tmp269.0 = phi i1 [ %and_tmp269271, %then270 ], [ false, %else272 ]
-  br label %ifmerge275
-
-ifmerge275:                                       ; preds = %ifmerge273, %then267
-  %or_tmp266.0 = phi i1 [ true, %then267 ], [ %and_tmp269.0, %ifmerge273 ]
-  br i1 %or_tmp266.0, label %then276, label %ifmerge278
-
-then276:                                          ; preds = %ifmerge275
+then276:                                          ; preds = %ifmerge238, %else268
   %f277 = fadd float %assignment_tmp263264, 1.000000e+00
   br label %ifmerge278
 
-ifmerge278:                                       ; preds = %then276, %ifmerge275
-  %f.0 = phi float [ %f277, %then276 ], [ %assignment_tmp263264, %ifmerge275 ]
-  %27 = and i32 %6, %i.0
+ifmerge278:                                       ; preds = %else268, %then276
+  %f.0 = phi float [ %f277, %then276 ], [ %assignment_tmp263264, %else268 ]
+  %assignment_tmp282283 = xor i1 %and_tmp231.0, true
+  br i1 %assignment_tmp282283, label %then285, label %ifmerge289
+
+then285:                                          ; preds = %ifmerge278
+  %27 = and i32 %6, %i253.assignment_tmp240241
   %28 = or i32 %27, 66
   %29 = xor i32 %28, %6
   %30 = srem i32 %29, 17
   %31 = lshr i32 %30, 2
   %32 = shl i32 %31, %6
   %assignment_tmp279280 = xor i32 %32, -1
-  %assignment_tmp282283 = xor i1 %and_tmp231.0, true
-  br i1 %assignment_tmp282283, label %then285, label %else287
-
-then285:                                          ; preds = %ifmerge278
   %33 = sitofp i32 %assignment_tmp279280 to float
   %34 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %33, i32 -1, float %33, i32 -1, float %33, i32 -1, float %33, i32 -1)
   %35 = call <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float> undef, i32 15, float %f.0, i32 -1, float %f.0, i32 -1, float %f.0, i32 -1, float %f.0, i32 -1)
@@ -1329,11 +1244,8 @@ then285:                                          ; preds = %ifmerge278
   %conditional_tmp286 = fadd <4 x float> %36, %v153
   br label %ifmerge289
 
-else287:                                          ; preds = %ifmerge278
-  br label %ifmerge289
-
-ifmerge289:                                       ; preds = %else287, %then285
-  %conditional_tmp.0 = phi <4 x float> [ %conditional_tmp286, %then285 ], [ %v153, %else287 ]
+ifmerge289:                                       ; preds = %ifmerge278, %then285
+  %conditional_tmp.0 = phi <4 x float> [ %conditional_tmp286, %then285 ], [ %v153, %ifmerge278 ]
   call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %conditional_tmp.0)
   ret void
 }
@@ -1439,6 +1351,10 @@ declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
 declare <3 x float> @llvm.gla.fMultiInsert.v3f32.v3f32.v4f32.v4f32.v4f32.f32(<3 x float>, i32, <4 x float>, i32, <4 x float>, i32, <4 x float>, i32, float, i32) nounwind readnone
 
 declare <4 x float> @llvm.gla.fMultiInsert.v4f32.v4f32.f32.f32.f32.f32(<4 x float>, i32, float, i32, float, i32, float, i32, float, i32) nounwind readnone
+
+***Unsupported functionality: Opcode in Bottom IR: 46
+
+***Unsupported functionality: Opcode in Bottom IR: 46
 compiling Operations.frag...
 uniform ivec4 uiv4 ; 
 uniform vec4 uv4 ; 
@@ -1997,30 +1913,18 @@ uniform float uf;
 uniform int ui;
 uniform bvec4 ub41;
 uniform bvec4 ub42;
-const bvec4 const122 = bvec4(0);
-const bool const125 = false;
-const bool const143 = true;
-const int const145 = 2;
-const int const148 = 1;
-const float const165 = 2;
-const float const167 = 1;
-const int const170 = 66;
-const int const173 = 17;
+const bvec4 const111 = bvec4(0);
+const bool const112 = false;
+const int const133 = 2;
+const int const136 = 1;
+const float const154 = 2;
+const float const157 = 1;
+const int const162 = 66;
+const int const165 = 17;
 
 void main()
 {
-    bool and_tmp_0;
-    bool and_tmp180_0;
-    bool and_tmp189_0;
-    bool and_tmp198_0;
-    bool and_tmp207_0;
-    bool and_tmp216_0;
-    bool and_tmp224_0;
     bool and_tmp231_0;
-    bool or_tmp_0;
-    int i_0;
-    bool and_tmp269_0;
-    bool or_tmp266_0;
     float f_0;
     vec4 conditional_tmp_0;
     vec4 radians_retval1 = radians(uv4);
@@ -2070,8 +1974,8 @@ void main()
     vec4 assignment_tmp8788 = assignment_tmp8384 + fract_retval86;
     vec4 mod_retval90 = mod(assignment_tmp8788, assignment_tmp8788);
     vec4 assignment_tmp9192 = assignment_tmp8788 + mod_retval90;
-    vec4 temp82 = vec4(assignment_tmp9192.x);
-    vec4 mod_retval9495 = mod(assignment_tmp9192, temp82);
+    vec4 temp71 = vec4(assignment_tmp9192.x);
+    vec4 mod_retval9495 = mod(assignment_tmp9192, temp71);
     vec4 assignment_tmp9697 = assignment_tmp9192 + mod_retval9495;
     vec4 min_retval99 = min(assignment_tmp9697, uv4);
     vec4 assignment_tmp100101 = assignment_tmp9697 + min_retval99;
@@ -2081,8 +1985,8 @@ void main()
     vec4 assignment_tmp108109 = assignment_tmp104105 + clamp_retval107;
     vec4 mix_retval111 = mix(assignment_tmp108109, assignment_tmp108109, assignment_tmp108109);
     vec4 assignment_tmp112113 = assignment_tmp108109 + mix_retval111;
-    float temp93 = float(ub);
-    vec4 mix_retval115116 = mix(assignment_tmp112113, assignment_tmp112113, temp93);
+    float temp82 = float(ub);
+    vec4 mix_retval115116 = mix(assignment_tmp112113, assignment_tmp112113, temp82);
     vec4 assignment_tmp117118 = assignment_tmp112113 + mix_retval115116;
     vec4 step_retval120 = step(assignment_tmp117118, assignment_tmp117118);
     vec4 assignment_tmp121122 = assignment_tmp117118 + step_retval120;
@@ -2101,162 +2005,116 @@ void main()
     vec4 dFdy_retval148 = dFdy(assignment_tmp145146);
     vec4 assignment_tmp149150 = assignment_tmp145146 + dFdy_retval148;
     vec4 fwidth_retval152 = fwidth(assignment_tmp149150);
-    vec4 temp113 = assignment_tmp149150 + fwidth_retval152;
+    vec4 temp102 = assignment_tmp149150 + fwidth_retval152;
     int abs_retval154155 = abs(ui);
     int min_retval159160 = min(abs_retval154155, ui);
     int assignment_tmp161162 = min_retval159160 + abs_retval154155;
     int max_retval164165 = max(assignment_tmp161162, ui);
     int assignment_tmp166167 = max_retval164165 + assignment_tmp161162;
     int clamp_retval169170 = clamp(assignment_tmp166167, ui, ui);
-    int temp120 = clamp_retval169170 + assignment_tmp166167;
-    bool any_retval173 = any(const122);
+    int temp109 = clamp_retval169170 + assignment_tmp166167;
+    bool any_retval173 = any(const111);
+    and_tmp231_0 = const112;
     if (any_retval173) {
-        bvec4 lessThanEqual_retval175 = lessThanEqual(temp113, temp113);
+        bvec4 lessThanEqual_retval175 = lessThanEqual(temp102, temp102);
         bool any_retval176177 = any(lessThanEqual_retval175);
-        and_tmp_0 = any_retval176177;
-    }
-    else {
-        and_tmp_0 = const125;
-    }
-    
-    if (and_tmp_0) {
-        bool any_retval183184 = any(const122);
-        and_tmp180_0 = any_retval183184;
-    }
-    else {
-        and_tmp180_0 = const125;
-    }
-    
-    if (and_tmp180_0) {
-        bvec4 greaterThanEqual_retval191 = greaterThanEqual(temp113, temp113);
-        bool any_retval192193 = any(greaterThanEqual_retval191);
-        and_tmp189_0 = any_retval192193;
-    }
-    else {
-        and_tmp189_0 = const125;
-    }
-    
-    if (and_tmp189_0) {
-        bvec4 equal_retval200 = equal(ub41, ub42);
-        bool any_retval201202 = any(equal_retval200);
-        and_tmp198_0 = any_retval201202;
-    }
-    else {
-        and_tmp198_0 = const125;
-    }
-    
-    if (and_tmp198_0) {
-        bvec4 notEqual_retval209 = notEqual(ub41, ub42);
-        bool any_retval210211 = any(notEqual_retval209);
-        and_tmp207_0 = any_retval210211;
-    }
-    else {
-        and_tmp207_0 = const125;
-    }
-    
-    if (and_tmp207_0) {
-        bool any_retval218219 = any(ub41);
-        and_tmp216_0 = any_retval218219;
-    }
-    else {
-        and_tmp216_0 = const125;
-    }
-    
-    if (and_tmp216_0) {
-        bool all_retval226 = all(ub41);
-        and_tmp224_0 = all_retval226;
-    }
-    else {
-        and_tmp224_0 = const125;
-    }
-    
-    if (and_tmp224_0) {
-        bvec4 not_retval233 = not(ub41);
-        bool any_retval234235 = any(not_retval233);
-        and_tmp231_0 = any_retval234235;
-    }
-    else {
-        and_tmp231_0 = const125;
-    }
-    
-    int temp137 = ui + temp120;
-    int temp138 = temp137 * temp120;
-    int temp139 = temp138 - ui;
-    int temp140 = temp139 / temp120;
-    int assignment_tmp240241 = temp140 % ui;
-    bool temp142 = assignment_tmp240241 == ui;
-    if (temp142) {
-        or_tmp_0 = const143;
-    }
-    else {
-        bool temp144 = assignment_tmp240241 != const145;
-        bool or_tmp250 = const125 ^^ temp144;
-        or_tmp_0 = or_tmp250;
-    }
-    
-    i_0 = assignment_tmp240241;
-    if (or_tmp_0) {
-        int temp147 = assignment_tmp240241 + const148;
-        i_0 = temp147;
-    }
-    
-    float temp149 = uf + uf;
-    float temp150 = temp149 * uf;
-    float temp151 = temp150 - uf;
-    float temp152 = temp151 / uf;
-    float length_retval256 = length(temp113);
-    float temp154 = temp152 + length_retval256;
-    float distance_retval258 = distance(temp113, temp113);
-    float temp156 = temp154 + distance_retval258;
-    float dot_retval260 = dot(temp113, temp113);
-    float temp158 = temp156 + dot_retval260;
-    vec3 temp159;
-    temp159.xyz = temp113.xyz;
-    vec3 cross_retval262 = cross(temp159, temp159);
-    float assignment_tmp263264 = temp158 + cross_retval262.x;
-    bool temp162 = assignment_tmp263264 == uf;
-    if (temp162) {
-        or_tmp266_0 = const143;
-    }
-    else {
-        bool temp163 = assignment_tmp263264 != uf;
-        if (temp163) {
-            bool and_tmp269271 = assignment_tmp263264 != const165;
-            and_tmp269_0 = and_tmp269271;
-        }
-        else {
-            and_tmp269_0 = const125;
+        and_tmp231_0 = const112;
+        if (any_retval176177) {
+            bool any_retval183184 = any(const111);
+            and_tmp231_0 = const112;
+            if (any_retval183184) {
+                bvec4 greaterThanEqual_retval191 = greaterThanEqual(temp102, temp102);
+                bool any_retval192193 = any(greaterThanEqual_retval191);
+                and_tmp231_0 = const112;
+                if (any_retval192193) {
+                    bvec4 equal_retval200 = equal(ub41, ub42);
+                    bool any_retval201202 = any(equal_retval200);
+                    and_tmp231_0 = const112;
+                    if (any_retval201202) {
+                        bvec4 notEqual_retval209 = notEqual(ub41, ub42);
+                        bool any_retval210211 = any(notEqual_retval209);
+                        and_tmp231_0 = const112;
+                        if (any_retval210211) {
+                            bool any_retval218219 = any(ub41);
+                            and_tmp231_0 = const112;
+                            if (any_retval218219) {
+                                bool all_retval226 = all(ub41);
+                                and_tmp231_0 = const112;
+                                if (all_retval226) {
+                                    bvec4 not_retval233 = not(ub41);
+                                    bool any_retval234235 = any(not_retval233);
+                                    and_tmp231_0 = any_retval234235;
+                                }
+                                
+                                int temp126 = ui + temp109;
+                                int temp127 = temp126 * temp109;
+                                int temp128 = temp127 - ui;
+                                int temp129 = temp128 / temp109;
+                                int assignment_tmp240241 = temp129 % ui;
+                                bool temp131 = assignment_tmp240241 == ui;
+                                bool temp132 = assignment_tmp240241 != const133;
+                                bool or_tmp250 = const112 ^^ temp132;
+                                int temp135 = assignment_tmp240241 + const136;
+                                bool or_cond311 = temp131 | or_tmp250;
+                                float temp138 = uf + uf;
+                                float temp139 = temp138 * uf;
+                                float temp140 = temp139 - uf;
+                                float temp141 = temp140 / uf;
+                                float length_retval256 = length(temp102);
+                                float temp143 = temp141 + length_retval256;
+                                float distance_retval258 = distance(temp102, temp102);
+                                float temp145 = temp143 + distance_retval258;
+                                float dot_retval260 = dot(temp102, temp102);
+                                float temp147 = temp145 + dot_retval260;
+                                vec3 temp148;
+                                temp148.xyz = temp102.xyz;
+                                vec3 cross_retval262 = cross(temp148, temp148);
+                                float assignment_tmp263264 = temp147 + cross_retval262.x;
+                                bool temp151 = assignment_tmp263264 == uf;
+                                if (! temp151) {
+                                    bool temp152 = assignment_tmp263264 != uf;
+                                    bool and_tmp269271 = assignment_tmp263264 != const154;
+                                    bool or_cond = temp152 & and_tmp269271;
+                                    f_0 = assignment_tmp263264;
+                                    if (or_cond) {
+                                        float temp156 = assignment_tmp263264 + const157;
+                                        f_0 = temp156;
+                                    }
+                                    
+                                    bool assignment_tmp282283 = ! and_tmp231_0;
+                                    conditional_tmp_0 = temp102;
+                                    if (assignment_tmp282283) {
+                                        int temp159 = ui & int temp160;
+                                        int temp161 = temp159 | const162;
+                                        int temp163 = temp161 ^ ui;
+                                        int temp164 = temp163 % const165;
+                                        int temp166 = temp164 >> const133;
+                                        int temp167 = temp166 << ui;
+                                        int assignment_tmp279280 = ~ temp167;
+                                        float temp169 = float(assignment_tmp279280);
+                                        vec4 temp170 = vec4(temp169, temp169, temp169, temp169);
+                                        vec4 temp171 = vec4(f_0, f_0, f_0, f_0);
+                                        vec4 temp172 = temp170 + temp171;
+                                        vec4 conditional_tmp286 = temp172 + temp102;
+                                        conditional_tmp_0 = conditional_tmp286;
+                                    }
+                                    
+                                    gl_FragColor = conditional_tmp_0;
+                                    
+                                }
+                                
+                            }
+                            
+                        }
+                        
+                    }
+                    
+                }
+                
+            }
+            
         }
         
-        or_tmp266_0 = and_tmp269_0;
     }
-    
-    f_0 = assignment_tmp263264;
-    if (or_tmp266_0) {
-        float temp166 = assignment_tmp263264 + const167;
-        f_0 = temp166;
-    }
-    
-    int temp168 = ui & i_0;
-    int temp169 = temp168 | const170;
-    int temp171 = temp169 ^ ui;
-    int temp172 = temp171 % const173;
-    int temp174 = temp172 >> const145;
-    int temp175 = temp174 << ui;
-    int assignment_tmp279280 = ~ temp175;
-    bool assignment_tmp282283 = ! and_tmp231_0;
-    if (assignment_tmp282283) {
-        float temp178 = float(assignment_tmp279280);
-        vec4 temp179 = vec4(temp178, temp178, temp178, temp178);
-        vec4 temp180 = vec4(f_0, f_0, f_0, f_0);
-        vec4 temp181 = temp179 + temp180;
-        vec4 conditional_tmp286 = temp181 + temp113;
-        conditional_tmp_0 = conditional_tmp286;
-    }
-    else {
-        conditional_tmp_0 = temp113;
-    }
-    
-    gl_FragColor = conditional_tmp_0;
     
 }

@@ -100,9 +100,6 @@ void gla::PrivateManager::runLLVMOptimizations1()
     if (Options.optimizations.adce)        passManager.add(llvm::createAggressiveDCEPass());
     passManager.add(llvm::createFlattenConditionalAssignmentsPass());
 
-    passManager.add(llvm::createIndVarSimplifyPass());
-    //passManager.add(llvm::createLoopStrengthReducePass());
-
     if (Options.optimizations.adce)        passManager.add(llvm::createAggressiveDCEPass());
 
     if (Options.optimizations.verify)      passManager.add(llvm::createVerifierPass());
@@ -147,6 +144,13 @@ void gla::PrivateManager::runLLVMOptimizations1()
     }
 
     llvm::PassManager canonicalize;
+    canonicalize.add(llvm::createIndVarSimplifyPass());
     canonicalize.add(llvm::createCanonicalizeCFGPass());
+    canonicalize.add(llvm::createSinkingPass());
+    canonicalize.add(llvm::createCFGSimplificationPass());
+
+    canonicalize.add(llvm::createIndVarSimplifyPass());
+    //canonicalize.add(llvm::createLoopStrengthReducePass());
+
     canonicalize.run(*module);
 }

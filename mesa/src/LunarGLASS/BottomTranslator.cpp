@@ -100,8 +100,10 @@
 #include "llvm/PassManager.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/Dominators.h"
+#include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Support/IRBuilder.h"
@@ -158,6 +160,8 @@ namespace {
         llvm::LoopInfo* loopInfo;
         llvm::DominatorTree* domTree;
         llvm::IdentifyConditionals* idConds;
+        llvm::ScalarEvolution* scalarEvo;
+        llvm::LazyValueInfo* lazyInfo;
 
         bool lastBlock;
 
@@ -442,14 +446,17 @@ bool BottomTranslator::runOnModule(llvm::Module& module)
         } else {
 
             // Get/set the loop info
-            loopInfo    = &getAnalysis<llvm::LoopInfo>(*function);
-            domTree     = &getAnalysis<llvm::DominatorTree>(*function);
-            idConds     = &getAnalysis<llvm::IdentifyConditionals>(*function);
+            loopInfo  = &getAnalysis<llvm::LoopInfo>             (*function);
+            domTree   = &getAnalysis<llvm::DominatorTree>        (*function);
+            idConds   = &getAnalysis<llvm::IdentifyConditionals> (*function);
+            scalarEvo = &getAnalysis<llvm::ScalarEvolution>      (*function);
+            lazyInfo  = &getAnalysis<llvm::LazyValueInfo>        (*function);
 
             // debug stuff
             if (gla::Options.debug && loopInfo->begin() != loopInfo->end()) {
-                llvm::errs() << "\n\nLoop info:\n";
-                loopInfo->print(llvm::errs());
+                llvm::errs() << "\n\nLoop info:\n";        loopInfo->print(llvm::errs());
+                llvm::errs() << "\n\nScalar evolution:\n"; scalarEvo->print(llvm::errs());
+                llvm::errs() << "\n\nLazy value info:\n";  lazyInfo->print(llvm::errs());
             }
 
             // handle function's with bodies
@@ -497,6 +504,8 @@ void BottomTranslator::getAnalysisUsage(llvm::AnalysisUsage& AU) const
     AU.addRequired<llvm::LoopInfo>();
     AU.addRequired<llvm::DominatorTree>();
     AU.addRequired<llvm::IdentifyConditionals>();
+    AU.addRequired<llvm::ScalarEvolution>();
+    AU.addRequired<llvm::LazyValueInfo>();
     return;
 }
 

@@ -21,9 +21,7 @@ TESTS=(test.frag \
 	   simpleFunctionCall.frag \
        functionCall.frag \
 	   voidFunction.frag \
-       forLoop.frag \
-       whileLoop.frag \
-       doWhileLoop.frag \
+       loops.frag \
        syntaxError.frag \
        depthOut.frag \
        dataOut.frag \

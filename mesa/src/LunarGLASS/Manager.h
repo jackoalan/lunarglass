@@ -76,7 +76,7 @@ namespace gla {
         // Add a conditional (e.g. while) loop. Currently unimplemented.
         virtual void beginConditionalLoop(/* TBD */) = 0;
 
-        // Add an inductive loop (e.g. for). Currently unimplemented.
+        // Add a canonical inductive loop (e.g. for (int i = 0; i < ...; ++i)). Currently unimplemented.
         virtual void beginInductiveLoop(/* TBD */) = 0;
 
 

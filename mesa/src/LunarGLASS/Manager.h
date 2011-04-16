@@ -79,6 +79,9 @@ namespace gla {
         // Add a canonical inductive loop (e.g. for (int i = 0; i < ...; ++i)). Currently unimplemented.
         virtual void beginInductiveLoop(/* TBD */) = 0;
 
+        // Add a canonical inductive loop as above where the bound is known statically
+        virtual void beginStaticInductiveLoop(/* TBD */) = 0;
+
 
         // Generic loop constructs
 

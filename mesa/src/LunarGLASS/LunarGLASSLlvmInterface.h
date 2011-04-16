@@ -35,6 +35,7 @@
 
 // LLVM includes
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/CFG.h"
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/IntrinsicInst.h"
@@ -202,6 +203,33 @@ namespace gla {
             return name.length() < 2 || (name[1] >= '0' && name[1] <= '9');
         }
 
+        // Whether the block terminates in a conditional branch
+        static bool isConditional(const llvm::BasicBlock* bb)
+        {
+            if (const llvm::BranchInst* bi = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator()))
+                return bi->isConditional();
+
+            return false;
+        }
+
+        // Whether the block terminates in a unconditional branch
+        static bool isUnConditional(const llvm::BasicBlock* bb)
+        {
+            return !isConditional(bb);
+        }
+
+        // Whether block A is a predecessor of B
+        static bool isPredecessor(const llvm::BasicBlock* pred, const llvm::BasicBlock* succ)
+        {
+            for (llvm::const_pred_iterator i = llvm::pred_begin(succ), e = llvm::pred_end(succ); i != e; ++i) {
+                if (*i == pred)
+                    return true;
+            }
+
+            return false;
+        }
+
+
         // true if provided basic block is one of the (possibly many) latches in
         // the provided loop
         static bool isLatch(const llvm::BasicBlock* bb, llvm::Loop* loop);
@@ -228,43 +256,6 @@ namespace gla {
 
             return false;
         }
-
-
-        // // Returns the single exit merge point of a loop, if it exists, or NULL
-        // // otherwise. For a single exit merge point to exist, if there are
-        // // multiple exit blocks they must all be empty blocks with unconditional
-        // // branches to the same point. Currently does not support early returns
-        // // inside loops (returns NULL in that case)
-        // static llvm::BasicBlock* getSingleExitMergePoint(llvm::Loop* loop);
-
-        // // Get the single, unique exit block that is not in the loop
-        // // itself. Returns NULL if there is zero or more than 1 such blocks
-        // static llvm::BasicBlock* getUniqueNonLoopExitBlock(llvm::Loop* loop)
-        // {
-        //     llvm::SmallVector<llvm::BasicBlock*, 4> exits;
-        //     loop->getUniqueExitBlocks(exits);
-
-        //     // If the exit block is part of the loop, and is a return
-        //     // statements, then that's ok too.
-
-        //     int exits = 0;
-        //     llvm::BasicBlock* bb = NULL;
-
-        //     for (llvm::SmallVector<llvm::BasicBlock*,4>::iterator i = exits.begin(), e = exits.end(); i != e; ++i) {
-        //         if (loop->contains(*i)) {
-
-        //         } else {
-        //             ++exits;
-        //         }
-        //             if (branches != 1)
-        //                 return NULL;
-        //             bb = *i;
-        //         }
-        //     }
-
-        //     return bb;
-        // }
-
 
         // Return the single merge point of the given conditional basic block. Returns
         // null if there is no merge point, or if there are more than 1 merge

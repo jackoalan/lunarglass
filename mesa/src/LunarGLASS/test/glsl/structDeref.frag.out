@@ -1,71 +1,29 @@
-; ModuleID = 'Top'
 
-@gl_MaxLights = internal global i32 8
-@gl_MaxClipPlanes = internal global i32 8
-@gl_MaxTextureUnits = internal global i32 2
-@gl_MaxTextureCoords = internal global i32 4
-@gl_MaxVertexAttribs = internal global i32 16
-@gl_MaxVertexUniformComponents = internal global i32 512
-@gl_MaxVaryingFloats = internal global i32 32
-@gl_MaxVertexTextureImageUnits = internal global i32 0
-@gl_MaxCombinedTextureImageUnits = internal global i32 2
-@gl_MaxTextureImageUnits = internal global i32 2
-@gl_MaxFragmentUniformComponents = internal global i32 64
-@gl_MaxDrawBuffers = internal global i32 2
-@gl_FragColor = internal global <4 x float> zeroinitializer
-
-define void @main() {
-entry:
-  %BaseColor = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 0, i32 0)
-  store <4 x float> %BaseColor, <4 x float>* @gl_FragColor
-  %0 = load <4 x float>* @gl_FragColor
-  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %0)
-  ret void
-}
-
-define fastcc <4 x float> @foo() {
-foo:
-  %BaseColor = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 0, i32 0)
-  ret <4 x float> %BaseColor
-}
-
-declare <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32, i32) nounwind readonly
-
-declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
-; ModuleID = 'Top'
-
-define void @main() {
-entry:
-  %BaseColor = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 0, i32 0)
-  call void @llvm.gla.fWriteData.v4f32(i32 0, <4 x float> %BaseColor)
-  ret void
-}
-
-define fastcc <4 x float> @foo() {
-foo:
-  %BaseColor = call <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32 0, i32 0)
-  ret <4 x float> %BaseColor
-}
-
-declare <4 x float> @llvm.gla.fReadInterpolant.v4f32(i32, i32) nounwind readonly
-
-declare void @llvm.gla.fWriteData.v4f32(i32, <4 x float>) nounwind
-compiling simpleFunctionCall.frag...
-uniform vec4 bigColor ; 
-varying vec4 BaseColor ; 
-uniform float d ; 
-vec4  foo (){
-return BaseColor ; }
-
+***Unsupported functionality: structure dereference in l-value
+compiling structDeref.frag...
+uniform sampler2D sampler ; 
+varying vec2 coord ; 
+struct s1 { int i ; float f ; } ; 
+struct s2 { int i ; float f ; s1 s1_1 ; } ; 
+struct s3 { s2 s2_1 ; int i ; float f ; s1 s1_1 ; } ; 
+uniform s1 foo ; 
+uniform s2 foo2 ; 
+uniform s3 foo3 ; 
 void  main (){
-gl_FragColor = foo ( ) ; }
+s2 locals2 ; if ( foo3 . s2_1 . i > 0 ) {
+locals2 . f = 1.000000 ; locals2 . s1_1 = s1 ( 0 , 0.000000 ) ; }
+else {
+locals2 . f = coord . x ; locals2 . s1_1 = s1 ( 1 , coord . y ) ; }
+gl_FragColor = locals2 . s1_1 . f * texture2D ( sampler , coord ) ; }
 
 
 
 (
-(declare (uniform ) float d)
-(declare (in ) vec4 BaseColor)
-(declare (uniform ) vec4 bigColor)
+(declare (uniform ) s3 foo3)
+(declare (uniform ) s2 foo2)
+(declare (uniform ) s1 foo)
+(declare (in ) vec2 coord)
+(declare (uniform ) sampler2D sampler)
 (declare (in ) vec4 gl_FragCoord)
 (declare (in ) bool gl_FrontFacing)
 (declare (out ) vec4 gl_FragColor)
@@ -126,40 +84,33 @@ gl_FragColor = foo ( ) ; }
 (declare (in ) (array vec4 0) gl_TexCoord)
 (declare () int gl_MaxDrawBuffers)
 (declare (out ) (array vec4 2) gl_FragData)
-(function foo
-  (signature vec4
-    (parameters
-    )
-    (
-      (return (var_ref BaseColor) )
-    ))
-
-)
-
+(declare (in ) vec2 gl_PointCoord)
+(declare (in ) (array float 8) gl_ClipDistance)
 (function main
   (signature void
     (parameters
     )
     (
-      (assign (constant bool (1)) (xyzw) (var_ref gl_FragColor)  (var_ref BaseColor) ) 
+      (declare () s2 locals2)
+      (if (expression bool > (record_ref (record_ref (var_ref foo3)  s2_1)  i) (constant int (0)) ) (
+        (assign (constant bool (1)) (x) (record_ref (var_ref locals2)  f)  (constant float (1.000000)) ) 
+        (assign (constant bool (1)) () (record_ref (var_ref locals2)  s1_1)  (constant s1 ((i (constant int (0)) )(i (constant float (0.000000)) ))) ) 
+      )
+      (
+        (assign (constant bool (1)) (x) (record_ref (var_ref locals2)  f)  (swiz x (var_ref coord) )) 
+        (declare (temporary ) s1 record_ctor)
+        (assign (constant bool (1)) (x) (record_ref (var_ref record_ctor)  i)  (constant int (1)) ) 
+        (assign (constant bool (1)) (x) (record_ref (var_ref record_ctor)  f)  (swiz y (var_ref coord) )) 
+        (assign (constant bool (1)) () (record_ref (var_ref locals2)  s1_1)  (var_ref record_ctor) ) 
+      ))
+
+      (declare (temporary ) vec4 texture2D_retval)
+      (assign (constant bool (1)) (xyzw) (var_ref texture2D_retval)  (call texture2D ((var_ref sampler) (var_ref coord) ))
+) 
+      (assign (constant bool (1)) (xyzw) (var_ref gl_FragColor)  (expression vec4 * (record_ref (record_ref (var_ref locals2)  s1_1)  f) (var_ref texture2D_retval) ) ) 
     ))
 
 )
 
 
 )
-// LunarGOO output
-#version 130
-in vec4 BaseColor;
-in vec4 BaseColor;
-
-void main()
-{
-    gl_FragColor = BaseColor;
-    
-}
-
-vec4 foo()
-{
-    return BaseColor;
-}

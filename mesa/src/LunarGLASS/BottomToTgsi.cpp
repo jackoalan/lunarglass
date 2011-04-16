@@ -163,6 +163,11 @@ public:
         gla::UnsupportedFunctionality("Loops");
     }
 
+    void beginStaticInductiveLoop()
+    {
+        UnsupportedFunctionality("inductive loops");
+    }
+
     void beginInductiveLoop()
     {
         gla::UnsupportedFunctionality("Loops");

@@ -336,9 +336,11 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
 
     llvm::Value* condition = branchInst->isConditional() ? branchInst->getCondition() : NULL;
 
+    llvm::Loop* loop = loops.top();
+
     bool isHeader  = bb == headers.top();
-    bool isExiting = bb == exits.top();
-    bool isLatch   = bb == latches.top();
+    bool isLatch   = bb == latches.top() || (!preservedBackedge.top() && gla::Util::isPredecessor(bb, latches.top()));
+    bool isExiting = loop->isLoopExiting(bb);
 
     // If it's a loop header, have the back-end add it
     if (isHeader) {
@@ -348,11 +350,11 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
         backEndTranslator->beginLoop();
     }
 
-    // If the branch is conditional and not a latch or exiting, we're dealing
-    // with conditional (e.g. if-then-else) flow control from a
-    // header. Otherwise handle it's instructions ourselves.
-    if (condition && !isLatch && !isExiting) {
-        assert(isHeader);
+    // If the branch is conditional and not a latch nor exiting, we're dealing
+    // with conditional (e.g. if-then-else) flow control from a header(why?).
+    // Otherwise handle it's instructions ourselves.
+    if (condition && (!isLatch && !isExiting)) {
+        assert(isHeader);       // why?
         assert(idConds->getConditional(bb));
         handleBranchingBlock(bb);
     } else {
@@ -366,8 +368,20 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
     // If it's a latch, add the (possibly conditional) loop-back. Immediately
     // handle the other block if we dominate it.
     if (isLatch) {
-        backEndTranslator->addLoopBack(condition, branchInst->getSuccessor(0) != headers.top());
-        assert(( !condition || isExiting) && "redundant assertion failed");
+        if (preservedBackedge.top()) {
+            backEndTranslator->addLoopBack(condition, branchInst->getSuccessor(0) != headers.top());
+            assert(( !condition || isExiting) && "redundant assertion failed");
+        } else {
+            forceOutputLatch();
+            backEndTranslator->addLoopBack(condition, branchInst->getSuccessor(0) != latches.top());
+
+            int pos = branchInst->getSuccessor(0) == latches.top() ? 0 : 1;
+            assert(branchInst->getSuccessor(pos) == latches.top() && "Latch block does not branch to latch");
+
+            if (branchInst->isConditional() && loop->contains(branchInst->getSuccessor(!pos)))
+                attemptHandleDominatee(bb, branchInst->getSuccessor(!pos));
+
+        }
     }
 
     // If we're exiting, add the (possibly conditional) exit. Immediately handle
@@ -385,25 +399,10 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
         }
     }
 
-    // We've been fully handled by now if we're a latch. If we're also a header,
-    // we must be a single block self-loop, so we're still done.
-    if (isLatch) {
-        assert(( !isHeader || ++(loops.top()->block_begin()) == loops.top()->block_end()) && "Header's a latch, and not a self-loop");
-        return;
-    }
-    assert(isHeader || isExiting);
-
-    // If we branch to a latch, and the backedge is not source-preserved, then
-    // we should replicate the latch block.
-    if ( !preservedBackedge.top() && gla::Util::isPredecessor(bb, latches.top()))
-        forceOutputLatch();
-
-
     // We've been fully handled by now, unless we're a header
     if (! isHeader)
         return;
     assert(isHeader);
-
 
     // If we're a header, by this point, all of our blocks in our loop should of
     // been handled.
@@ -439,8 +438,6 @@ void BottomTranslator::forceOutputLatch()
     if (backEnd->getRemovePhiFunctions()) {
         addPhiCopies(br);
     }
-
-    backEndTranslator->addLoopBack(NULL, false);
 }
 
 void BottomTranslator::handleIfBlock(const llvm::BasicBlock* bb)
@@ -498,6 +495,10 @@ void BottomTranslator::handleBranchingBlock(const llvm::BasicBlock* bb)
     }
 
     // TODO: handle for if we're branching into a latch
+    if (llvm::Loop* loop = loopInfo->getLoopFor(bb)) {
+        if (loops.size() && loop == loops.top() && gla::Util::isPredecessor(bb, latches.top()) && !preservedBackedge.top())
+            gla::UnsupportedFunctionality("inner continues, for now");
+    }
 
     // If it's unconditional, we'll want to handle any subtrees that it points to.
     if (branchInst->isUnconditional()) {
@@ -525,7 +526,8 @@ void BottomTranslator::handleBlock(const llvm::BasicBlock* bb)
     // If the block exhibits loop-relevant control flow,
     // handle it specially
     llvm::Loop* loop = loopInfo->getLoopFor(bb);
-    if (loop && (loop->getHeader() == bb || gla::Util::isLatch(bb, loop) || loop->isLoopExiting(bb))
+    bool latch = loop && loops.size() && loop == loops.top() && gla::Util::isPredecessor(bb, latches.top());
+    if (loop && (loop->getHeader() == bb || gla::Util::isLatch(bb, loop) || loop->isLoopExiting(bb) || latch)
              && flowControlMode == gla::EFcmStructuredOpCodes) {
 
         if (loop->getHeader() == bb)
@@ -538,7 +540,7 @@ void BottomTranslator::handleBlock(const llvm::BasicBlock* bb)
     // If the block's a branching block, handle it specially.
     if (llvm::isa<llvm::BranchInst>(bb->getTerminator())) {
         handleBranchingBlock(bb);
-        return;
+       return;
     }
 
     // Otherwise we're a block ending in a return statement

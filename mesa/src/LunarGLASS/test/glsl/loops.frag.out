@@ -653,8 +653,6 @@ Loop %loop-header70: Unpredictable backedge-taken count.
 Loop %loop-header70: Unpredictable max backedge-taken count. 
 Loop %loop-header50: Unpredictable backedge-taken count. 
 Loop %loop-header50: Unpredictable max backedge-taken count. 
-
-***Unsupported functionality: inductive loops
 compiling loops.frag...
 uniform vec4 bigColor ; 
 uniform vec4 bigColor2 ; 
@@ -920,3 +918,247 @@ gl_FragColor = color ; }
 
 
 )
+// LunarGOO output
+#version 130
+uniform float d;
+uniform vec4 bigColor;
+uniform int Count;
+uniform vec4 bigColor2;
+uniform vec4 bigColor3;
+uniform float d2;
+uniform vec4 bigColor4;
+uniform float d4;
+uniform vec4 bigColor5;
+uniform float d5;
+uniform float d6;
+uniform vec4 bigColor6;
+uniform float d7;
+uniform vec4 bigColor7;
+uniform vec4 bigColor8;
+uniform float d8;
+in vec4 BaseColor;
+const int const48 = 0;
+const int const52 = 1;
+const float const75 = 0;
+const float const78 = 1;
+in vec4 BaseColor67;
+const float const81 = 10;
+
+void main()
+{
+    vec4 color_0;
+    vec4 color_0_lcssa;
+    vec4 color_1;
+    int temp24;
+    vec4 color_1_lcssa;
+    vec4 color_2;
+    vec4 assignment_tmp10_lcssa;
+    vec4 color_3;
+    vec4 color_3_be;
+    vec4 color_4;
+    vec4 color_4_lcssa;
+    vec4 color_5;
+    vec4 color_6;
+    float _lcssa;
+    vec4 color_6_lcssa;
+    vec4 color_7;
+    vec4 color_9;
+    vec4 color_9_lcssa;
+    vec4 color_7_lcssa;
+    vec4 color_10_ph;
+    vec4 color_10;
+    vec4 color_12_ph;
+    vec4 color_12;
+    vec4 color_12_lcssa;
+    vec4 color_12_be;
+    color_0 = BaseColor;
+    while (true) {
+        bool temp46 = color_0.x >= d;
+        color_0_lcssa = color_0;
+        if (temp46) {
+            break;
+        }
+        
+        vec4 color1 = color_0 + bigColor;
+        color_0 = color1;
+        continue;
+    }
+    
+    color_1 = color_0_lcssa;
+    temp24 = const48;
+    while (true) {
+        bool temp49 = temp24 >= Count;
+        color_1_lcssa = color_1;
+        if (temp49) {
+            break;
+        }
+        
+        vec4 color6 = color_1 + bigColor2;
+        int temp51 = temp24 + const52;
+        color_1 = color6;
+        temp24 = temp51;
+        continue;
+    }
+    
+    color_2 = color_1_lcssa;
+    while (true) {
+        vec4 assignment_tmp10 = color_2 + bigColor3;
+        bool temp54 = assignment_tmp10.x >= d2;
+        color_2 = assignment_tmp10;
+        assignment_tmp10_lcssa = assignment_tmp10;
+        if (! temp54) {
+            continue;
+        }
+        
+        if (temp54) {
+            break;
+        }
+        
+    }
+    
+    color_3 = assignment_tmp10_lcssa;
+    while (true) {
+        vec4 assignment_tmp1718 = color_3 + bigColor4;
+        bool temp56 = assignment_tmp1718.x < d4;
+        color_3_be = assignment_tmp1718;
+        color_3 = color_3_be;
+        if (temp56) {
+            continue;
+        }
+        
+        bool temp57 = assignment_tmp1718.y < d4;
+        if (temp57) {
+            float temp58 = assignment_tmp1718.y + d4;
+            vec4 temp59 = assignment_tmp1718;
+            temp59.y = temp58.x;
+            color_4 = temp59;
+        }
+        else {
+            float temp60 = assignment_tmp1718.x + d4;
+            vec4 temp61 = assignment_tmp1718;
+            temp61.x = temp60.x;
+            color_4 = temp61;
+        }
+        
+        bool temp62 = color_4.z >= d4;
+        color_3_be = color_4;
+        color_4_lcssa = color_4;
+        color_3 = color_3_be;
+        if (! temp62) {
+            continue;
+        }
+        
+        if (temp62) {
+            break;
+        }
+        
+    }
+    
+    color_5 = color_4_lcssa;
+    while (true) {
+        vec4 assignment_tmp3233 = color_5 + bigColor5;
+        bool temp64 = assignment_tmp3233.y < d5;
+        color_6 = assignment_tmp3233;
+        if (temp64) {
+            float temp65 = assignment_tmp3233.y + d5;
+            vec4 temp66 = assignment_tmp3233;
+            temp66.y = temp65.x;
+        }
+        
+        bool temp67 = color_6.x >= d5;
+        color_5 = color_6;
+        _lcssa = color_6.x;
+        color_6_lcssa = color_6;
+        if (! temp67) {
+            continue;
+        }
+        
+        if (temp67) {
+            break;
+        }
+        
+    }
+    
+    bool temp68 = _lcssa < d6;
+    if (temp68) {
+        color_7 = color_6_lcssa;
+        while (true) {
+            bool temp69 = color_7.y >= d6;
+            color_7_lcssa = color_7;
+            if (temp69) {
+                break;
+            }
+            
+            vec4 color47 = color_7 + bigColor6;
+            color_7 = color47;
+            continue;
+        }
+        
+    }
+    else {
+        color_9 = color_6_lcssa;
+        while (true) {
+            bool temp71 = color_9.z >= d6;
+            color_9_lcssa = color_9;
+            if (temp71) {
+                break;
+            }
+            
+            float temp72 = color_9.z + bigColor6.z;
+            vec4 temp73 = color_9;
+            temp73.z = temp72.x;
+            color_9 = temp73;
+            continue;
+        }
+        
+    }
+    
+    color_10 = color_10_ph;
+    while (true) {
+        bool temp74 = d7 < const75;
+        color_12_ph = color_10;
+        if (temp74) {
+            break;
+        }
+        
+        vec4 assignment_tmp6162 = color_10 + bigColor7;
+        bool temp77 = d7 < const78;
+        color_12_ph = assignment_tmp6162;
+        if (temp77) {
+            break;
+        }
+        
+        vec4 color68 = assignment_tmp6162 + BaseColor67;
+        color_10 = color68;
+        continue;
+    }
+    
+    color_10_ph = color_9_lcssa;
+    color_10_ph = color_7_lcssa;
+    color_12 = color_12_ph;
+    while (true) {
+        bool temp80 = color_12.x >= const81;
+        color_12_lcssa = color_12;
+        if (temp80) {
+            break;
+        }
+        
+        vec4 assignment_tmp7475 = color_12 + bigColor8;
+        bool temp83 = assignment_tmp7475.z < d8;
+        color_12_be = assignment_tmp7475;
+        color_12 = color_12_be;
+        if (temp83) {
+            continue;
+        }
+        
+        float temp84 = assignment_tmp7475.y + bigColor8.x;
+        vec4 temp85 = assignment_tmp7475;
+        temp85.y = temp84.x;
+        color_12_be = temp85;
+        color_12 = color_12_be;
+        continue;
+    }
+    
+    gl_FragColor = color_12_lcssa;
+    
+}

@@ -213,7 +213,7 @@ namespace gla {
         }
 
         // Whether the block terminates in a unconditional branch
-        static bool isUnConditional(const llvm::BasicBlock* bb)
+        static bool isUnconditional(const llvm::BasicBlock* bb)
         {
             return !isConditional(bb);
         }
@@ -221,14 +221,24 @@ namespace gla {
         // Whether block A is a predecessor of B
         static bool isPredecessor(const llvm::BasicBlock* pred, const llvm::BasicBlock* succ)
         {
-            for (llvm::const_pred_iterator i = llvm::pred_begin(succ), e = llvm::pred_end(succ); i != e; ++i) {
+            for (llvm::const_pred_iterator i = llvm::pred_begin(succ), e = llvm::pred_end(succ); i != e; ++i)
                 if (*i == pred)
                     return true;
-            }
 
             return false;
         }
 
+        // A is an indirect predecessor of B if A branches to some block that
+        // unconditionally branches to B.
+        static bool isIndirectPredecessor(const llvm::BasicBlock* pred, const llvm::BasicBlock* succ)
+        {
+            for (llvm::const_pred_iterator i = llvm::pred_begin(succ), e = llvm::pred_end(succ); i != e; ++i)
+                if (isUnconditional(*i))
+                    if (isPredecessor(pred, *i))
+                        return true;
+
+            return false;
+        }
 
         // true if provided basic block is one of the (possibly many) latches in
         // the provided loop

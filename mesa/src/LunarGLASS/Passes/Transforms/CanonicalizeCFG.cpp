@@ -26,6 +26,8 @@
 //
 // Canonicalize the CFG for LunarGLASS, this includes the following:
 //   * All basic blocks without predecessors are removed.
+//   * All single predecessor/single successor sequences of basic blocks are
+//     condensed into one block. Currently unimplemented.
 //
 //===----------------------------------------------------------------------===//
 
@@ -75,13 +77,13 @@ bool CanonicalizeCFG::runOnFunction(Function& F)
         changed = true;
     }
 
-    // Remove needless phi nodes from single-predecessor blocks
-    for (Function::iterator bb = F.begin(), e = F.end(); bb != e; ++bb) {
-        if (&F.getEntryBlock() == &*bb)
-            continue;
-        if (++pred_begin(bb) == pred_end(bb))
-            FoldSingleEntryPHINodes(bb);
-    }
+    // // Remove needless phi nodes from single-predecessor blocks
+    // for (Function::iterator bb = F.begin(), e = F.end(); bb != e; ++bb) {
+    //     if (&F.getEntryBlock() == &*bb)
+    //         continue;
+    //     if (++pred_begin(bb) == pred_end(bb))
+    //         FoldSingleEntryPHINodes(bb);
+    // }
 
     return changed;
 }

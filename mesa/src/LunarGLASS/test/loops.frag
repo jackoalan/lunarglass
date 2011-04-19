@@ -25,20 +25,20 @@ void main()
 {
     vec4 color = BaseColor;
 
-    // While
-    while (color.x < d) {
-        color += bigColor;
-    }
+    // // While
+    // while (color.x < d) {
+    //     color += bigColor;
+    // }
 
-    // For (dynamic)
-    for (int i = 0; i < Count; ++i) {
-        color += bigColor2;
-    }
+    // // For (dynamic)
+    // for (int i = 0; i < Count; ++i) {
+    //     color += bigColor2;
+    // }
 
-    // Do while
-    do {
-        color += bigColor3;
-    } while (color.x < d2);
+    // // Do while
+    // do {
+    //     color += bigColor3;
+    // } while (color.x < d2);
 
     // // For (static)
     // for (int i = 0; i < 42; ++i) {
@@ -46,31 +46,47 @@ void main()
     // }
 
     // Latchy
-    do {
-        color += bigColor4;
-        if (color.x < d4)
-            continue;
-        if (color.y < d4)
-            color.y += d4;
-        else
-            color.x += d4;
-    } while (color.z < d4);
+    // do {
+    //     color += bigColor4;
+    //     if (color.x < d4)
+    //         continue;
+    //     if (color.y < d4)
+    //         color.y += d4;
+    //     else
+    //         color.x += d4;
+    // } while (color.z < d4);
 
-    // Do while flow control
-    do {
-        color += bigColor5;
-        if (color.y < d5)
-            color.y += d5;
-    } while (color.x < d5);
+    // Latchy2
+    // do {
+    //     color += bigColor4;
+    //     if (color.x < d4) {
+    //         color.z += 2.0;
+    //         if (color.z < d4) {
+    //             color.x++;
+    //             continue;
+    //         }
+    //     }
+    //     if (color.y < d4)
+    //         color.y += d4;
+    //     else
+    //         color.x += d4;
+    // } while (color.z < d4);
 
-    // If then loop
-    if (color.x < d6) {
-        while (color.y < d6)
-            color += bigColor6;
-    } else {
-        while (color.z < d6)
-            color.z += bigColor6.z;
-    }
+    // // Do while flow control
+    // do {
+    //     color += bigColor5;
+    //     if (color.y < d5)
+    //         color.y += d5;
+    // } while (color.x < d5);
+
+    // // If then loop
+    // if (color.x < d6) {
+    //     while (color.y < d6)
+    //         color += bigColor6;
+    // } else {
+    //     while (color.z < d6)
+    //         color.z += bigColor6.z;
+    // }
 
     // Multi-exit
     do {
@@ -79,22 +95,25 @@ void main()
 
        color += bigColor7;
 
-       if (d7 < 1.0)
+       if (d7 < 1.0) {
+           color.z++;
            break;
+       }
 
        color += BaseColor;
 
     } while (true);
 
-    // Multi-continue
-    while (color.x < 10) {
-        color += bigColor8;
+    // // Multi-continue
+    // while (color.x < 10) {
+    //     color += bigColor8;
 
-        if (color.z < d8)
-           continue;
+    //     if (color.z < d8)
+    //         if (color.w < d6)
+    //             continue;
 
-        color.y += bigColor8.x;
-    }
+    //     color.y += bigColor8.x;
+    // }
 
 
     gl_FragColor = color;

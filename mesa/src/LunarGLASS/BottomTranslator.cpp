@@ -134,9 +134,12 @@
 // LunarGLASS Passes
 #include "Passes/Analysis/IdentifyConditionals.h"
 
+using namespace llvm;
+
+
 namespace {
 
-    class BottomTranslator : public llvm::ModulePass {
+    class BottomTranslator : public ModulePass {
     public:
         BottomTranslator() : ModulePass(ID)
         { }
@@ -145,109 +148,109 @@ namespace {
         { }
 
         // Translate from LLVM CFG style to structured style.
-        void declarePhiCopies(const llvm::Function*);
+        void declarePhiCopies(const Function*);
 
-        void setLoopInfo(llvm::LoopInfo* li) { loopInfo = li; }
+        void setLoopInfo(LoopInfo* li) { loopInfo = li; }
 
-        void addPhiCopies(const llvm::Instruction*);
+        void addPhiCopies(const Instruction*);
 
         void setBackEndTranslator(gla::BackEndTranslator* bet) { backEndTranslator = bet; }
         void setBackEnd(gla::BackEnd* be)                      { backEnd = be; }
 
         // Module Pass implementation
         static char ID;
-        bool runOnModule(llvm::Module&);
-        void print(std::ostream&, const llvm::Module*) const;
-        void getAnalysisUsage(llvm::AnalysisUsage&) const;
+        bool runOnModule(Module&);
+        void print(std::ostream&, const Module*) const;
+        void getAnalysisUsage(AnalysisUsage&) const;
 
     protected:
         gla::BackEndTranslator* backEndTranslator;
         gla::BackEnd* backEnd;
         gla::EFlowControlMode flowControlMode;
 
-        llvm::LoopInfo* loopInfo;
-        llvm::DominatorTree* domTree;
-        llvm::IdentifyConditionals* idConds;
-        llvm::ScalarEvolution* scalarEvo;
-        llvm::LazyValueInfo* lazyInfo;
+        LoopInfo* loopInfo;
+        DominatorTree* domTree;
+        IdentifyConditionals* idConds;
+        ScalarEvolution* scalarEvo;
+        LazyValueInfo* lazyInfo;
 
         bool lastBlock;
 
-        llvm::SmallPtrSet<const llvm::BasicBlock*,8> handledBlocks;
+        SmallPtrSet<const BasicBlock*,8> handledBlocks;
 
         // Data for handling loops
-        std::stack<llvm::BasicBlock*> headers;
-        std::stack<llvm::BasicBlock*> latches;
-        std::stack<llvm::BasicBlock*> exits;
-        std::stack<llvm::Loop*> loops;
+        std::stack<BasicBlock*> headers;
+        std::stack<BasicBlock*> latches;
+        std::stack< SmallVector<BasicBlock*,4> > exits;
+        std::stack<Loop*> loops;
         std::stack<bool> preservedBackedge;
 
         // Set everything up for handling a new loop
-        void newLoop(const llvm::BasicBlock*);
+        void newLoop(const BasicBlock*);
 
         // Reset loop data
         void closeLoop();
 
         // Handle and dispatch the given block, updating handledBlocks.
-        void handleBlock(const llvm::BasicBlock*);
+        void handleBlock(const BasicBlock*);
 
         // Handle and dispatch for an if block
-        void handleIfBlock(const llvm::BasicBlock*);
+        void handleIfBlock(const BasicBlock*);
 
         // Send off all the non-terminating instructions in a basic block to the
         // backend
-        void handleNonTerminatingInstructions(const llvm::BasicBlock*);
+        void handleNonTerminatingInstructions(const BasicBlock*);
 
         // Given a loop block, handle it. Dispatches to other methods and ends
         // up handling all blocks in the loop.
-        void handleLoopBlock(const llvm::BasicBlock*);
+        void handleLoopBlock(const BasicBlock*);
 
         // Given a block ending in return, output it and the return
-        void handleReturnBlock(const llvm::BasicBlock*);
+        void handleReturnBlock(const BasicBlock*);
 
         // Handle non-loop control flow
-        void handleBranchingBlock(const llvm::BasicBlock*);
+        void handleBranchingBlock(const BasicBlock*);
 
         // Force the output of the current latch. Assumes it's only being called
         // when the source-level backedge is not preserved.
         void forceOutputLatch();
 
         // If dominator properly dominates dominatee, then handle it, else do nothing
-        void attemptHandleDominatee(const llvm::BasicBlock* dominator, const llvm::BasicBlock* dominatee);
+        void attemptHandleDominatee(const BasicBlock* dominator, const BasicBlock* dominatee);
 
     };
 
 } // end namespace
 
-void BottomTranslator::declarePhiCopies(const llvm::Function* function)
+void BottomTranslator::declarePhiCopies(const Function* function)
 {
     // basic blocks
-    for (llvm::Function::const_iterator bb = function->begin(), E = function->end(); bb != E; ++bb) {
+    for (Function::const_iterator bb = function->begin(), E = function->end(); bb != E; ++bb) {
 
         // instructions in the basic block
-        for (llvm::BasicBlock::const_iterator i = bb->begin(), e = bb->end(); i != e; ++i) {
-            const llvm::Instruction* llvmInstruction = i;
+        for (BasicBlock::const_iterator i = bb->begin(), e = bb->end(); i != e; ++i) {
+            const Instruction* llvmInstruction = i;
 
-            if (llvmInstruction->getOpcode() == llvm::Instruction::PHI)
+            if (llvmInstruction->getOpcode() == Instruction::PHI)
                 backEndTranslator->declarePhiCopy(llvmInstruction);
         }
     }
 }
 
-void BottomTranslator::addPhiCopies(const llvm::Instruction* llvmInstruction)
+void BottomTranslator::addPhiCopies(const Instruction* llvmInstruction)
 {
     // for each child block
     for (unsigned int op = 0; op < llvmInstruction->getNumOperands(); ++op) {
 
         // get the destination block (not all operands are blocks, but consider each that is)
-        const llvm::BasicBlock *phiBlock = llvm::dyn_cast<llvm::BasicBlock>(llvmInstruction->getOperand(op));
+        const BasicBlock *phiBlock = dyn_cast<BasicBlock>(llvmInstruction->getOperand(op));
         if (! phiBlock)
             continue;
 
         // for each llvm phi node, add a copy instruction
-        for (llvm::BasicBlock::const_iterator i = phiBlock->begin(), e = phiBlock->end(); i != e; ++i) {
-            const llvm::Instruction* destInstruction = i;
-            const llvm::PHINode *phiNode = llvm::dyn_cast<llvm::PHINode>(destInstruction);
+        for (BasicBlock::const_iterator i = phiBlock->begin(), e = phiBlock->end(); i != e; ++i) {
+            const Instruction* destInstruction = i;
+            const PHINode *phiNode = dyn_cast<PHINode>(destInstruction);
 
             if (phiNode) {
                 // find the operand whose predecessor is us
@@ -263,20 +266,20 @@ void BottomTranslator::addPhiCopies(const llvm::Instruction* llvmInstruction)
     }
 }
 
-void BottomTranslator::handleNonTerminatingInstructions(const llvm::BasicBlock* bb) {
+void BottomTranslator::handleNonTerminatingInstructions(const BasicBlock* bb) {
     // Add the non-terminating instructions
-    for (llvm::BasicBlock::const_iterator i = bb->begin(), e = bb->getTerminator(); i != e; ++i) {
-        const llvm::Instruction* inst = i;
+    for (BasicBlock::const_iterator i = bb->begin(), e = bb->getTerminator(); i != e; ++i) {
+        const Instruction* inst = i;
 
-        if (! (backEnd->getRemovePhiFunctions() && inst->getOpcode() == llvm::Instruction::PHI))
+        if (! (backEnd->getRemovePhiFunctions() && inst->getOpcode() == Instruction::PHI))
             backEndTranslator->add(inst, lastBlock);
 
     }
 }
 
-static bool properExitBlock(const llvm::BasicBlock* bb, const llvm::Loop* loop)
+static bool properExitBlock(const BasicBlock* bb, const Loop* loop)
 {
-    for (llvm::const_pred_iterator i = pred_begin(bb), e = pred_end(bb); i != e; ++i) {
+    for (const_pred_iterator i = pred_begin(bb), e = pred_end(bb); i != e; ++i) {
         if (! loop->contains(*i))
             return false;
     }
@@ -284,18 +287,22 @@ static bool properExitBlock(const llvm::BasicBlock* bb, const llvm::Loop* loop)
     return true;
 }
 
-void BottomTranslator::newLoop(const llvm::BasicBlock* bb)
+void BottomTranslator::newLoop(const BasicBlock* bb)
 {
-    llvm::Loop* loop = loopInfo->getLoopFor(bb);
+    Loop* loop = loopInfo->getLoopFor(bb);
     assert(loop && "newLoop called on non-loop");
 
-    llvm::BasicBlock* header = loop->getHeader();
-    llvm::BasicBlock* exit   = loop->getUniqueExitBlock();
-    llvm::BasicBlock* latch  = loop->getLoopLatch();
+    BasicBlock* header = loop->getHeader();
+    BasicBlock* latch  = loop->getLoopLatch();
 
-    assert(exit && "Unstructured flow control: flow exits a loop into multiple places");
-    assert(header && latch && gla::Util::getNumLatches(loop) == 1 && properExitBlock(exit, loop) && "Loop not in canonical form");
-    assert((gla::Util::isUnConditional(latch) || loop->isLoopExiting(latch)) && "Non-bottom latching loop structure");
+    SmallVector<BasicBlock*, 4> exitVec;
+    loop->getUniqueExitBlocks(exitVec);
+
+    //todo: have exit lookahead.
+
+    //assert(exits && "Unstructured flow control: flow exits a loop into multiple places");
+    // assert(header && latch && gla::Util::getNumLatches(loop) == 1 && properExitBlock(exit, loop) && "Loop not in canonical form");
+    assert((gla::Util::isUnconditional(latch) || loop->isLoopExiting(latch)) && "Non-bottom latching loop structure");
 
     assert(loops.size() == headers.size() && headers.size() == exits.size() && exits.size() == latches.size()
            && latches.size() == preservedBackedge.size() && "Internal data mismatch");
@@ -312,49 +319,56 @@ void BottomTranslator::newLoop(const llvm::BasicBlock* bb)
 
     loops.push(loop);
     headers.push(header);
-    exits.push(exit);
+    exits.push(exitVec);
     latches.push(latch);
     preservedBackedge.push(preserved);
 }
 
-void BottomTranslator::attemptHandleDominatee(const llvm::BasicBlock* dominator, const llvm::BasicBlock* dominatee)
+void BottomTranslator::attemptHandleDominatee(const BasicBlock* dominator, const BasicBlock* dominatee)
 {
-    llvm::BasicBlock* unconstTor = const_cast<llvm::BasicBlock*>(dominator); // Necessary
-    llvm::BasicBlock* unconstTee = const_cast<llvm::BasicBlock*>(dominatee); // Necessary
+    BasicBlock* unconstTor = const_cast<BasicBlock*>(dominator); // Necessary
+    BasicBlock* unconstTee = const_cast<BasicBlock*>(dominatee); // Necessary
 
     if (domTree->properlyDominates(unconstTor, unconstTee)) {
         handleBlock(dominatee);
     }
 }
 
-void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
+
+
+void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
 {
     assert(loops.size() != 0 && "handleLoopBlock called on a new loop without newLoop being called");
+    assert(loops.size() == 1 && "uncaught nested loop");
 
-    const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
+    const BranchInst* branchInst = dyn_cast<BranchInst>(bb->getTerminator());
     assert(branchInst && "handleLoopBlock called with non-branch terminator");
 
-    llvm::Value* condition = branchInst->isConditional() ? branchInst->getCondition() : NULL;
+    Value* condition = branchInst->isConditional() ? branchInst->getCondition() : NULL;
 
-    llvm::Loop* loop = loops.top();
+    Loop* loop = loops.top();
 
     bool isHeader  = bb == headers.top();
-    bool isLatch   = bb == latches.top() || (!preservedBackedge.top() && gla::Util::isPredecessor(bb, latches.top()));
+    bool isLatch   = bb == latches.top();
     bool isExiting = loop->isLoopExiting(bb);
+
+    bool preserved = preservedBackedge.top();
+
+    assert(!isLatch || preserved); // isLatch => preserved
 
     // If it's a loop header, have the back-end add it
     if (isHeader) {
-        // llvm::PHINode* pn = loop->getCanonicalInductionVariable();
+        // PHINode* pn = loop->getCanonicalInductionVariable();
         // if (pn)
         //     backEndTranslator->beginInductiveLoop();
         backEndTranslator->beginLoop();
     }
 
     // If the branch is conditional and not a latch nor exiting, we're dealing
-    // with conditional (e.g. if-then-else) flow control from a header(why?).
+    // with conditional (e.g. if-then-else) flow control from a header.
     // Otherwise handle it's instructions ourselves.
     if (condition && (!isLatch && !isExiting)) {
-        assert(isHeader);       // why?
+        assert(isHeader);
         assert(idConds->getConditional(bb));
         handleBranchingBlock(bb);
     } else {
@@ -387,11 +401,11 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
     // If we're exiting, add the (possibly conditional) exit. Immediately handle
     // the other block if we dominate it.
     if (isExiting) {
-        if (exits.top() == branchInst->getSuccessor(0)) {
+        if (gla::Util::smallVectorContains(exits.top(), branchInst->getSuccessor(0))) {
             backEndTranslator->addLoopExit(condition, false);
             if (condition)
                 attemptHandleDominatee(bb, branchInst->getSuccessor(1));
-        } else if (condition && exits.top() == branchInst->getSuccessor(1)) {
+        } else if (condition && gla::Util::smallVectorContains(exits.top(), branchInst->getSuccessor(1))) {
             backEndTranslator->addLoopExit(condition, true);
             attemptHandleDominatee(bb, branchInst->getSuccessor(0));
         } else {
@@ -404,9 +418,17 @@ void BottomTranslator::handleLoopBlock(const llvm::BasicBlock* bb)
         return;
     assert(isHeader);
 
-    // If we're a header, by this point, all of our blocks in our loop should of
+    // If we're an unconditional header (e.g. branching immediately to an inner
+    // loop), add our target
+    if (branchInst->isUnconditional()) {
+        handleBlock(branchInst->getSuccessor(0));
+    }
+
+    // By this point, we're a header and all of our blocks in our loop should of
     // been handled.
-    for (llvm::Loop::block_iterator i = loops.top()->block_begin(), e = loops.top()->block_end(); i != e; ++i) {
+    for (Loop::block_iterator i = loops.top()->block_begin(), e = loops.top()->block_end(); i != e; ++i) {
+        if (! handledBlocks.count(*i))
+            errs() << " unhandled: " << **i << "\n";
         assert(handledBlocks.count(*i) && "Loop blocks remaining that were not handled structurally");
     }
 
@@ -430,7 +452,7 @@ void BottomTranslator::forceOutputLatch()
     assert(latches.top() && !preservedBackedge.top());
     assert(handledBlocks.count(latches.top()));
 
-    llvm::BranchInst* br = llvm::dyn_cast<llvm::BranchInst>(latches.top()->getTerminator());
+    BranchInst* br = dyn_cast<BranchInst>(latches.top()->getTerminator());
     assert(br && br->isUnconditional());
 
     handleNonTerminatingInstructions(latches.top());
@@ -440,11 +462,28 @@ void BottomTranslator::forceOutputLatch()
     }
 }
 
-void BottomTranslator::handleIfBlock(const llvm::BasicBlock* bb)
+void BottomTranslator::handleIfBlock(const BasicBlock* bb)
 {
 
-    const llvm::Conditional* cond = idConds->getConditional(bb);
-    assert(cond);
+    const Conditional* cond = idConds->getConditional(bb);
+
+    // If we don't have a conditional entry for bb, then we're dealing with
+    // conditionals with backedges/exits and other tricky control flow in them.
+    if (! cond) {
+        const BranchInst* br = dyn_cast<BranchInst>(bb->getTerminator());
+        assert(br && br->isConditional());
+
+        backEndTranslator->addIf(br->getCondition(), false);
+        handleBlock(br->getSuccessor(0));
+
+        backEndTranslator->addElse();
+        handleBlock(br->getSuccessor(1));
+
+        backEndTranslator->addEndif();
+
+        return;
+    }
+
 
     bool invert = cond->isIfElse();
 
@@ -473,9 +512,9 @@ void BottomTranslator::handleIfBlock(const llvm::BasicBlock* bb)
     return;
 }
 
-void BottomTranslator::handleReturnBlock(const llvm::BasicBlock* bb)
+void BottomTranslator::handleReturnBlock(const BasicBlock* bb)
 {
-    assert(llvm::isa<llvm::ReturnInst>(bb->getTerminator()));
+    assert(isa<ReturnInst>(bb->getTerminator()));
 
     handleNonTerminatingInstructions(bb);
     backEndTranslator->add(bb->getTerminator(), lastBlock);
@@ -483,9 +522,9 @@ void BottomTranslator::handleReturnBlock(const llvm::BasicBlock* bb)
     return;
 }
 
-void BottomTranslator::handleBranchingBlock(const llvm::BasicBlock* bb)
+void BottomTranslator::handleBranchingBlock(const BasicBlock* bb)
 {
-    const llvm::BranchInst* branchInst = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator());
+    const BranchInst* branchInst = dyn_cast<BranchInst>(bb->getTerminator());
     assert(branchInst);
 
     // Handle it's instructions and do phi node removal if appropriate
@@ -494,16 +533,19 @@ void BottomTranslator::handleBranchingBlock(const llvm::BasicBlock* bb)
         addPhiCopies(branchInst);
     }
 
-    // TODO: handle for if we're branching into a latch
-    if (llvm::Loop* loop = loopInfo->getLoopFor(bb)) {
-        if (loops.size() && loop == loops.top() && gla::Util::isPredecessor(bb, latches.top()) && !preservedBackedge.top())
-            gla::UnsupportedFunctionality("inner continues, for now");
-    }
+    // // TODO: handle for if we're branching into a latch
+    // if (Loop* loop = loopInfo->getLoopFor(bb)) {
+    //     if (loops.size() && loop == loops.top() && gla::Util::isPredecessor(bb, latches.top()) && !preservedBackedge.top())
+    //         gla::UnsupportedFunctionality("inner continues, for now");
+    // }
 
-    // If it's unconditional, we'll want to handle any subtrees that it points to.
+    // If it's unconditional, we'll want to handle any subtrees (and introduced
+    // latches) that it points to.
     if (branchInst->isUnconditional()) {
-        if (domTree->dominates(bb, branchInst->getSuccessor(0)))
+        if (domTree->dominates(bb, branchInst->getSuccessor(0))
+            || (loops.size() && !preservedBackedge.top() && branchInst->getSuccessor(0) == latches.top()))
             handleBlock(branchInst->getSuccessor(0));
+
         return;
     }
 
@@ -513,8 +555,15 @@ void BottomTranslator::handleBranchingBlock(const llvm::BasicBlock* bb)
     return;
 }
 
-void BottomTranslator::handleBlock(const llvm::BasicBlock* bb)
+void BottomTranslator::handleBlock(const BasicBlock* bb)
 {
+    if (loops.size() && latches.top() == bb && !preservedBackedge.top()) {
+        assert(gla::Util::isUnconditional(bb));
+        forceOutputLatch();
+        backEndTranslator->addLoopBack(NULL, false);
+        return;
+    }
+
     if (handledBlocks.count(bb))
         return;
     handledBlocks.insert(bb);
@@ -525,9 +574,8 @@ void BottomTranslator::handleBlock(const llvm::BasicBlock* bb)
 
     // If the block exhibits loop-relevant control flow,
     // handle it specially
-    llvm::Loop* loop = loopInfo->getLoopFor(bb);
-    bool latch = loop && loops.size() && loop == loops.top() && gla::Util::isPredecessor(bb, latches.top());
-    if (loop && (loop->getHeader() == bb || gla::Util::isLatch(bb, loop) || loop->isLoopExiting(bb) || latch)
+    Loop* loop = loopInfo->getLoopFor(bb);
+    if (loop && (loop->getHeader() == bb || gla::Util::isLatch(bb, loop) || loop->isLoopExiting(bb))
              && flowControlMode == gla::EFcmStructuredOpCodes) {
 
         if (loop->getHeader() == bb)
@@ -538,7 +586,7 @@ void BottomTranslator::handleBlock(const llvm::BasicBlock* bb)
     }
 
     // If the block's a branching block, handle it specially.
-    if (llvm::isa<llvm::BranchInst>(bb->getTerminator())) {
+    if (isa<BranchInst>(bb->getTerminator())) {
         handleBranchingBlock(bb);
        return;
     }
@@ -548,7 +596,7 @@ void BottomTranslator::handleBlock(const llvm::BasicBlock* bb)
     return;
 }
 
-bool BottomTranslator::runOnModule(llvm::Module& module)
+bool BottomTranslator::runOnModule(Module& module)
 {
     //
     // Query the back end about its flow control
@@ -561,29 +609,29 @@ bool BottomTranslator::runOnModule(llvm::Module& module)
     //
     // Translate globals.
     //
-    for (llvm::Module::const_global_iterator global = module.global_begin(), end = module.global_end(); global != end; ++global)
+    for (Module::const_global_iterator global = module.global_begin(), end = module.global_end(); global != end; ++global)
         backEndTranslator->addGlobal(global);
 
     //
     // Translate code.
     //
-    llvm::Module::iterator function, lastFunction;
+    Module::iterator function, lastFunction;
     for (function = module.begin(), lastFunction = module.end(); function != lastFunction; ++function) {
         if (function->isDeclaration()) {
             //?? do we need to handle declarations of functions, or just definitions?
         } else {
 
             // Get/set the loop info
-            loopInfo  = &getAnalysis<llvm::LoopInfo>             (*function);
-            domTree   = &getAnalysis<llvm::DominatorTree>        (*function);
-            idConds   = &getAnalysis<llvm::IdentifyConditionals> (*function);
-            scalarEvo = &getAnalysis<llvm::ScalarEvolution>      (*function);
-            lazyInfo  = &getAnalysis<llvm::LazyValueInfo>        (*function);
+            loopInfo  = &getAnalysis<LoopInfo>             (*function);
+            domTree   = &getAnalysis<DominatorTree>        (*function);
+            idConds   = &getAnalysis<IdentifyConditionals> (*function);
+            scalarEvo = &getAnalysis<ScalarEvolution>      (*function);
+            lazyInfo  = &getAnalysis<LazyValueInfo>        (*function);
 
             // debug stuff
             if (gla::Options.debug && loopInfo->begin() != loopInfo->end()) {
-                llvm::errs() << "\n\nLoop info:\n";        loopInfo->print(llvm::errs());
-                llvm::errs() << "\n\nScalar evolution:\n"; scalarEvo->print(llvm::errs());
+                errs() << "\n\nLoop info:\n";        loopInfo->print(errs());
+                errs() << "\n\nScalar evolution:\n"; scalarEvo->print(errs());
             }
 
             // handle function's with bodies
@@ -591,8 +639,8 @@ bool BottomTranslator::runOnModule(llvm::Module& module)
             backEndTranslator->startFunctionDeclaration(function->getFunctionType(), function->getNameStr());
 
             // paramaters and arguments
-            for (llvm::Function::const_arg_iterator arg = function->arg_begin(), endArg = function->arg_end(); arg != endArg; ++arg) {
-                llvm::Function::const_arg_iterator nextArg = arg;
+            for (Function::const_arg_iterator arg = function->arg_begin(), endArg = function->arg_end(); arg != endArg; ++arg) {
+                Function::const_arg_iterator nextArg = arg;
                 ++nextArg;
                 backEndTranslator->addArgument(arg, nextArg == endArg);
             }
@@ -608,7 +656,7 @@ bool BottomTranslator::runOnModule(llvm::Module& module)
             lastBlock = false;
 
             // basic blocks
-            for (llvm::Function::const_iterator bb = function->begin(), E = function->end(); bb != E; ++bb) {
+            for (Function::const_iterator bb = function->begin(), E = function->end(); bb != E; ++bb) {
                 handleBlock(bb);
             }
 
@@ -622,13 +670,13 @@ bool BottomTranslator::runOnModule(llvm::Module& module)
     return false;
 }
 
-void BottomTranslator::getAnalysisUsage(llvm::AnalysisUsage& AU) const
+void BottomTranslator::getAnalysisUsage(AnalysisUsage& AU) const
 {
-    AU.addRequired<llvm::LoopInfo>();
-    AU.addRequired<llvm::DominatorTree>();
-    AU.addRequired<llvm::IdentifyConditionals>();
-    AU.addRequired<llvm::ScalarEvolution>();
-    AU.addRequired<llvm::LazyValueInfo>();
+    AU.addRequired<LoopInfo>();
+    AU.addRequired<DominatorTree>();
+    AU.addRequired<IdentifyConditionals>();
+    AU.addRequired<ScalarEvolution>();
+    AU.addRequired<LazyValueInfo>();
     return;
 }
 
@@ -642,7 +690,7 @@ namespace llvm {
                     false); // Whether it is an analysis pass
 } // end namespace llvm
 
-static llvm::ModulePass* createBottomTranslatorPass(gla::BackEndTranslator* bet, gla::BackEnd* be)
+static ModulePass* createBottomTranslatorPass(gla::BackEndTranslator* bet, gla::BackEnd* be)
 {
     BottomTranslator* bot = new BottomTranslator();
     bot->setBackEndTranslator(bet);
@@ -654,7 +702,7 @@ static llvm::ModulePass* createBottomTranslatorPass(gla::BackEndTranslator* bet,
 
 void gla::PrivateManager::translateBottomToTarget()
 {
-    llvm::PassManager passManager;
+    PassManager passManager;
     passManager.add(createBottomTranslatorPass(backEndTranslator, backEnd));
     passManager.run(*module);
 }

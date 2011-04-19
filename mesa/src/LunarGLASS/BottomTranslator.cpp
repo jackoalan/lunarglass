@@ -95,7 +95,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: - test for return statements inside a loop.
+// TODO: - return statements inside a loop.
 // Unimplemented: - loops with return statements inside them
 
 // LLVM includes
@@ -131,8 +131,9 @@
 #include "Manager.h"
 #include "Options.h"
 
-// LunarGLASS Passes
+// LunarGLASS Passes and Utils
 #include "Passes/Analysis/IdentifyConditionals.h"
+#include "Passes/Util/LoopUtil.h"
 
 using namespace llvm;
 
@@ -298,11 +299,11 @@ void BottomTranslator::newLoop(const BasicBlock* bb)
     SmallVector<BasicBlock*, 4> exitVec;
     loop->getUniqueExitBlocks(exitVec);
 
-    //todo: have exit lookahead.
+    // todo: have exit lookahead.
 
-    //assert(exits && "Unstructured flow control: flow exits a loop into multiple places");
+    // assert(exits && "Unstructured flow control: flow exits a loop into multiple places");
     // assert(header && latch && gla::Util::getNumLatches(loop) == 1 && properExitBlock(exit, loop) && "Loop not in canonical form");
-    assert((gla::Util::isUnconditional(latch) || loop->isLoopExiting(latch)) && "Non-bottom latching loop structure");
+    assert((IsUnconditional(latch) || loop->isLoopExiting(latch)) && "Non-bottom latching loop structure");
 
     assert(loops.size() == headers.size() && headers.size() == exits.size() && exits.size() == latches.size()
            && latches.size() == preservedBackedge.size() && "Internal data mismatch");
@@ -310,7 +311,7 @@ void BottomTranslator::newLoop(const BasicBlock* bb)
     if (loops.size() != 0 || loop->getLoopDepth() > 1)
         gla::UnsupportedFunctionality("nested loops");
 
-    bool preserved = gla::Util::isConditional(latch) || latch->getSinglePredecessor();
+    bool preserved = IsConditional(latch) || latch->getSinglePredecessor();
 
     // We'll have to handle the latch specially if the backedge is not preserved.
     if (! preserved) {
@@ -535,7 +536,7 @@ void BottomTranslator::handleBranchingBlock(const BasicBlock* bb)
 
     // // TODO: handle for if we're branching into a latch
     // if (Loop* loop = loopInfo->getLoopFor(bb)) {
-    //     if (loops.size() && loop == loops.top() && gla::Util::isPredecessor(bb, latches.top()) && !preservedBackedge.top())
+    //     if (loops.size() && loop == loops.top() && IsPredecessor(bb, latches.top()) && !preservedBackedge.top())
     //         gla::UnsupportedFunctionality("inner continues, for now");
     // }
 
@@ -558,7 +559,7 @@ void BottomTranslator::handleBranchingBlock(const BasicBlock* bb)
 void BottomTranslator::handleBlock(const BasicBlock* bb)
 {
     if (loops.size() && latches.top() == bb && !preservedBackedge.top()) {
-        assert(gla::Util::isUnconditional(bb));
+        assert(IsUnconditional(bb));
         forceOutputLatch();
         backEndTranslator->addLoopBack(NULL, false);
         return;

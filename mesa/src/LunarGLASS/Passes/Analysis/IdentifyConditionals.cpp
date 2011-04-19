@@ -36,7 +36,7 @@
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "LunarGLASSLlvmInterface.h"
+#include "Passes/Util/BasicBlockUtil.h"
 
 using namespace llvm;
 
@@ -53,13 +53,19 @@ bool IdentifyConditionals::runOnFunction(Function &F)
         if (branchInst->isUnconditional())
             continue;
 
+        BasicBlock* left  = branchInst->getSuccessor(0);
+        BasicBlock* right = branchInst->getSuccessor(1);
+
         // If there's not a single merge point exclude this bb
-        BasicBlock* merge = gla::Util::getSingleMergePoint(bb, domFront);
+        SmallVector<BasicBlock*, 2> points;
+        points.push_back(left);
+        points.push_back(right);
+
+
+        BasicBlock* merge = GetSingleMergePoint(points, domFront);
         if (!merge)
             continue;
 
-        BasicBlock* left  = branchInst->getSuccessor(0);
-        BasicBlock* right = branchInst->getSuccessor(1);
 
         std::pair<const BasicBlock*, const Conditional*> pair(bb, new Conditional(bb, merge, left, right, &domFront));
 
@@ -90,13 +96,6 @@ void IdentifyConditionals::releaseMemory()
     conditionals.clear();
 }
 
-// Whether from unconditionaly branches to to.
-inline static bool uncondBranchesTo(BasicBlock* from, BasicBlock* to)
-{
-    BranchInst* bi = dyn_cast<BranchInst>(from->getTerminator());
-    return bi && bi->isUnconditional() && (bi->getSuccessor(0) == to);
-}
-
 bool Conditional::isEmptyConditional() const
 {
     if (!isSelfContained())
@@ -104,8 +103,8 @@ bool Conditional::isEmptyConditional() const
 
     // Todo: test the case when the then or else have underlying subgraphs
 
-    bool isLeftEmpty  = (left  == merge) || (uncondBranchesTo(left, merge)  && gla::Util::isEmptyBB(left));
-    bool isRightEmpty = (right == merge) || (uncondBranchesTo(right, merge) && gla::Util::isEmptyBB(right));
+    bool isLeftEmpty  = (left  == merge) || (UncondBranchesTo(left, merge)  && IsEmptyBB(left));
+    bool isRightEmpty = (right == merge) || (UncondBranchesTo(right, merge) && IsEmptyBB(right));
 
     return isLeftEmpty && isRightEmpty;
 }

@@ -88,7 +88,23 @@ void main()
     //         color.z += bigColor6.z;
     // }
 
-    // Multi-exit
+    // // Multi-exit
+    // do {
+    //    if (d7 < 0.0)
+    //        break;
+
+    //    color += bigColor7;
+
+    //    if (d7 < 1.0) {
+    //        color.z++;
+    //        break;
+    //    }
+
+    //    color += BaseColor;
+
+    // } while (true);
+
+    // Multi-exit2
     do {
        if (d7 < 0.0)
            break;
@@ -97,12 +113,18 @@ void main()
 
        if (d7 < 1.0) {
            color.z++;
+           if (d7 < 2.0) {
+               color.y++;
+           } else {
+               color.x++;
+           }
            break;
        }
 
        color += BaseColor;
 
     } while (true);
+
 
     // // Multi-continue
     // while (color.x < 10) {

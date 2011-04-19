@@ -203,56 +203,12 @@ namespace gla {
             return name.length() < 2 || (name[1] >= '0' && name[1] <= '9');
         }
 
-        // Whether the block terminates in a conditional branch
-        static bool isConditional(const llvm::BasicBlock* bb)
-        {
-            if (const llvm::BranchInst* bi = llvm::dyn_cast<llvm::BranchInst>(bb->getTerminator()))
-                return bi->isConditional();
-
-            return false;
-        }
-
-        // Whether the block terminates in a unconditional branch
-        static bool isUnconditional(const llvm::BasicBlock* bb)
-        {
-            return !isConditional(bb);
-        }
-
-        // Whether block A is a predecessor of B
-        static bool isPredecessor(const llvm::BasicBlock* pred, const llvm::BasicBlock* succ)
-        {
-            for (llvm::const_pred_iterator i = llvm::pred_begin(succ), e = llvm::pred_end(succ); i != e; ++i)
-                if (*i == pred)
-                    return true;
-
-            return false;
-        }
-
-        // A is an indirect predecessor of B if A branches to some block that
-        // unconditionally branches to B.
-        static bool isIndirectPredecessor(const llvm::BasicBlock* pred, const llvm::BasicBlock* succ)
-        {
-            for (llvm::const_pred_iterator i = llvm::pred_begin(succ), e = llvm::pred_end(succ); i != e; ++i)
-                if (isUnconditional(*i))
-                    if (isPredecessor(pred, *i))
-                        return true;
-
-            return false;
-        }
-
         // true if provided basic block is one of the (possibly many) latches in
         // the provided loop
         static bool isLatch(const llvm::BasicBlock* bb, llvm::Loop* loop);
 
         // Return the number of latches in a loop
         static int getNumLatches(llvm::Loop* loop);
-
-        // Whether a basic block has no constituent instructions, other than
-        // it's phi-nodes and terminator.
-        static bool isEmptyBB(const llvm::BasicBlock* bb)
-        {
-            return bb->getFirstNonPHIOrDbg() == bb->getTerminator();
-        }
 
         // Whether a SmallVector contains the given element
         template<typename T>
@@ -267,11 +223,6 @@ namespace gla {
             return false;
         }
 
-        // Return the single merge point of the given conditional basic block. Returns
-        // null if there is no merge point, or if there are more than 1 merge
-        // points. Note that the presense of backedges or exitedges in the then and else
-        // branchs' subgraphs may cause there to be multiple potential merge points.
-        static llvm::BasicBlock* getSingleMergePoint(const llvm::BasicBlock* condBB, llvm::DominanceFrontier& domFront);
 
     };
 };

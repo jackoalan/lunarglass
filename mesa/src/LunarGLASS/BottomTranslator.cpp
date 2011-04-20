@@ -121,7 +121,6 @@
 #include <string>
 #include <map>
 #include <vector>
-#include <stack>
 #include <algorithm>
 
 // LunarGLASS includes
@@ -171,6 +170,7 @@ namespace {
 
         LoopInfo* loopInfo;
         DominatorTree* domTree;
+        DominanceFrontier* domFront;
         IdentifyConditionals* idConds;
         ScalarEvolution* scalarEvo;
         LazyValueInfo* lazyInfo;
@@ -180,11 +180,7 @@ namespace {
         SmallPtrSet<const BasicBlock*,8> handledBlocks;
 
         // Data for handling loops
-        std::stack<BasicBlock*> headers;
-        std::stack<BasicBlock*> latches;
-        std::stack< SmallVector<BasicBlock*,4> > exits;
-        std::stack<Loop*> loops;
-        std::stack<bool> preservedBackedge;
+        LoopStack* loops;
 
         // Set everything up for handling a new loop
         void newLoop(const BasicBlock*);
@@ -274,7 +270,6 @@ void BottomTranslator::handleNonTerminatingInstructions(const BasicBlock* bb) {
 
         if (! (backEnd->getRemovePhiFunctions() && inst->getOpcode() == Instruction::PHI))
             backEndTranslator->add(inst, lastBlock);
-
     }
 }
 
@@ -290,39 +285,19 @@ static bool properExitBlock(const BasicBlock* bb, const Loop* loop)
 
 void BottomTranslator::newLoop(const BasicBlock* bb)
 {
-    Loop* loop = loopInfo->getLoopFor(bb);
-    assert(loop && "newLoop called on non-loop");
+    assert(loopInfo->getLoopFor(bb) && "newLoop called on non-loop");
 
-    BasicBlock* header = loop->getHeader();
-    BasicBlock* latch  = loop->getLoopLatch();
+    if (loops->size() != 0)
+        gla::UnsupportedFunctionality("nested loops");
 
-    SmallVector<BasicBlock*, 4> exitVec;
-    loop->getUniqueExitBlocks(exitVec);
+    loops->newLoop(bb);
 
     // todo: have exit lookahead.
 
-    // assert(exits && "Unstructured flow control: flow exits a loop into multiple places");
-    // assert(header && latch && gla::Util::getNumLatches(loop) == 1 && properExitBlock(exit, loop) && "Loop not in canonical form");
-    assert((IsUnconditional(latch) || loop->isLoopExiting(latch)) && "Non-bottom latching loop structure");
-
-    assert(loops.size() == headers.size() && headers.size() == exits.size() && exits.size() == latches.size()
-           && latches.size() == preservedBackedge.size() && "Internal data mismatch");
-
-    if (loops.size() != 0 || loop->getLoopDepth() > 1)
-        gla::UnsupportedFunctionality("nested loops");
-
-    bool preserved = IsConditional(latch) || latch->getSinglePredecessor();
-
     // We'll have to handle the latch specially if the backedge is not preserved.
-    if (! preserved) {
-        handledBlocks.insert(latch);
+    if (! loops->top()->preservesBackedge()) {
+        handledBlocks.insert(loops->top()->getLatch());
     }
-
-    loops.push(loop);
-    headers.push(header);
-    exits.push(exitVec);
-    latches.push(latch);
-    preservedBackedge.push(preserved);
 }
 
 void BottomTranslator::attemptHandleDominatee(const BasicBlock* dominator, const BasicBlock* dominatee)
@@ -339,21 +314,25 @@ void BottomTranslator::attemptHandleDominatee(const BasicBlock* dominator, const
 
 void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
 {
-    assert(loops.size() != 0 && "handleLoopBlock called on a new loop without newLoop being called");
-    assert(loops.size() == 1 && "uncaught nested loop");
+    assert(loops->size() != 0 && "handleLoopBlock called on a new loop without newLoop being called");
+    assert(loops->size() == 1 && "uncaught nested loop");
 
-    const BranchInst* branchInst = dyn_cast<BranchInst>(bb->getTerminator());
-    assert(branchInst && "handleLoopBlock called with non-branch terminator");
+    const BranchInst* br = dyn_cast<BranchInst>(bb->getTerminator());
+    assert(br && "handleLoopBlock called with non-branch terminator");
 
-    Value* condition = branchInst->isConditional() ? branchInst->getCondition() : NULL;
+    Value* condition = br->isConditional() ? br->getCondition() : NULL;
 
-    Loop* loop = loops.top();
+    LoopWrapper* loop = loops->top();
 
-    bool isHeader  = bb == headers.top();
-    bool isLatch   = bb == latches.top();
+    BasicBlock* header = loop->getHeader();
+    BasicBlock* latch  = loop->getLatch();
+    BasicBlock* exitMerge = loop->getExitMerge();
+
+    bool isHeader  = bb == header;
+    bool isLatch   = bb == latch;
     bool isExiting = loop->isLoopExiting(bb);
 
-    bool preserved = preservedBackedge.top();
+    bool preserved = loop->preservesBackedge();
 
     assert(!isLatch || preserved); // isLatch => preserved
 
@@ -376,25 +355,25 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
         handleNonTerminatingInstructions(bb);
     }
 
-    // Add phi copies (if applicable)
-    if ((isLatch || isExiting) && backEnd->getRemovePhiFunctions())
-        addPhiCopies(branchInst);
-
     // If it's a latch, add the (possibly conditional) loop-back. Immediately
     // handle the other block if we dominate it.
     if (isLatch) {
-        if (preservedBackedge.top()) {
-            backEndTranslator->addLoopBack(condition, branchInst->getSuccessor(0) != headers.top());
+        if (preserved) {
+            // Add phi copies (if applicable)
+            if (backEnd->getRemovePhiFunctions())
+                addPhiCopies(br);
+
+            backEndTranslator->addLoopBack(condition, br->getSuccessor(0) != header);
             assert(( !condition || isExiting) && "redundant assertion failed");
         } else {
             forceOutputLatch();
-            backEndTranslator->addLoopBack(condition, branchInst->getSuccessor(0) != latches.top());
+            backEndTranslator->addLoopBack(condition, br->getSuccessor(0) != latch);
 
-            int pos = branchInst->getSuccessor(0) == latches.top() ? 0 : 1;
-            assert(branchInst->getSuccessor(pos) == latches.top() && "Latch block does not branch to latch");
+            int pos = br->getSuccessor(0) == latch ? 0 : 1;
+            assert(br->getSuccessor(pos) == latch && "Latch block does not branch to latch");
 
-            if (branchInst->isConditional() && loop->contains(branchInst->getSuccessor(!pos)))
-                attemptHandleDominatee(bb, branchInst->getSuccessor(!pos));
+            if (br->isConditional() && loop->contains(br->getSuccessor(!pos)))
+                attemptHandleDominatee(bb, br->getSuccessor(!pos));
 
         }
     }
@@ -402,16 +381,32 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
     // If we're exiting, add the (possibly conditional) exit. Immediately handle
     // the other block if we dominate it.
     if (isExiting) {
-        if (gla::Util::smallVectorContains(exits.top(), branchInst->getSuccessor(0))) {
-            backEndTranslator->addLoopExit(condition, false);
-            if (condition)
-                attemptHandleDominatee(bb, branchInst->getSuccessor(1));
-        } else if (condition && gla::Util::smallVectorContains(exits.top(), branchInst->getSuccessor(1))) {
-            backEndTranslator->addLoopExit(condition, true);
-            attemptHandleDominatee(bb, branchInst->getSuccessor(0));
-        } else {
-            assert(!"Exiting block does not branch to exit");
+        int pos = loop->exitSuccNumber(bb);
+        assert(pos != -1);
+        if (pos == 2)
+            gla::UnsupportedFunctionality("complex loop exits (two exit branches from same block)");
+
+        // Set up the conditional, and add the exit block subgraph if it isn't
+        // the exit merge.
+        if (condition) {
+            backEndTranslator->addIf(condition, pos == 1);
+
+            BasicBlock* exitBlock = br->getSuccessor(pos);
+            if (exitBlock != exitMerge) {
+                if (handledBlocks.count(exitBlock)) {
+                    gla::UnsupportedFunctionality("complex loop exits (shared exit block)");
+                }
+
+                handleBlock(exitBlock);
+            }
         }
+
+
+        backEndTranslator->addLoopExit();
+        backEndTranslator->addEndif();
+
+        if (condition)
+            attemptHandleDominatee(bb, br->getSuccessor(!pos));
     }
 
     // We've been fully handled by now, unless we're a header
@@ -421,13 +416,13 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
 
     // If we're an unconditional header (e.g. branching immediately to an inner
     // loop), add our target
-    if (branchInst->isUnconditional()) {
-        handleBlock(branchInst->getSuccessor(0));
+    if (br->isUnconditional()) {
+        handleBlock(br->getSuccessor(0));
     }
 
     // By this point, we're a header and all of our blocks in our loop should of
     // been handled.
-    for (Loop::block_iterator i = loops.top()->block_begin(), e = loops.top()->block_end(); i != e; ++i) {
+    for (Loop::block_iterator i = loops->top()->block_begin(), e = loops->top()->block_end(); i != e; ++i) {
         if (! handledBlocks.count(*i))
             errs() << " unhandled: " << **i << "\n";
         assert(handledBlocks.count(*i) && "Loop blocks remaining that were not handled structurally");
@@ -436,27 +431,33 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
     backEndTranslator->endLoop();
     closeLoop();
 
+    // Schedule the handling of the exit merge block now, to make sure it occurs
+    // immediately
+    handleBlock(exitMerge);
+
     return;
 }
 
 void BottomTranslator::closeLoop()
 {
-    loops.pop();
-    headers.pop();
-    exits.pop();
-    latches.pop();
-    preservedBackedge.pop();
+    loops->pop();
+
+    if (loops->size() != 0)
+        gla::UnsupportedFunctionality("nested loops (in closing)");
 }
 
 void BottomTranslator::forceOutputLatch()
 {
-    assert(latches.top() && !preservedBackedge.top());
-    assert(handledBlocks.count(latches.top()));
+    const BasicBlock* latch = loops->top()->getLatch();
+    bool preserved  = loops->top()->preservesBackedge();
 
-    BranchInst* br = dyn_cast<BranchInst>(latches.top()->getTerminator());
+    assert(latch && !preserved);
+    assert(handledBlocks.count(latch));
+
+    const BranchInst* br = dyn_cast<BranchInst>(latch->getTerminator());
     assert(br && br->isUnconditional());
 
-    handleNonTerminatingInstructions(latches.top());
+    handleNonTerminatingInstructions(latch);
 
     if (backEnd->getRemovePhiFunctions()) {
         addPhiCopies(br);
@@ -525,32 +526,32 @@ void BottomTranslator::handleReturnBlock(const BasicBlock* bb)
 
 void BottomTranslator::handleBranchingBlock(const BasicBlock* bb)
 {
-    const BranchInst* branchInst = dyn_cast<BranchInst>(bb->getTerminator());
-    assert(branchInst);
+    const BranchInst* br = dyn_cast<BranchInst>(bb->getTerminator());
+    assert(br);
 
     // Handle it's instructions and do phi node removal if appropriate
     handleNonTerminatingInstructions(bb);
     if (backEnd->getRemovePhiFunctions()) {
-        addPhiCopies(branchInst);
+        addPhiCopies(br);
     }
 
     // // TODO: handle for if we're branching into a latch
     // if (Loop* loop = loopInfo->getLoopFor(bb)) {
-    //     if (loops.size() && loop == loops.top() && IsPredecessor(bb, latches.top()) && !preservedBackedge.top())
+    //     if (loops->size() && loop == loops->top() && IsPredecessor(bb, latch) && !preservedBackedge.top())
     //         gla::UnsupportedFunctionality("inner continues, for now");
     // }
 
     // If it's unconditional, we'll want to handle any subtrees (and introduced
     // latches) that it points to.
-    if (branchInst->isUnconditional()) {
-        if (domTree->dominates(bb, branchInst->getSuccessor(0))
-            || (loops.size() && !preservedBackedge.top() && branchInst->getSuccessor(0) == latches.top()))
-            handleBlock(branchInst->getSuccessor(0));
+    if (br->isUnconditional()) {
+        if (domTree->dominates(bb, br->getSuccessor(0))
+            || (loops->size() && !loops->top()->preservesBackedge() && br->getSuccessor(0) == loops->top()->getLatch()))
+            handleBlock(br->getSuccessor(0));
 
         return;
     }
 
-    assert(branchInst->getNumSuccessors() == 2 && "Ill-formed conditional branch");
+    assert(br->getNumSuccessors() == 2 && "Ill-formed conditional branch");
 
     handleIfBlock(bb);
     return;
@@ -558,7 +559,7 @@ void BottomTranslator::handleBranchingBlock(const BasicBlock* bb)
 
 void BottomTranslator::handleBlock(const BasicBlock* bb)
 {
-    if (loops.size() && latches.top() == bb && !preservedBackedge.top()) {
+    if (loops->size() && loops->top()->getLatch() == bb && !loops->top()->preservesBackedge()) {
         assert(IsUnconditional(bb));
         forceOutputLatch();
         backEndTranslator->addLoopBack(NULL, false);
@@ -599,6 +600,8 @@ void BottomTranslator::handleBlock(const BasicBlock* bb)
 
 bool BottomTranslator::runOnModule(Module& module)
 {
+    loops = new LoopStack();
+
     //
     // Query the back end about its flow control
     //
@@ -625,9 +628,13 @@ bool BottomTranslator::runOnModule(Module& module)
             // Get/set the loop info
             loopInfo  = &getAnalysis<LoopInfo>             (*function);
             domTree   = &getAnalysis<DominatorTree>        (*function);
+            domFront  = &getAnalysis<DominanceFrontier>    (*function);
             idConds   = &getAnalysis<IdentifyConditionals> (*function);
             scalarEvo = &getAnalysis<ScalarEvolution>      (*function);
             lazyInfo  = &getAnalysis<LazyValueInfo>        (*function);
+
+            loops->setDominanceFrontier(domFront);
+            loops->setLoopInfo(loopInfo);
 
             // debug stuff
             if (gla::Options.debug && loopInfo->begin() != loopInfo->end()) {
@@ -675,6 +682,7 @@ void BottomTranslator::getAnalysisUsage(AnalysisUsage& AU) const
 {
     AU.addRequired<LoopInfo>();
     AU.addRequired<DominatorTree>();
+    AU.addRequired<DominanceFrontier>();
     AU.addRequired<IdentifyConditionals>();
     AU.addRequired<ScalarEvolution>();
     AU.addRequired<LazyValueInfo>();

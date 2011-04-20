@@ -35,23 +35,21 @@
 namespace llvm {
 
 // Return the single merge point of the given basic blocks.  Returns null if
-// there is no merge point, or if there are more than 1 merge points.  Note that
-// the presense of backedges or exitedges may cause there to be multiple
-// potential merge points.
+// there is no merge point, or if there are more than 1 merge points.  If the
+// vector contains only a single element, returns that element.  If the vector
+// is empty, returns NULL.  Note that the presense of backedges or exitedges may
+// cause there to be multiple potential merge points.
 BasicBlock* GetSingleMergePoint(SmallVectorImpl<BasicBlock*>& bbVec, DominanceFrontier& domFront)
 {
     if (bbVec.size() == 0)
         return NULL;
 
-    BasicBlock* prev = const_cast<BasicBlock*>(bbVec[0]); // Necessary, but safe
+    BasicBlock* prev = bbVec[0];
 
-    DominanceFrontier::DomSetType prevSet = (*domFront.find(const_cast<BasicBlock*>(prev))).second;
+    DominanceFrontier::DomSetType prevSet = (*domFront.find(prev)).second;
 
     if (bbVec.size() == 1) {
-        if (prevSet.size() > 1)
-            return NULL;
-
-        return *prevSet.begin();
+        return prev;
     }
 
     BasicBlock* candidate = NULL;

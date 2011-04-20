@@ -116,6 +116,8 @@ namespace llvm {
         // of then or else subgraphs, for which is currently will return false.
         bool isEmptyConditional() const;
 
+        // todo: latching and exiting conditionals
+
         BasicBlock* getEntryBlock() const { return entry; }
         BasicBlock* getMergeBlock() const { return merge; }
         BasicBlock* getThenBlock()  const { return left; }

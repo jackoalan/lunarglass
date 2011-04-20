@@ -443,7 +443,7 @@ void BottomTranslator::closeLoop()
     loops->pop();
 
     if (loops->size() != 0)
-        gla::UnsupportedFunctionality("nested loops (in closing)");
+        gla::UnsupportedFunctionality("nested loops [2]");
 }
 
 void BottomTranslator::forceOutputLatch()
@@ -472,18 +472,22 @@ void BottomTranslator::handleIfBlock(const BasicBlock* bb)
     // If we don't have a conditional entry for bb, then we're dealing with
     // conditionals with backedges/exits and other tricky control flow in them.
     if (! cond) {
-        const BranchInst* br = dyn_cast<BranchInst>(bb->getTerminator());
-        assert(br && br->isConditional());
+        gla::UnsupportedFunctionality("complex continues in loops");
 
-        backEndTranslator->addIf(br->getCondition(), false);
-        handleBlock(br->getSuccessor(0));
+        // todo: have idconditionls recognizing latching conditionals
 
-        backEndTranslator->addElse();
-        handleBlock(br->getSuccessor(1));
+        // const BranchInst* br = dyn_cast<BranchInst>(bb->getTerminator());
+        // assert(br && br->isConditional());
 
-        backEndTranslator->addEndif();
+        // backEndTranslator->addIf(br->getCondition(), false);
+        // handleBlock(br->getSuccessor(0));
 
-        return;
+        // backEndTranslator->addElse();
+        // handleBlock(br->getSuccessor(1));
+
+        // backEndTranslator->addEndif();
+
+        // return;
     }
 
 

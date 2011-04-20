@@ -161,6 +161,54 @@ llvm::Constant* GlslToTopVisitor::createLLVMConstant(ir_constant* constant)
     return llvmConstant;
 }
 
+// If the loop is an inductive loop (to the front-end), set up the increment and
+// the condition test. For now, the front end inserts the increment into the
+// loop body, so don't do that yet.
+bool GlslToTopVisitor::setUpLatch()
+{
+    LoopData ld = loops.top();
+
+    if (ld.isInductive) {
+        assert(ld.counter && ld.counter->getType()->isPointerTy() && ld.increment && ld.finish);
+
+        llvm::Value* iPrev = builder.CreateLoad(ld.counter);
+        llvm::Value* cmp   = NULL;
+
+        // For now, the front end puts the increment inside the body of the
+        // loop, so don't do it
+        // // llvm::Value* iNext = NULL;
+        // // switch(ld.counter->getType()->getContainedType(0)->getTypeID()) {
+        // // case llvm::Type::FloatTyID:       iNext = builder.CreateFAdd(iPrev, ld.increment);     break;
+        // // case llvm::Type::IntegerTyID:     iNext = builder.CreateAdd( iPrev, ld.increment);     break;
+
+        // // default: gla::UnsupportedFunctionality("unknown type in inductive variable");
+        // // }
+
+        // // builder.CreateStore(iNext, ld.counter);
+
+        // note: If we do the increment ourselves, change iPrev to be iNext
+        switch(ld.counter->getType()->getContainedType(0)->getTypeID()) {
+        case llvm::Type::FloatTyID:       cmp = builder.CreateFCmpOGE(iPrev, ld.finish);     break;
+        case llvm::Type::IntegerTyID:     cmp = builder.CreateICmpSGE(iPrev, ld.finish);     break;
+
+        default: gla::UnsupportedFunctionality("unknown type in inductive variable [2]");
+        }
+
+        // If iNext exceeds ld.finish, exit the loop, else branch back to
+        // the header
+        builder.CreateCondBr(cmp, ld.exit, ld.header);
+
+        // Not going to dreate dummy basic block, as our callers should see if
+        // we set up the latch
+
+        lastValue.clear();
+
+        return true;
+    }
+
+    return false;
+}
+
 ir_visitor_status
     GlslToTopVisitor::visit(ir_loop_jump *ir)
 {
@@ -170,11 +218,13 @@ ir_visitor_status
     llvm::BasicBlock* postLoopJump = llvm::BasicBlock::Create(context, "post-loopjump", function);
 
     if (ir->is_break()) {
-        builder.CreateBr(exitStack.top());
+        builder.CreateBr(loops.top().exit);
     }
 
     if (ir->is_continue()) {
-        builder.CreateBr(headerStack.top());
+        bool done = setUpLatch();
+        if (! done)
+            builder.CreateBr(loops.top().header);
     }
 
     builder.SetInsertPoint(postLoopJump);
@@ -266,19 +316,36 @@ ir_visitor_status
 {
     llvm::Function* function = builder.GetInsertBlock()->getParent();
 
-    llvm::BasicBlock* headerBB = llvm::BasicBlock::Create(context, "loop-header", function);
-    llvm::BasicBlock *mergeBB = llvm::BasicBlock::Create(context, "loop-merge");
+    llvm::BasicBlock *headerBB = llvm::BasicBlock::Create(context, "loop-header", function);
+    llvm::BasicBlock *mergeBB  = llvm::BasicBlock::Create(context, "loop-merge");
 
-    // Push the blocks onto the stacks, so that breaks/continues inside the loop
-    // know where to go
-    exitStack.push(mergeBB);
-    headerStack.push(headerBB);
+    // Remember the blocks, so that breaks/continues inside the loop know where
+    // to go
+    LoopData ld = { };
+    ld.exit   = mergeBB;
+    ld.header = headerBB;
 
-    // It seems like the AST we get from GLSL does not have anything in the loop
-    // filled in except it's body. Assert on these assumptions
-    assert(!ir->from && "Loop has from field set");
-    assert(!ir->to && "Loop has from field set");
-    assert(!ir->increment && "Loop has from field set");
+    if (ir->counter) {
+        // I've not seen the compare field used, only from+to+increment
+        assert(ir->from && ir->to && ir->increment && "partially undefined static inductive loop");
+        assert(ir->from->as_constant() && ir->to->as_constant() && ir->increment->as_constant()
+               && "non-constant fields for static inductive loop");
+
+        ld.finish      = createLLVMConstant(ir->to->as_constant());
+        ld.increment   = createLLVMConstant(ir->increment->as_constant());
+        ld.counter     = createLLVMVariable(ir->counter);
+        ld.isInductive = true;
+
+        namedValues[ir->counter] = ld.counter;
+
+        llvm::Constant* from = createLLVMConstant(ir->from->as_constant());
+
+        builder.CreateStore(from, ld.counter);
+    }
+
+    // todo: see if a phi node for the counter needs to be added
+
+    loops.push(ld);
 
     // Branch into the loop
     builder.CreateBr(headerBB);
@@ -289,15 +356,16 @@ ir_visitor_status
     visit_list_elements(this, &ir->body_instructions);
 
     // Branch back through the loop
-    builder.CreateBr(headerBB);
+    bool done = setUpLatch();
+    if (! done)
+        builder.CreateBr(headerBB);
 
     // Now, create a new block for the rest of the post-loop program
     function->getBasicBlockList().push_back(mergeBB);
     builder.SetInsertPoint(mergeBB);
 
     // Remove ourselves from the stacks
-    exitStack.pop();
-    headerStack.pop();
+    loops.pop();
 
     // lastValue may not be up-to-date, and we shouldn't be referenced
     // anyways

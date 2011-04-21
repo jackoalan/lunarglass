@@ -65,6 +65,7 @@ namespace llvm {
         bool contains(const BasicBlock* bb)      const { return loop->contains(bb); }
         Loop::block_iterator block_begin()       const { return loop->block_begin(); }
         Loop::block_iterator block_end()         const { return loop->block_end(); }
+        Value* getTripCount()                    const { return loop->getTripCount(); }
 
         // New functionality
 

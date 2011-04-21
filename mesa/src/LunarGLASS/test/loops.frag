@@ -53,6 +53,14 @@ void main()
         ++color.w;
     }
 
+    // For (static) multi-exit
+    for (int i = 0; i < 42; ++i) {
+        color.z += d3;
+        if (color.x < d4)
+            break;
+        ++color.w;
+    }
+
     // // Latchy
     // do {
     //     color += bigColor4;

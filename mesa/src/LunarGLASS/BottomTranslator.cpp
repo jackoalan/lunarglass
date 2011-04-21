@@ -152,7 +152,9 @@ namespace {
 
         void setLoopInfo(LoopInfo* li) { loopInfo = li; }
 
+        // Add phi copies, if the backend wants us to
         void addPhiCopies(const Instruction*);
+        void addPhiCopies(const BasicBlock* curBB, const BasicBlock* nextBB);
 
         void setBackEndTranslator(gla::BackEndTranslator* bet) { backEndTranslator = bet; }
         void setBackEnd(gla::BackEnd* be)                      { backEnd = be; }
@@ -221,6 +223,9 @@ namespace {
 
 void BottomTranslator::declarePhiCopies(const Function* function)
 {
+    if (! backEnd->getRemovePhiFunctions())
+        return;
+
     // basic blocks
     for (Function::const_iterator bb = function->begin(), E = function->end(); bb != E; ++bb) {
 
@@ -230,6 +235,27 @@ void BottomTranslator::declarePhiCopies(const Function* function)
 
             if (llvmInstruction->getOpcode() == Instruction::PHI)
                 backEndTranslator->declarePhiCopy(llvmInstruction);
+        }
+    }
+}
+
+void BottomTranslator::addPhiCopies(const BasicBlock* curBB, const BasicBlock* nextBB)
+{
+    if (! backEnd->getRemovePhiFunctions())
+        return;
+
+    // for each llvm phi node, add a copy instruction
+    for (BasicBlock::const_iterator i = nextBB->begin(), e = nextBB->end(); i != e; ++i) {
+        const Instruction* destInstruction = i;
+        const PHINode *phiNode = dyn_cast<PHINode>(destInstruction);
+
+        if (phiNode) {
+            // Find the operand whose predecessor is curBB.
+            int predIndex = phiNode->getBasicBlockIndex(curBB);
+            if (predIndex >= 0) {
+                // then we found ourselves
+                backEndTranslator->addPhiCopy(phiNode, phiNode->getIncomingValue(predIndex));
+            }
         }
     }
 }
@@ -244,22 +270,7 @@ void BottomTranslator::addPhiCopies(const Instruction* llvmInstruction)
         if (! phiBlock)
             continue;
 
-        // for each llvm phi node, add a copy instruction
-        for (BasicBlock::const_iterator i = phiBlock->begin(), e = phiBlock->end(); i != e; ++i) {
-            const Instruction* destInstruction = i;
-            const PHINode *phiNode = dyn_cast<PHINode>(destInstruction);
-
-            if (phiNode) {
-                // find the operand whose predecessor is us
-                // each phi operand takes up two normal operands,
-                // so don't directly access operands; use the Index encapsulation
-                int predIndex = phiNode->getBasicBlockIndex(llvmInstruction->getParent());
-                if (predIndex >= 0) {
-                    // then we found ourselves
-                    backEndTranslator->addPhiCopy(phiNode, phiNode->getIncomingValue(predIndex));
-                }
-            }
-        }
+        addPhiCopies(llvmInstruction->getParent(), phiBlock);
     }
 }
 
@@ -306,6 +317,7 @@ void BottomTranslator::attemptHandleDominatee(const BasicBlock* dominator, const
     BasicBlock* unconstTee = const_cast<BasicBlock*>(dominatee); // Necessary
 
     if (domTree->properlyDominates(unconstTor, unconstTee)) {
+        addPhiCopies(dominator, dominatee);
         handleBlock(dominatee);
     }
 }
@@ -315,7 +327,8 @@ void BottomTranslator::attemptHandleDominatee(const BasicBlock* dominator, const
 void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
 {
     assert(loops->size() != 0 && "handleLoopBlock called on a new loop without newLoop being called");
-    assert(loops->size() == 1 && "uncaught nested loop");
+    if (loops->size() > 1)
+        gla::UnsupportedFunctionality("nested loops [2]");
 
     const BranchInst* br = dyn_cast<BranchInst>(bb->getTerminator());
     assert(br && "handleLoopBlock called with non-branch terminator");
@@ -338,6 +351,10 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
 
     // If it's a loop header, have the back-end add it
     if (isHeader) {
+        // todo: add stuff for simple inductive loops
+        // if (loop->getTripCount())
+        //     llvm::errs() << " \n\nstatic inductive loop\n\n";
+
         // PHINode* pn = loop->getCanonicalInductionVariable();
         // if (pn)
         //     backEndTranslator->beginInductiveLoop();
@@ -358,29 +375,25 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
     // If it's a latch, add the (possibly conditional) loop-back. Immediately
     // handle the other block if we dominate it.
     if (isLatch) {
-        if (preserved) {
+        assert(preserved);
+
+        if (condition) {
+            backEndTranslator->addIf(condition, br->getSuccessor(0) != header);
+
             // Add phi copies (if applicable)
-            if (backEnd->getRemovePhiFunctions())
-                addPhiCopies(br);
+            addPhiCopies(bb, header);
 
-            backEndTranslator->addLoopBack(condition, br->getSuccessor(0) != header);
-            assert(( !condition || isExiting) && "redundant assertion failed");
-        } else {
-            forceOutputLatch();
-            backEndTranslator->addLoopBack(condition, br->getSuccessor(0) != latch);
-
-            int pos = br->getSuccessor(0) == latch ? 0 : 1;
-            assert(br->getSuccessor(pos) == latch && "Latch block does not branch to latch");
-
-            if (br->isConditional() && loop->contains(br->getSuccessor(!pos)))
-                attemptHandleDominatee(bb, br->getSuccessor(!pos));
-
+            backEndTranslator->addLoopBack();
+            backEndTranslator->addEndif();
         }
+
+        assert(( !condition || isExiting) && "redundant assertion failed");
     }
 
     // If we're exiting, add the (possibly conditional) exit. Immediately handle
     // the other block if we dominate it.
     if (isExiting) {
+
         int pos = loop->exitSuccNumber(bb);
         assert(pos != -1);
         if (pos == 2)
@@ -390,6 +403,9 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
         // the exit merge.
         if (condition) {
             backEndTranslator->addIf(condition, pos == 1);
+
+            // Add phi copies (if applicable)
+            addPhiCopies(bb, br->getSuccessor(pos));
 
             BasicBlock* exitBlock = br->getSuccessor(pos);
             if (exitBlock != exitMerge) {
@@ -405,8 +421,9 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
         backEndTranslator->addLoopExit();
         backEndTranslator->addEndif();
 
-        if (condition)
-            attemptHandleDominatee(bb, br->getSuccessor(!pos));
+        if (condition) {
+            attemptHandleDominatee(bb, br->getSuccessor(! pos));
+        }
     }
 
     // We've been fully handled by now, unless we're a header
@@ -443,7 +460,7 @@ void BottomTranslator::closeLoop()
     loops->pop();
 
     if (loops->size() != 0)
-        gla::UnsupportedFunctionality("nested loops [2]");
+        gla::UnsupportedFunctionality("nested loops [3]");
 }
 
 void BottomTranslator::forceOutputLatch()
@@ -459,9 +476,8 @@ void BottomTranslator::forceOutputLatch()
 
     handleNonTerminatingInstructions(latch);
 
-    if (backEnd->getRemovePhiFunctions()) {
-        addPhiCopies(br);
-    }
+    addPhiCopies(br);
+
 }
 
 void BottomTranslator::handleIfBlock(const BasicBlock* bb)
@@ -535,9 +551,7 @@ void BottomTranslator::handleBranchingBlock(const BasicBlock* bb)
 
     // Handle it's instructions and do phi node removal if appropriate
     handleNonTerminatingInstructions(bb);
-    if (backEnd->getRemovePhiFunctions()) {
-        addPhiCopies(br);
-    }
+    addPhiCopies(br);
 
     // // TODO: handle for if we're branching into a latch
     // if (Loop* loop = loopInfo->getLoopFor(bb)) {

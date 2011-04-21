@@ -96,12 +96,7 @@ void gla::PrivateManager::runLLVMOptimizations1()
     llvm::FunctionPassManager passManager(module);
     if (Options.optimizations.verify)      passManager.add(llvm::createVerifierPass());
     if (Options.optimizations.mem2reg)     passManager.add(llvm::createPromoteMemoryToRegisterPass());
-
-    // For some reasion, reassociate changes the inductive loop to increment by
-    // 2 instead of 1, but doesn't seem to change anything else. Until I figure
-    // out what's going on, let's leave it off.
-    // if (Options.optimizations.reassociate) passManager.add(llvm::createReassociatePass());
-
+    if (Options.optimizations.reassociate) passManager.add(llvm::createReassociatePass());
     if (Options.optimizations.gvn)         passManager.add(llvm::createGVNPass());
     if (Options.optimizations.coalesce)    passManager.add(llvm::createCoalesceInsertsPass());
     passManager.add(llvm::createSinkingPass());
@@ -161,8 +156,8 @@ void gla::PrivateManager::runLLVMOptimizations1()
 
     // canonicalize.add(llvm::createSinkingPass());
 
-    // canonicalize.add(llvm::createIndVarSimplifyPass());
-    // canonicalize.add(llvm::createLoopStrengthReducePass());
+    canonicalize.add(llvm::createIndVarSimplifyPass());
+    canonicalize.add(llvm::createLoopStrengthReducePass());
 
     canonicalize.run(*module);
 }

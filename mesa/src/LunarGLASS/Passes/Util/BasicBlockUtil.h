@@ -28,6 +28,7 @@
 
 #include "llvm/BasicBlock.h"
 #include "llvm/Instructions.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Support/CFG.h"
@@ -39,6 +40,17 @@ namespace llvm {
     inline bool IsEmptyBB(const BasicBlock* bb)
     {
         return bb->getFirstNonPHIOrDbg() == bb->getTerminator();
+    }
+
+    inline bool AreEmptyBB(SmallVectorImpl<const BasicBlock*>& bbs)
+    {
+        for (SmallVectorImpl<const BasicBlock*>::iterator i = bbs.begin(), e = bbs.end(); i != e; ++i)
+            if (! IsEmptyBB(*i)) {
+                errs() << "\n================================================================================\n" << **i << "\n================================================================================\n";
+                return false;
+            }
+
+        return true;
     }
 
     // Whether from unconditionaly branches to to.
@@ -92,6 +104,35 @@ namespace llvm {
                     return true;
 
         return false;
+    }
+
+    // If the passed block has no predecessors, remove it, updating and
+    // unlinking everything that needs to be updated/unlinked. Will not remove
+    // the entry block
+    inline bool RemoveNoPredecessorBlock(BasicBlock* bb)
+    {
+        if (&*bb->getParent()->begin() == bb || pred_begin(bb) != pred_end(bb))
+            return false;
+
+        for (succ_iterator sI = succ_begin(bb), sE = succ_end(bb); sI != sE; ++sI) {
+            (*sI)->removePredecessor(bb);
+        }
+        bb->dropAllReferences();
+        bb->getParent()->getBasicBlockList().erase(bb);
+
+        return true;
+    }
+
+    // Gather up all the children of the passed basic block that are dominated
+    // by it.
+    inline void GetDominatedChildren(const DominatorTree* dt, const BasicBlock* bb, SmallVectorImpl<const BasicBlock*>& children)
+    {
+        for (df_iterator<const BasicBlock*> i = df_begin(bb), e = df_end(bb); i != e; ++i) {
+            if (! dt->dominates(bb, *i))
+                continue;
+
+            children.push_back(*i);
+        }
     }
 
     // Return the single merge point of the given basic blocks.  Returns null if

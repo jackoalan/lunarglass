@@ -46,6 +46,8 @@
 #include "CanonicalizeCFG.h"
 #include "LunarGLASSLlvmInterface.h"
 
+#include "Passes/Util/BasicBlockUtil.h"
+
 using namespace llvm;
 
 namespace  {
@@ -61,7 +63,7 @@ namespace  {
     protected:
         bool removeNoPredecessorBlocks(Function& F);
 
-        // bool removeIndirectExits(Function& F);
+        bool removeUnneededPHIs(Function& F);
 
         LoopInfo* loopInfo;
         DominatorTree* domTree;
@@ -76,15 +78,17 @@ bool CanonicalizeCFG::runOnFunction(Function& F)
     loopInfo = &getAnalysis<LoopInfo>();
     domTree  = &getAnalysis<DominatorTree>();
 
-    // while (removeIndirectExits(F)) {
-    //     changed = true;
-    // }
+    changed |= removeNoPredecessorBlocks(F);
 
-    while (removeNoPredecessorBlocks(F)) {
+    while (removeUnneededPHIs(F)) {
         changed = true;
     }
 
-    // Remove unneeded phi nodes
+    return changed;
+}
+
+bool CanonicalizeCFG::removeUnneededPHIs(Function& F)
+{
     SmallVector<PHINode*, 64> deadPHIs;
     for (Function::iterator bbI = F.begin(), bbE = F.end(); bbI != bbE; ++bbI) {
         for (BasicBlock::iterator instI = bbI->begin(), instE = bbI->end(); instI != instE; ++instI) {
@@ -102,44 +106,30 @@ bool CanonicalizeCFG::runOnFunction(Function& F)
             deadPHIs.push_back(pn);
         }
     }
+
     for (SmallVector<PHINode*, 64>::iterator i = deadPHIs.begin(), e = deadPHIs.end(); i != e; ++i) {
         (*i)->eraseFromParent();
     }
 
-    // // Remove needless phi nodes from single-predecessor blocks
-    // for (Function::iterator bb = F.begin(), e = F.end(); bb != e; ++bb) {
-    //     if (&F.getEntryBlock() == &*bb)
-    //         continue;
-    //     if (++pred_begin(bb) == pred_end(bb))
-    //         FoldSingleEntryPHINodes(bb);
-    // }
-
-    return changed;
+    return deadPHIs.size();
 }
 
 bool CanonicalizeCFG::removeNoPredecessorBlocks(Function& F)
 {
     bool changed = false;
+    bool flag = false;
 
-    // Loop over all but the entry block
     for (Function::iterator bbI = F.begin(), bbE = F.end(); bbI != bbE; ++bbI) {
+        flag |= RemoveNoPredecessorBlock(bbI);
 
-        // For some reason, iterating with "bbI = ++F.begin()" instead of
-        // testing against "front()" can fail to skip the entry block with the
-        // presence of loop-simplify, so make sure we're never deleting the
-        // entry block
-        if (&F.getEntryBlock() == &*bbI)
-            continue;
-
-        // If the block has no predecessors, remove it from the function
-        if (pred_begin(bbI) == pred_end(bbI)) {
+        // Removing it seems to invalidate the iterator, so start over
+        // again. Note that the for-loop incrementation is ok, as all functions
+        // have an entry block and we don't mind incrementing past it right
+        // away.
+        if (flag) {
+            flag = false;
             changed = true;
-
-            for (succ_iterator sI = succ_begin(bbI), sE = succ_end(bbI); sI != sE; ++sI) {
-                (*sI)->removePredecessor(bbI);
-            }
-            bbI->dropAllReferences();
-            bbI = F.getBasicBlockList().erase(bbI);
+            bbI = F.begin();
         }
     }
 

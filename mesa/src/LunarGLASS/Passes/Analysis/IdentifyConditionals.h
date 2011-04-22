@@ -47,7 +47,7 @@ namespace llvm {
     private:
         DenseMap<const BasicBlock*, const Conditional*> conditionals;
     public:
-        // Iterators for this class provide a pair of <entryBlock*, Conditional*>
+        // Iterators for this class provide a pair of <entryBlock*,Conditional*>
         typedef DenseMap<const BasicBlock*, const Conditional*>::const_iterator const_iterator;
         const_iterator begin() const { return conditionals.begin(); }
         const_iterator end()   const { return conditionals.end(); }
@@ -78,14 +78,15 @@ namespace llvm {
         // IdentifyConditionals is the only one allowed to construct a Conditional
         friend class IdentifyConditionals;
 
-        Conditional(BasicBlock* entryBlock, BasicBlock* mergeBlock,
-                    BasicBlock* thenBlock, BasicBlock* elseBlock,
-                    DominanceFrontier* frontiers)
-            : entry(entryBlock)
-            , merge(mergeBlock)
-            , left(thenBlock)
-            , right(elseBlock)
-            , domFront(frontiers)
+        Conditional(BasicBlock* entryBB, BasicBlock* mergeBB,
+                    BasicBlock* thenBB, BasicBlock* elseBB,
+                    DominanceFrontier* df, DominatorTree* dt)
+            : entry(entryBB)
+            , merge(mergeBB)
+            , left(thenBB)
+            , right(elseBB)
+            , domFront(df)
+            , domTree(dt)
         { }
 
         BasicBlock* entry;
@@ -94,6 +95,7 @@ namespace llvm {
         BasicBlock* right;
 
         DominanceFrontier* domFront;
+        DominatorTree* domTree;
 
     public:
         // Whether there is no "then" block, only an "else" one. This may be
@@ -112,8 +114,7 @@ namespace llvm {
 
         // Whether the conditional is empty. An empty conditional is a
         // self-contained conditional in which the then and else subgraphs, if
-        // they exist, are all empty blocks. Currently unimplemented in the case
-        // of then or else subgraphs, for which is currently will return false.
+        // they exist, are all empty blocks.
         bool isEmptyConditional() const;
 
         // todo: latching and exiting conditionals

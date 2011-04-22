@@ -163,8 +163,8 @@ bool FlattenCondAssn::removeEmptyConditional(const Conditional* cond)
     if (!cond->isSelfContained() || !cond->isEmptyConditional())
         return false;
 
-    BasicBlock* left  = cond->getThenBlock();
-    BasicBlock* right = cond->getElseBlock();
+    // BasicBlock* left  = cond->getThenBlock();
+    // BasicBlock* right = cond->getElseBlock();
     BasicBlock* merge = cond->getMergeBlock();
     BasicBlock* entry = cond->getEntryBlock();
 
@@ -172,15 +172,6 @@ bool FlattenCondAssn::removeEmptyConditional(const Conditional* cond)
     assert(entryBranch);
 
     bool changed = true;
-
-    if (left != merge)
-        changed &= TryToSimplifyUncondBranchFromEmptyBlock(left);
-
-    if (right != merge)
-        changed &= TryToSimplifyUncondBranchFromEmptyBlock(right);
-
-    assert(changed);
-    assert((merge == entryBranch->getSuccessor(0)) && (merge == entryBranch->getSuccessor(1)));
 
     ReplaceInstWithInst(entryBranch, BranchInst::Create(merge));
 

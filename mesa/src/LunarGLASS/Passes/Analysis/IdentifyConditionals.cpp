@@ -43,6 +43,7 @@ using namespace llvm;
 bool IdentifyConditionals::runOnFunction(Function &F)
 {
     DominanceFrontier& domFront = getAnalysis<DominanceFrontier>();
+    DominatorTree& domTree      = getAnalysis<DominatorTree>();
 
     for (Function::iterator bb = F.begin(), e = F.end(); bb != e; ++bb) {
 
@@ -67,7 +68,8 @@ bool IdentifyConditionals::runOnFunction(Function &F)
             continue;
 
 
-        std::pair<const BasicBlock*, const Conditional*> pair(bb, new Conditional(bb, merge, left, right, &domFront));
+        std::pair<const BasicBlock*, const Conditional*> pair(bb, new Conditional(bb, merge, left, right,
+                                                                                  &domFront, &domTree));
 
         conditionals.insert(pair);
     }
@@ -79,6 +81,7 @@ bool IdentifyConditionals::runOnFunction(Function &F)
 void IdentifyConditionals::getAnalysisUsage(AnalysisUsage& AU) const
 {
     AU.addRequired<DominanceFrontier>();
+    AU.addRequired<DominatorTree>();
     AU.setPreservesAll();
     return;
 }
@@ -102,9 +105,17 @@ bool Conditional::isEmptyConditional() const
         return false;
 
     // Todo: test the case when the then or else have underlying subgraphs
+    SmallVector<const BasicBlock*, 16> leftGraph;
+    SmallVector<const BasicBlock*, 16> rightGraph;
 
-    bool isLeftEmpty  = (left  == merge) || (UncondBranchesTo(left, merge)  && IsEmptyBB(left));
-    bool isRightEmpty = (right == merge) || (UncondBranchesTo(right, merge) && IsEmptyBB(right));
+    GetDominatedChildren(domTree, left, leftGraph);
+    GetDominatedChildren(domTree, right, rightGraph);
+
+    leftGraph.push_back(left);
+    rightGraph.push_back(right);
+
+    bool isLeftEmpty  = (left  == merge) || AreEmptyBB(leftGraph);
+    bool isRightEmpty = (right == merge) || AreEmptyBB(rightGraph);
 
     return isLeftEmpty && isRightEmpty;
 }

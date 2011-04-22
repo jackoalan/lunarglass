@@ -42,9 +42,10 @@ namespace llvm {
     // Loop wrapper providing more queries/information
     class LoopWrapper {
     public:
-        LoopWrapper(/*LoopInfo* li,*/ Loop* l, DominanceFrontier* df)
+        LoopWrapper(Loop* l, DominanceFrontier* df /*, ScalarEvolution* se*/)
             : loop(l)
             , domFront(df)
+            // , scalarEvo(se)
             , header(loop->getHeader())
             , latch(loop->getLoopLatch())
             , preservedBackedge(IsConditional(latch) || latch->getSinglePredecessor())
@@ -62,10 +63,15 @@ namespace llvm {
         // Wrapped functionality
         unsigned getLoopDepth()                  const { return loop->getLoopDepth(); }
         bool isLoopExiting(const BasicBlock* bb) const { return loop->isLoopExiting(bb); }
+        PHINode* getCanonicalInductionVariable() const { return loop->getCanonicalInductionVariable(); }
         bool contains(const BasicBlock* bb)      const { return loop->contains(bb); }
         Loop::block_iterator block_begin()       const { return loop->block_begin(); }
         Loop::block_iterator block_end()         const { return loop->block_end(); }
         Value* getTripCount()                    const { return loop->getTripCount(); }
+
+        // Note, we may want to move away from only wrapping LoopInfo and wrap
+        // ScalarEvolution as well
+
 
         // New functionality
 
@@ -81,6 +87,8 @@ namespace llvm {
             return header && latch && exitMerge
                 && (IsUnconditional(latch) || loop->isLoopExiting(latch));
         }
+
+
 
         // Returns the successor number (0 or 1) of the exiting edge from an exiting
         // block. Returns -1 if none exit, and 2 if they both exit.
@@ -112,6 +120,7 @@ namespace llvm {
         // LoopInfo* loopInfo;
         Loop* loop;
         DominanceFrontier* domFront;
+        ScalarEvolution* scalarEvo;
 
         BasicBlock* header;
         BasicBlock* latch;
@@ -153,8 +162,8 @@ namespace llvm {
         }
 
         void setDominanceFrontier(DominanceFrontier* df) { domFront = df; }
-
-        void setLoopInfo(LoopInfo* li) { loopInfo = li; }
+        void setLoopInfo(LoopInfo* li)                   { loopInfo = li; }
+        void setScalarEvolution(ScalarEvolution* se)     { scalarEvo = se; }
 
         ~LoopStack()
         {
@@ -164,6 +173,7 @@ namespace llvm {
     protected:
         DominanceFrontier* domFront;
         LoopInfo* loopInfo;
+        ScalarEvolution* scalarEvo;
 
         std::stack<LoopWrapper*> st;
 

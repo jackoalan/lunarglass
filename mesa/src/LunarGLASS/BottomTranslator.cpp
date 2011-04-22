@@ -348,9 +348,14 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
         // if (loop->getTripCount())
         //     llvm::errs() << " \n\nstatic inductive loop\n\n";
 
-        // PHINode* pn = loop->getCanonicalInductionVariable();
-        // if (pn)
-        //     backEndTranslator->beginInductiveLoop();
+        PHINode* pn = loop->getCanonicalInductionVariable();
+        if (pn) {
+            Value* count = loop->getTripCount();
+            errs() << "\ninductive variable: " << *pn << "\t";
+            if (count)
+                errs() << "trip count: " << gla::Util::getConstantInt(loop->getTripCount());
+        }
+
         backEndTranslator->beginLoop();
     }
 
@@ -642,11 +647,12 @@ bool BottomTranslator::runOnModule(Module& module)
             domTree   = &getAnalysis<DominatorTree>        (*function);
             domFront  = &getAnalysis<DominanceFrontier>    (*function);
             idConds   = &getAnalysis<IdentifyConditionals> (*function);
-            // scalarEvo = &getAnalysis<ScalarEvolution>      (*function);
+            scalarEvo = &getAnalysis<ScalarEvolution>      (*function);
             // lazyInfo  = &getAnalysis<LazyValueInfo>        (*function);
 
             loops->setDominanceFrontier(domFront);
             loops->setLoopInfo(loopInfo);
+            loops->setScalarEvolution(scalarEvo);
 
             // debug stuff
             if (gla::Options.debug && loopInfo->begin() != loopInfo->end()) {
@@ -696,7 +702,7 @@ void BottomTranslator::getAnalysisUsage(AnalysisUsage& AU) const
     AU.addRequired<DominatorTree>();
     AU.addRequired<DominanceFrontier>();
     AU.addRequired<IdentifyConditionals>();
-    // AU.addRequired<ScalarEvolution>();
+    AU.addRequired<ScalarEvolution>();
     // AU.addRequired<LazyValueInfo>();
 }
 

@@ -220,7 +220,7 @@ public:
         UnsupportedFunctionality("conditional loops");
     }
 
-    void beginStaticInductiveLoop()
+    void beginSimpleInductiveLoop(unsigned count)
     {
         UnsupportedFunctionality("inductive loops");
     }

@@ -157,7 +157,7 @@ void gla::PrivateManager::runLLVMOptimizations1()
     // canonicalize.add(llvm::createSinkingPass());
 
     canonicalize.add(llvm::createIndVarSimplifyPass());
-    canonicalize.add(llvm::createLoopStrengthReducePass());
+    // canonicalize.add(llvm::createLoopStrengthReducePass());
 
     canonicalize.add(llvm::createCanonicalizeCFGPass());
     canonicalize.run(*module);

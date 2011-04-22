@@ -38,6 +38,11 @@
 // LunarGLASS includes
 #include "LunarGLASSTopIR.h"
 
+// Forward decls
+namespace llvm {
+    class PHINode;
+} // end namespace llvm
+
 namespace gla {
 
     class BackEndTranslator {
@@ -82,7 +87,7 @@ namespace gla {
         // // Add a canonical inductive loop as above where the bound is known statically
         // virtual void beginStaticInductiveLoop(/* TBD */) = 0;
 
-        virtual void beginSimpleInductiveLoop(unsigned count) = 0;
+        virtual void beginSimpleInductiveLoop(const llvm::PHINode* phi, unsigned count) = 0;
 
         // Generic loop constructs
 

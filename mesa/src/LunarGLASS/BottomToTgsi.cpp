@@ -163,7 +163,7 @@ public:
         gla::UnsupportedFunctionality("Loops");
     }
 
-    void beginSimpleInductiveLoop(unsigned count)
+    void beginSimpleInductiveLoop(const llvm::PHINode* phi, unsigned count)
     {
         UnsupportedFunctionality("inductive loops");
     }

@@ -28,6 +28,7 @@
 
 #include "llvm/BasicBlock.h"
 #include "llvm/Instructions.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Support/CFG.h"
 
@@ -70,6 +71,15 @@ namespace llvm {
                 return true;
 
         return false;
+    }
+
+    // Collect all the phi nodes in bb into a phis
+    template<unsigned Size>
+    inline void getPHINodes(const BasicBlock* bb, SmallPtrSet<const PHINode*, Size>& phis)
+    {
+        for (BasicBlock::const_iterator i = bb->begin(), e = bb->end(); i != e; ++i)
+            if (const PHINode* pn = dyn_cast<PHINode>(i))
+                phis.insert(pn);
     }
 
     // A is an indirect predecessor of B if A branches to some block that

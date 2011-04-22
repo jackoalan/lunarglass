@@ -150,11 +150,21 @@ namespace {
         // Translate from LLVM CFG style to structured style.
         void declarePhiCopies(const Function*);
 
-        // Add phi copies for all the successors of bb (if the backend wants us to)
+
+        // Add phi copies if the backend wants us to:
+
+        // For all the successors of bb
         void addPhiCopies(const BasicBlock* bb);
 
-        // Add phi copies for nextBB that are relevant for curBB (if the backend wants us to)
+        // For nextBB that are relevant for curBB
         void addPhiCopies(const BasicBlock* curBB, const BasicBlock* nextBB);
+
+        // For all the given phis
+        template<unsigned Size>
+        void addPhiCopies(SmallPtrSet<const PHINode*, Size>& phis, const BasicBlock* curBB);
+
+        // For the specified phi node for currBB
+        void addPhiCopy(const PHINode* phi, const BasicBlock* curBB);
 
         void setLoopInfo(LoopInfo* li)                         { loopInfo = li; }
         void setBackEndTranslator(gla::BackEndTranslator* bet) { backEndTranslator = bet; }
@@ -180,7 +190,9 @@ namespace {
 
         bool lastBlock;
 
-        SmallPtrSet<const BasicBlock*,8> handledBlocks;
+        SmallPtrSet<const BasicBlock*, 8> handledBlocks;
+
+        SmallPtrSet<const PHINode*, 8> inductionVariables;
 
         // Data for handling loops
         LoopStack* loops;
@@ -200,6 +212,10 @@ namespace {
         // Send off all the non-terminating instructions in a basic block to the
         // backend
         void handleNonTerminatingInstructions(const BasicBlock*);
+
+        // Call add (except for phis when applicable) on all the instructions
+        // provided in insts.
+        void addInstructions(SmallVectorImpl<const Instruction*>& insts);
 
         // Given a loop block, handle it. Dispatches to other methods and ends
         // up handling all blocks in the loop.
@@ -240,6 +256,12 @@ void BottomTranslator::declarePhiCopies(const Function* function)
     }
 }
 
+void BottomTranslator::addPhiCopies(const BasicBlock* bb)
+{
+    for (succ_const_iterator s = succ_begin(bb), e = succ_end(bb); s != e; ++s)
+        addPhiCopies(bb, *s);
+}
+
 void BottomTranslator::addPhiCopies(const BasicBlock* curBB, const BasicBlock* nextBB)
 {
     if (! backEnd->getRemovePhiFunctions())
@@ -247,24 +269,29 @@ void BottomTranslator::addPhiCopies(const BasicBlock* curBB, const BasicBlock* n
 
     // for each llvm phi node, add a copy instruction
     for (BasicBlock::const_iterator i = nextBB->begin(), e = nextBB->end(); i != e; ++i) {
-        const Instruction* destInstruction = i;
-        const PHINode *phiNode = dyn_cast<PHINode>(destInstruction);
+        const PHINode *phiNode = dyn_cast<PHINode>(i);
 
         if (phiNode) {
-            // Find the operand whose predecessor is curBB.
-            int predIndex = phiNode->getBasicBlockIndex(curBB);
-            if (predIndex >= 0) {
-                // then we found ourselves
-                backEndTranslator->addPhiCopy(phiNode, phiNode->getIncomingValue(predIndex));
-            }
+            addPhiCopy(phiNode, curBB);
         }
     }
 }
 
-void BottomTranslator::addPhiCopies(const BasicBlock* bb)
+template<unsigned Size>
+void BottomTranslator::addPhiCopies(SmallPtrSet<const PHINode*, Size>& phis, const BasicBlock* curBB)
 {
-    for (succ_const_iterator s = succ_begin(bb), e = succ_end(bb); s != e; ++s)
-        addPhiCopies(bb, *s);
+    for (typename SmallPtrSet<const PHINode*,Size>::iterator i = phis.begin(), e = phis.end(); i != e; ++i)
+        addPhiCopy(*i, curBB);
+}
+
+void BottomTranslator::addPhiCopy(const PHINode* phi, const BasicBlock* curBB)
+{
+    // Find the operand whose predecessor is curBB.
+    int predIndex = phi->getBasicBlockIndex(curBB);
+    if (predIndex >= 0) {
+        // then we found ourselves
+        backEndTranslator->addPhiCopy(phi, phi->getIncomingValue(predIndex));
+    }
 }
 
 void BottomTranslator::handleNonTerminatingInstructions(const BasicBlock* bb) {
@@ -275,6 +302,13 @@ void BottomTranslator::handleNonTerminatingInstructions(const BasicBlock* bb) {
         if (! (backEnd->getRemovePhiFunctions() && inst->getOpcode() == Instruction::PHI))
             backEndTranslator->add(inst, lastBlock);
     }
+}
+
+void BottomTranslator::addInstructions(SmallVectorImpl<const Instruction*>& insts)
+{
+    for (SmallVectorImpl<const Instruction*>::iterator i = insts.begin(), e = insts.end(); i != e; ++i)
+        if (! (backEnd->getRemovePhiFunctions() && (*i)->getOpcode() == Instruction::PHI))
+            backEndTranslator->add(*i, lastBlock);
 }
 
 // static bool properExitBlock(const BasicBlock* bb, const Loop* loop)
@@ -348,15 +382,28 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
         // if (loop->getTripCount())
         //     llvm::errs() << " \n\nstatic inductive loop\n\n";
 
-        PHINode* pn = loop->getCanonicalInductionVariable();
-        if (pn) {
-            Value* count = loop->getTripCount();
-            errs() << "\ninductive variable: " << *pn << "\t";
-            if (count)
-                errs() << "trip count: " << gla::Util::getConstantInt(loop->getTripCount());
-        }
 
-        backEndTranslator->beginLoop();
+        if (loop->isSimpleInductive()) {
+            const PHINode* pn = loop->getCanonicalInductionVariable();
+            Value* count = loop->getTripCount();
+            assert(pn && count);
+
+            int tripCount = gla::Util::getConstantInt(count);
+            assert (tripCount  >= 0);
+
+            if (gla::Options.debug) {
+                errs() << "\ninductive variable:" << *pn;
+                errs() << "\n  trip count:        " << tripCount;
+                errs() << "\n  increment:       "   << *loop->getIncrement();
+                errs() << "\n  exit condition:  "   << *loop->getExitCondition();
+                errs() << "\n";
+            }
+
+            backEndTranslator->beginSimpleInductiveLoop(pn, tripCount);
+            inductionVariables.insert(pn);
+        } else {
+            backEndTranslator->beginLoop();
+        }
     }
 
     // If the branch is conditional and not a latch nor exiting, we're dealing
@@ -367,27 +414,24 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
         assert(idConds->getConditional(bb));
         handleBranchingBlock(bb);
     } else {
-        handleNonTerminatingInstructions(bb);
-    }
+        // If we're simple inductive, then don't do the instructions computing
+        // the inductive variable or the exit condition
+        if ((isExiting || isLatch) && loop->isSimpleInductive()) {
+            SmallVector<const Instruction*, 32> insts;
+            const Instruction* lastInst  = bb->getTerminator();
 
-    // If it's a latch, add the (possibly conditional) loop-back. Immediately
-    // handle the other block if we dominate it.
-    if (isLatch) {
-        assert(preserved);
+            for (BasicBlock::const_iterator i = bb->begin(); &*i != lastInst; ++i) {
+                if (&*i == loop->getExitCondition() || &*i == loop->getIncrement())
+                    continue;
+                insts.push_back(i);
+            }
 
-        if (condition) {
-            backEndTranslator->addIf(condition, br->getSuccessor(0) != header);
+            addInstructions(insts);
+
         }
-
-        // Add phi copies (if applicable)
-        addPhiCopies(bb, header);
-
-        if (condition) {
-            backEndTranslator->addLoopBack();
-            backEndTranslator->addEndif();
+        else {
+            handleNonTerminatingInstructions(bb);
         }
-
-        assert(( !condition || isExiting) && "redundant assertion failed");
     }
 
     // If we're exiting, add the (possibly conditional) exit. Immediately handle
@@ -402,7 +446,9 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
         // Set up the conditional, and add the exit block subgraph if it isn't
         // the exit merge.
         if (condition) {
-            backEndTranslator->addIf(condition, pos == 1);
+
+            if (! loop->isSimpleInductive())
+                backEndTranslator->addIf(condition, pos == 1);
 
             // Add phi copies (if applicable)
             addPhiCopies(bb, br->getSuccessor(pos));
@@ -414,16 +460,34 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
                 }
 
                 handleBlock(exitBlock);
+                assert(! loop->isSimpleInductive()); // I'm not sure how this can arise
             }
         }
 
-
-        backEndTranslator->addLoopExit();
-        backEndTranslator->addEndif();
+        if (! loop->isSimpleInductive()) {
+            backEndTranslator->addLoopExit();
+            backEndTranslator->addEndif();
+        }
 
         if (condition) {
             attemptHandleDominatee(bb, br->getSuccessor(! pos));
         }
+    }
+
+    // If it's a latch, we must be preserved and thus only need to add phi copies
+    if (isLatch) {
+        assert(preserved);
+
+        // Add phi copies (if applicable) excluding the one for the inductive variable
+        SmallPtrSet<const PHINode*, 8> phis;
+        getPHINodes(header, phis);
+
+        if (loop->isSimpleInductive())
+            phis.erase(loop->getCanonicalInductionVariable());
+
+        addPhiCopies(phis, bb);
+
+        assert(( !condition || isExiting) && "redundant assertion failed");
     }
 
     // We've been fully handled by now, unless we're a header

@@ -220,9 +220,23 @@ public:
         UnsupportedFunctionality("conditional loops");
     }
 
-    void beginSimpleInductiveLoop(unsigned count)
+    void beginSimpleInductiveLoop(const llvm::PHINode* phi, unsigned count)
     {
-        UnsupportedFunctionality("inductive loops");
+        newLine();
+
+        shader << "for (";
+        emitGlaValue(phi);
+
+        shader << " = 0; ";
+
+        emitGlaValue(phi);
+        shader << " >= " << count;
+
+        shader << "; ++";
+        emitGlaValue(phi);
+        shader << ") ";
+
+        newScope();
     }
 
     void beginInductiveLoop()

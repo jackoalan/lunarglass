@@ -106,7 +106,7 @@ void gla::PrivateManager::runLLVMOptimizations1()
     // // passManager.add(llvm::createInstructionCombiningPass());
 
     // if (Options.optimizations.adce)        passManager.add(llvm::createAggressiveDCEPass());
-    // // passManager.add(llvm::createFlattenConditionalAssignmentsPass());
+    // passManager.add(llvm::createFlattenConditionalAssignmentsPass());
 
     if (Options.optimizations.adce)        passManager.add(llvm::createAggressiveDCEPass());
     if (Options.optimizations.verify)      passManager.add(llvm::createVerifierPass());

@@ -127,7 +127,6 @@ bool FlattenCondAssn::flattenConds()
             changed = true;
             idConds->nullConditional(entry);
         };
-
     }
 
     return changed;
@@ -184,6 +183,9 @@ bool FlattenCondAssn::removeEmptyConditional(const Conditional* cond)
     assert((merge == entryBranch->getSuccessor(0)) && (merge == entryBranch->getSuccessor(1)));
 
     ReplaceInstWithInst(entryBranch, BranchInst::Create(merge));
+
+    changed |= SimplifyInstructionsInBlock(entry);
+    changed |= SimplifyInstructionsInBlock(merge);
 
     // Future work: merge the block into the predecessor, and update any
     // affected conditionals

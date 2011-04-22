@@ -49,6 +49,8 @@ namespace llvm {
             , header(loop->getHeader())
             , latch(loop->getLoopLatch())
             , preservedBackedge(IsConditional(latch) || latch->getSinglePredecessor())
+            , inductiveVar(loop->getCanonicalInductionVariable())
+            , tripCount(loop->getTripCount())
         {
             loop->getUniqueExitBlocks(exits);
             exitMerge = GetSingleMergePoint(exits, *domFront);
@@ -63,17 +65,26 @@ namespace llvm {
         // Wrapped functionality
         unsigned getLoopDepth()                  const { return loop->getLoopDepth(); }
         bool isLoopExiting(const BasicBlock* bb) const { return loop->isLoopExiting(bb); }
-        PHINode* getCanonicalInductionVariable() const { return loop->getCanonicalInductionVariable(); }
+        PHINode* getCanonicalInductionVariable() const { return inductiveVar; }
         bool contains(const BasicBlock* bb)      const { return loop->contains(bb); }
         Loop::block_iterator block_begin()       const { return loop->block_begin(); }
         Loop::block_iterator block_end()         const { return loop->block_end(); }
-        Value* getTripCount()                    const { return loop->getTripCount(); }
+        Value* getTripCount()                    const { return tripCount; }
 
         // Note, we may want to move away from only wrapping LoopInfo and wrap
         // ScalarEvolution as well
 
 
         // New functionality
+
+        // Is the loop simple inductive one. A simple inductive loop is one
+        // where the backedge is preserved, a canonical induction variable
+        // exists, and the execution count is known statically (e.g. there are
+        // no breaks or continues)
+        bool isSimpleInductive()
+        {
+            return preservedBackedge && loop->getCanonicalInductionVariable() && loop->getTripCount();
+        }
 
         // Whether the loop is a canonical, structured loop.  In a canonical,
         // structured loop there should only be one latch.  Tf the latch is
@@ -88,7 +99,35 @@ namespace llvm {
                 && (IsUnconditional(latch) || loop->isLoopExiting(latch));
         }
 
+        // If the loop is simple inductive, then returns the instruction
+        // recomputing the exit condition, else returns NULL
+        Instruction* getExitCondition()
+        {
+            if (! isSimpleInductive())
+                return NULL;
 
+            BasicBlock* exit = loop->getExitingBlock();
+            assert(exit);
+
+            BranchInst* br = dyn_cast<BranchInst>(exit->getTerminator());
+            assert(br && br->isConditional());
+
+            return dyn_cast<Instruction>(br->getCondition());
+        }
+
+        // If the loop is simple inductive, then returns the instruction doing
+        // the increment on the inductive variables, else returns NULL
+        Instruction* getIncrement()
+        {
+            if (! isSimpleInductive())
+                return NULL;
+            assert(inductiveVar);
+
+            int index = inductiveVar->getBasicBlockIndex(latch);
+            assert(index >= 0);
+
+            return dyn_cast<Instruction>(inductiveVar->getIncomingValue(index));
+        }
 
         // Returns the successor number (0 or 1) of the exiting edge from an exiting
         // block. Returns -1 if none exit, and 2 if they both exit.
@@ -125,11 +164,14 @@ namespace llvm {
         BasicBlock* header;
         BasicBlock* latch;
 
+        bool preservedBackedge;
+
+        PHINode* inductiveVar;
+        Value*   tripCount;
+
         SmallVector<BasicBlock*, 4> exits;
 
         BasicBlock* exitMerge;
-
-        bool preservedBackedge;
 
     private:
         LoopWrapper(const LoopWrapper&);       // do not implement

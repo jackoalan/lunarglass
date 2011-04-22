@@ -150,12 +150,13 @@ namespace {
         // Translate from LLVM CFG style to structured style.
         void declarePhiCopies(const Function*);
 
-        void setLoopInfo(LoopInfo* li) { loopInfo = li; }
+        // Add phi copies for all the successors of bb (if the backend wants us to)
+        void addPhiCopies(const BasicBlock* bb);
 
-        // Add phi copies, if the backend wants us to
-        void addPhiCopies(const Instruction*);
+        // Add phi copies for nextBB that are relevant for curBB (if the backend wants us to)
         void addPhiCopies(const BasicBlock* curBB, const BasicBlock* nextBB);
 
+        void setLoopInfo(LoopInfo* li)                         { loopInfo = li; }
         void setBackEndTranslator(gla::BackEndTranslator* bet) { backEndTranslator = bet; }
         void setBackEnd(gla::BackEnd* be)                      { backEnd = be; }
 
@@ -260,18 +261,10 @@ void BottomTranslator::addPhiCopies(const BasicBlock* curBB, const BasicBlock* n
     }
 }
 
-void BottomTranslator::addPhiCopies(const Instruction* llvmInstruction)
+void BottomTranslator::addPhiCopies(const BasicBlock* bb)
 {
-    // for each child block
-    for (unsigned int op = 0; op < llvmInstruction->getNumOperands(); ++op) {
-
-        // get the destination block (not all operands are blocks, but consider each that is)
-        const BasicBlock *phiBlock = dyn_cast<BasicBlock>(llvmInstruction->getOperand(op));
-        if (! phiBlock)
-            continue;
-
-        addPhiCopies(llvmInstruction->getParent(), phiBlock);
-    }
+    for (succ_const_iterator s = succ_begin(bb), e = succ_end(bb); s != e; ++s)
+        addPhiCopies(bb, *s);
 }
 
 void BottomTranslator::handleNonTerminatingInstructions(const BasicBlock* bb) {
@@ -284,15 +277,15 @@ void BottomTranslator::handleNonTerminatingInstructions(const BasicBlock* bb) {
     }
 }
 
-static bool properExitBlock(const BasicBlock* bb, const Loop* loop)
-{
-    for (const_pred_iterator i = pred_begin(bb), e = pred_end(bb); i != e; ++i) {
-        if (! loop->contains(*i))
-            return false;
-    }
+// static bool properExitBlock(const BasicBlock* bb, const Loop* loop)
+// {
+//     for (const_pred_iterator i = pred_begin(bb), e = pred_end(bb); i != e; ++i) {
+//         if (! loop->contains(*i))
+//             return false;
+//     }
 
-    return true;
-}
+//     return true;
+// }
 
 void BottomTranslator::newLoop(const BasicBlock* bb)
 {
@@ -379,10 +372,12 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
 
         if (condition) {
             backEndTranslator->addIf(condition, br->getSuccessor(0) != header);
+        }
 
-            // Add phi copies (if applicable)
-            addPhiCopies(bb, header);
+        // Add phi copies (if applicable)
+        addPhiCopies(bb, header);
 
+        if (condition) {
             backEndTranslator->addLoopBack();
             backEndTranslator->addEndif();
         }
@@ -476,8 +471,7 @@ void BottomTranslator::forceOutputLatch()
 
     handleNonTerminatingInstructions(latch);
 
-    addPhiCopies(br);
-
+    addPhiCopies(latch);
 }
 
 void BottomTranslator::handleIfBlock(const BasicBlock* bb)
@@ -551,7 +545,7 @@ void BottomTranslator::handleBranchingBlock(const BasicBlock* bb)
 
     // Handle it's instructions and do phi node removal if appropriate
     handleNonTerminatingInstructions(bb);
-    addPhiCopies(br);
+    addPhiCopies(bb);
 
     // // TODO: handle for if we're branching into a latch
     // if (Loop* loop = loopInfo->getLoopFor(bb)) {
@@ -648,8 +642,8 @@ bool BottomTranslator::runOnModule(Module& module)
             domTree   = &getAnalysis<DominatorTree>        (*function);
             domFront  = &getAnalysis<DominanceFrontier>    (*function);
             idConds   = &getAnalysis<IdentifyConditionals> (*function);
-            scalarEvo = &getAnalysis<ScalarEvolution>      (*function);
-            lazyInfo  = &getAnalysis<LazyValueInfo>        (*function);
+            // scalarEvo = &getAnalysis<ScalarEvolution>      (*function);
+            // lazyInfo  = &getAnalysis<LazyValueInfo>        (*function);
 
             loops->setDominanceFrontier(domFront);
             loops->setLoopInfo(loopInfo);
@@ -657,7 +651,7 @@ bool BottomTranslator::runOnModule(Module& module)
             // debug stuff
             if (gla::Options.debug && loopInfo->begin() != loopInfo->end()) {
                 errs() << "\n\nLoop info:\n";        loopInfo->print(errs());
-                errs() << "\n\nScalar evolution:\n"; scalarEvo->print(errs());
+                // errs() << "\n\nScalar evolution:\n"; scalarEvo->print(errs());
             }
 
             // handle function's with bodies
@@ -702,9 +696,8 @@ void BottomTranslator::getAnalysisUsage(AnalysisUsage& AU) const
     AU.addRequired<DominatorTree>();
     AU.addRequired<DominanceFrontier>();
     AU.addRequired<IdentifyConditionals>();
-    AU.addRequired<ScalarEvolution>();
-    AU.addRequired<LazyValueInfo>();
-    return;
+    // AU.addRequired<ScalarEvolution>();
+    // AU.addRequired<LazyValueInfo>();
 }
 
 char BottomTranslator::ID = 0;

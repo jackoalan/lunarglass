@@ -96,6 +96,7 @@ void gla::PrivateManager::runLLVMOptimizations1()
     llvm::FunctionPassManager passManager(module);
     if (Options.optimizations.verify)      passManager.add(llvm::createVerifierPass());
     if (Options.optimizations.mem2reg)     passManager.add(llvm::createPromoteMemoryToRegisterPass());
+    passManager.add(llvm::createCanonicalizeCFGPass());
     if (Options.optimizations.reassociate) passManager.add(llvm::createReassociatePass());
     if (Options.optimizations.gvn)         passManager.add(llvm::createGVNPass());
     if (Options.optimizations.coalesce)    passManager.add(llvm::createCoalesceInsertsPass());
@@ -152,12 +153,12 @@ void gla::PrivateManager::runLLVMOptimizations1()
     llvm::PassManager canonicalize;
     canonicalize.add(llvm::createLoopSimplifyPass());
     // canonicalize.add(llvm::createIndVarSimplifyPass());
-    canonicalize.add(llvm::createCanonicalizeCFGPass());
 
     // canonicalize.add(llvm::createSinkingPass());
 
     canonicalize.add(llvm::createIndVarSimplifyPass());
     canonicalize.add(llvm::createLoopStrengthReducePass());
 
+    canonicalize.add(llvm::createCanonicalizeCFGPass());
     canonicalize.run(*module);
 }

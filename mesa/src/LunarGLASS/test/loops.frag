@@ -25,10 +25,10 @@ void main()
 {
     vec4 color = BaseColor;
 
-    // // While
-    // while (color.x < d) {
-    //     color += bigColor;
-    // }
+    // While
+    while (color.x < d) {
+        color += bigColor;
+    }
 
     // // For (dynamic)
     // for (int i = 0; i < Count; ++i) {
@@ -40,26 +40,26 @@ void main()
     //     color += bigColor3;
     // } while (color.x < d2);
 
-    // For (static)
-    for (int i = 0; i < 42; ++i) {
-        color.z += d3;
-    }
+    // // For (static)
+    // for (int i = 0; i < 42; ++i) {
+    //     color.z += d3;
+    // }
 
-    // For (static) latchy
-    for (int i = 0; i < 42; ++i) {
-        color.z += d3;
-        if (color.x < d4)
-            continue;
-        ++color.w;
-    }
+    // // For (static) latchy
+    // for (int i = 0; i < 42; ++i) {
+    //     color.z += d3;
+    //     if (color.x < d4)
+    //         continue;
+    //     ++color.w;
+    // }
 
-    // For (static) multi-exit
-    for (int i = 0; i < 42; ++i) {
-        color.z += d3;
-        if (color.x < d4)
-            break;
-        ++color.w;
-    }
+    // // For (static) multi-exit
+    // for (int i = 0; i < 42; ++i) {
+    //     color.z += d3;
+    //     if (color.x < d4)
+    //         break;
+    //     ++color.w;
+    // }
 
     // // Latchy
     // do {

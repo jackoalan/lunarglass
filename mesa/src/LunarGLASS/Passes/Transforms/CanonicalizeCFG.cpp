@@ -26,12 +26,17 @@
 //
 // Canonicalize the CFG for LunarGLASS, this includes the following:
 //   * All basic blocks without predecessors are removed.
+//
 //   * All single predecessor/single successor sequences of basic blocks are
 //     condensed into one block. Currently unimplemented.
+//
+//   * Pointless phi nodes are removed (invalidating LCSSA).
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Pass.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/Dominators.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/raw_ostream.h"
@@ -59,6 +64,7 @@ namespace  {
         // bool removeIndirectExits(Function& F);
 
         LoopInfo* loopInfo;
+        DominatorTree* domTree;
 
     };
 } // end namespace
@@ -68,6 +74,7 @@ bool CanonicalizeCFG::runOnFunction(Function& F)
     bool changed = false;
 
     loopInfo = &getAnalysis<LoopInfo>();
+    domTree  = &getAnalysis<DominatorTree>();
 
     // while (removeIndirectExits(F)) {
     //     changed = true;
@@ -75,6 +82,28 @@ bool CanonicalizeCFG::runOnFunction(Function& F)
 
     while (removeNoPredecessorBlocks(F)) {
         changed = true;
+    }
+
+    // Remove unneeded phi nodes
+    SmallVector<PHINode*, 64> deadPHIs;
+    for (Function::iterator bbI = F.begin(), bbE = F.end(); bbI != bbE; ++bbI) {
+        for (BasicBlock::iterator instI = bbI->begin(), instE = bbI->end(); instI != instE; ++instI) {
+            PHINode* pn = dyn_cast<PHINode>(instI);
+            if (!pn)
+                break;
+
+            Value* v = pn->hasConstantValue(domTree);
+            if (!v)
+                continue;
+
+            pn->replaceAllUsesWith(v);
+
+            // Remove it
+            deadPHIs.push_back(pn);
+        }
+    }
+    for (SmallVector<PHINode*, 64>::iterator i = deadPHIs.begin(), e = deadPHIs.end(); i != e; ++i) {
+        (*i)->eraseFromParent();
     }
 
     // // Remove needless phi nodes from single-predecessor blocks
@@ -117,63 +146,10 @@ bool CanonicalizeCFG::removeNoPredecessorBlocks(Function& F)
     return changed;
 }
 
-// // Returns true if exits is size 1, or if all the blocks in exits are empty
-// // unconditionally branching blocks that branch to the same destination.
-// static bool AllProperExits(SmallVector<BasicBlock*, 4>& exits)
-// {
-//     if (exits.size() == 1)
-//         return true;
-
-//     BranchInst* bi = dyn_cast<BranchInst>(exits[0]->getTerminator());
-//     if (!bi)
-//         return false;
-
-//     BasicBlock* target = bi->getSuccessor(0);
-
-//     for (SmallVector<BasicBlock*,4>::iterator bbI = exits.begin(), bbE = exits.end(); bbI != bbE; ++bbI) {
-//         BranchInst* bi = dyn_cast<BranchInst>((*bbI)->getTerminator());
-//         if (!bi || bi->isConditional() || (bi->getSuccessor(0) != target))
-//             return false;
-//     }
-
-//     return true;
-// }
-
-// bool CanonicalizeCFG::removeIndirectExits(Function& F)
-// {
-//     bool changed = false;
-
-//     SmallVector<BasicBlock*, 4> exits;
-
-//     // TODO: traverse the loopInfo structure instead of F
-//     for (Function::iterator bbI = F.begin(), bbE = F.end(); bbI != bbE; ++bbI) {
-//         Loop* loop = loopInfo->getLoopFor(bbI);
-//         if (!loop || !loop->hasDedicatedExits())
-//             continue;
-
-//         exits.clear();
-
-//         loop->getUniqueExitBlocks(exits);
-
-//         if (!AllProperExits(exits))
-//             continue;
-
-//         for (SmallVector<BasicBlock*, 4>::iterator i = exits.begin(), e = exits.end(); i != e; ++i) {
-//             if (isa<BranchInst>((*i)->getTerminator())) {
-//                 changed |= TryToSimplifyUncondBranchFromEmptyBlock(*i);
-//             }
-//         }
-
-//     }
-
-//     return changed;
-// }
-
-
 void CanonicalizeCFG::getAnalysisUsage(AnalysisUsage& AU) const
 {
     AU.addRequired<LoopInfo>();
-    return;
+    AU.addRequired<DominatorTree>();
 }
 
 void CanonicalizeCFG::print(raw_ostream&, const Module*) const

@@ -137,16 +137,12 @@ namespace llvm {
                 return -1;
 
             const BranchInst* br = dyn_cast<BranchInst>(bb->getTerminator());
+            assert(br);
 
-            int count = 0;
+            if (br->isUnconditional())
+                return 0;
 
-            if (contains(br->getSuccessor(0)))
-                count++;
-
-            if (contains(br->getSuccessor(1)))
-                count++;
-
-            if (count == 2)
+            if (! contains(br->getSuccessor(0)) && ! contains(br->getSuccessor(1)))
                 return 2;
 
             // Else return 0 or 1 indicating which one is not contained
@@ -175,7 +171,7 @@ namespace llvm {
 
     private:
         LoopWrapper(const LoopWrapper&);       // do not implement
-        void operator=(const LoopWrapper&); // do not implement
+        void operator=(const LoopWrapper&);    // do not implement
 
     };
 

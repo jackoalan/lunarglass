@@ -104,7 +104,6 @@ bool Conditional::isEmptyConditional() const
     if (!isSelfContained())
         return false;
 
-    // Todo: test the case when the then or else have underlying subgraphs
     SmallVector<const BasicBlock*, 16> leftGraph;
     SmallVector<const BasicBlock*, 16> rightGraph;
 

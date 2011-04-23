@@ -95,8 +95,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: - return statements inside a loop.
-// Unimplemented: - loops with return statements inside them
+// FIXME: - loops with return statements inside them
 
 // LLVM includes
 #include "llvm/DerivedTypes.h"
@@ -325,12 +324,11 @@ void BottomTranslator::newLoop(const BasicBlock* bb)
 {
     assert(loopInfo->getLoopFor(bb) && "newLoop called on non-loop");
 
-    if (loops->size() != 0)
-        gla::UnsupportedFunctionality("nested loops");
+    // FIXME: turn off when ready for nested loops, and test thoroughly
+    // if (loops->size() != 0)
+    //     gla::UnsupportedFunctionality("nested loops");
 
     loops->newLoop(bb);
-
-    // todo: have exit lookahead.
 
     // We'll have to handle the latch specially if the backedge is not preserved.
     if (! loops->top()->preservesBackedge()) {
@@ -354,8 +352,10 @@ void BottomTranslator::attemptHandleDominatee(const BasicBlock* dominator, const
 void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
 {
     assert(loops->size() != 0 && "handleLoopBlock called on a new loop without newLoop being called");
-    if (loops->size() > 1)
-        gla::UnsupportedFunctionality("nested loops [2]");
+
+    // FIXME: turn off when ready for nested loops, and test thoroughly
+    // if (loops->size() > 1)
+    //     gla::UnsupportedFunctionality("nested loops [2]");
 
     const BranchInst* br = dyn_cast<BranchInst>(bb->getTerminator());
     assert(br && "handleLoopBlock called with non-branch terminator");
@@ -378,10 +378,8 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
 
     // If it's a loop header, have the back-end add it
     if (isHeader) {
-        // todo: add stuff for simple inductive loops
-        // if (loop->getTripCount())
-        //     llvm::errs() << " \n\nstatic inductive loop\n\n";
 
+        // FIXME: add more loop constructs here
 
         if (loop->isSimpleInductive()) {
             const PHINode* pn = loop->getCanonicalInductionVariable();
@@ -435,7 +433,7 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
     }
 
     // If we're exiting, add the (possibly conditional) exit. Immediately handle
-    // the other block if we dominate it.
+    // the other (non-exit) block if we dominate it.
     if (isExiting) {
 
         int pos = loop->exitSuccNumber(bb);
@@ -523,8 +521,9 @@ void BottomTranslator::closeLoop()
 {
     loops->pop();
 
-    if (loops->size() != 0)
-        gla::UnsupportedFunctionality("nested loops [3]");
+    // FIXME: turn off when ready for nested loops, and test thoroughly
+    // if (loops->size() != 0)
+    //     gla::UnsupportedFunctionality("nested loops [3]");
 }
 
 void BottomTranslator::forceOutputLatch()
@@ -549,26 +548,17 @@ void BottomTranslator::handleIfBlock(const BasicBlock* bb)
     const Conditional* cond = idConds->getConditional(bb);
 
     // If we don't have a conditional entry for bb, then we're dealing with
-    // conditionals with backedges/exits and other tricky control flow in them.
+    // conditionals with backedges/exits and other tricky control flow in
+    // them. If they weren't dispatched to handleLoopBlock, then that means that
+    // it's not exiting, and thus we must be a branch to a non-preserved latch
     if (! cond) {
         gla::UnsupportedFunctionality("complex continues in loops");
 
-        // todo: have idconditionls recognizing latching conditionals
+        // FIXME: have idconditionls recognizing latching conditionals, then add
+        // support for complex continues.
 
-        // const BranchInst* br = dyn_cast<BranchInst>(bb->getTerminator());
-        // assert(br && br->isConditional());
-
-        // backEndTranslator->addIf(br->getCondition(), false);
-        // handleBlock(br->getSuccessor(0));
-
-        // backEndTranslator->addElse();
-        // handleBlock(br->getSuccessor(1));
-
-        // backEndTranslator->addEndif();
-
-        // return;
+        return;
     }
-
 
     bool invert = cond->isIfElse();
 
@@ -616,12 +606,6 @@ void BottomTranslator::handleBranchingBlock(const BasicBlock* bb)
     handleNonTerminatingInstructions(bb);
     addPhiCopies(bb);
 
-    // // TODO: handle for if we're branching into a latch
-    // if (Loop* loop = loopInfo->getLoopFor(bb)) {
-    //     if (loops->size() && loop == loops->top() && IsPredecessor(bb, latch) && !preservedBackedge.top())
-    //         gla::UnsupportedFunctionality("inner continues, for now");
-    // }
-
     // If it's unconditional, we'll want to handle any subtrees (and introduced
     // latches) that it points to.
     if (br->isUnconditional()) {
@@ -640,6 +624,8 @@ void BottomTranslator::handleBranchingBlock(const BasicBlock* bb)
 
 void BottomTranslator::handleBlock(const BasicBlock* bb)
 {
+    // If handleBlock is called on a non-preserved latch, then force its output
+    // to happen.
     if (loops->size() && loops->top()->getLatch() == bb && !loops->top()->preservesBackedge()) {
         assert(IsUnconditional(bb));
         forceOutputLatch();
@@ -652,11 +638,13 @@ void BottomTranslator::handleBlock(const BasicBlock* bb)
     handledBlocks.insert(bb);
 
     // Are we on the last block?
+    // FIXME: I think the size method for ilist and iplists are linear in size,
+    // so save the result earlier (assuming we never modify the list).
     if (handledBlocks.size() == bb->getParent()->getBasicBlockList().size())
         lastBlock = true;
 
-    // If the block exhibits loop-relevant control flow,
-    // handle it specially
+    // If the block exhibits loop-relevant control flow, handle it specially
+    // FIXME: change the below to use LoopUtil (and extend functionality in LoopUtil)
     Loop* loop = loopInfo->getLoopFor(bb);
     if (loop && (loop->getHeader() == bb || gla::Util::isLatch(bb, loop) || loop->isLoopExiting(bb))
              && flowControlMode == gla::EFcmStructuredOpCodes) {
@@ -671,10 +659,11 @@ void BottomTranslator::handleBlock(const BasicBlock* bb)
     // If the block's a branching block, handle it specially.
     if (isa<BranchInst>(bb->getTerminator())) {
         handleBranchingBlock(bb);
-       return;
+        return;
     }
 
     // Otherwise we're a block ending in a return statement
+    assert(isa<ReturnInst>(bb->getTerminator()));
     handleReturnBlock(bb);
     return;
 }
@@ -746,6 +735,12 @@ bool BottomTranslator::runOnModule(Module& module)
             lastBlock = false;
 
             // basic blocks
+
+            // FIXME: only the first block should have to be handled, as every
+            // subgraph knows how to handle itself. Make sure this is true for
+            // subgraphs handling their merge points (it is for loop exits, but
+            // what about conditional merges?). Then this would become a
+            // handleBlock for the entry, and an assert that bb has been handled
             for (Function::const_iterator bb = function->begin(), E = function->end(); bb != E; ++bb) {
                 handleBlock(bb);
             }

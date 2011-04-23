@@ -117,7 +117,7 @@ namespace llvm {
         // they exist, are all empty blocks.
         bool isEmptyConditional() const;
 
-        // todo: latching and exiting conditionals
+        // FIXME: add support/queries for latching (and exiting maybe) conditionals
 
         BasicBlock* getEntryBlock() const { return entry; }
         BasicBlock* getMergeBlock() const { return merge; }

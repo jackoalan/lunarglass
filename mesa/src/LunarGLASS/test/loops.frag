@@ -18,6 +18,9 @@ uniform float d5;
 uniform float d6;
 uniform float d7;
 uniform float d8;
+uniform float d9;
+uniform float d10;
+uniform float d11;
 
 uniform int Count;
 
@@ -72,32 +75,32 @@ void main()
         ++color.w;
     }
 
-    // // Latchy
-    // do {
-    //     color += bigColor4;
-    //     if (color.x < d4)
-    //         continue;
-    //     if (color.y < d4)
-    //         color.y += d4;
-    //     else
-    //         color.x += d4;
-    // } while (color.z < d4);
+    // Latchy
+    do {
+        color += bigColor4;
+        if (color.x < d4)
+            continue;
+        if (color.y < d4)
+            color.y += d4;
+        else
+            color.x += d4;
+    } while (color.z < d4);
 
-    // // // Latchy2
-    // // do {
-    // //     color += bigColor4;
-    // //     if (color.x < d4) {
-    // //         color.z += 2.0;
-    // //         if (color.z < d4) {
-    // //             color.x++;
-    // //             continue;
-    // //         }
-    // //     }
-    // //     if (color.y < d4)
-    // //         color.y += d4;
-    // //     else
-    // //         color.x += d4;
-    // // } while (color.z < d4);
+    // Latchy2
+    do {
+        color += bigColor4;
+        if (color.x < d4) {
+            color.z += 2.0;
+            if (color.z < d4) {
+                color.x++;
+                continue;
+            }
+        }
+        if (color.y < d4)
+            color.y += d4;
+        else
+            color.x += d4;
+    } while (color.z < d4);
 
     // Do while flow control
     do {
@@ -133,14 +136,14 @@ void main()
 
     // Multi-exit2
     do {
-       if (d7 < 0.0)
+       if (d8 < 0.0)
            break;
 
        color += bigColor7;
 
-       if (d7 < 1.0) {
+       if (d8 < 1.0) {
            color.z++;
-           if (d7 < 2.0) {
+           if (d8 < 2.0) {
                color.y++;
            } else {
                color.x++;

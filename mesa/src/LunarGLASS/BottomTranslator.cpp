@@ -368,20 +368,32 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
     BasicBlock* latch  = loop->getLatch();
     BasicBlock* exitMerge = loop->getExitMerge();
 
+    // FIXME: have calculating exit merge take into account when some of the
+    // exit blocks merge into a return (that is, you can have return statements
+    // inside loops, with some exiting blocks going to it).
+
+    if (! exitMerge)
+        gla::UnsupportedFunctionality("complex exits/continues in loops");
+
     bool isHeader  = bb == header;
     bool isLatch   = bb == latch;
     bool isExiting = loop->isLoopExiting(bb);
 
-    bool preserved = loop->preservesBackedge();
+    bool preserved         = loop->preservesBackedge();
+    bool simpleInductive   = loop->isSimpleInductive();
+    bool simpleConditional = loop->isSimpleConditional();
+
+    // // Whether we have already handled the internal instructions (e.g. in a
+    // // header for a conditional loop)
+    // bool handledInsts = false;
 
     assert(!isLatch || preserved); // isLatch => preserved
 
     // If it's a loop header, have the back-end add it
     if (isHeader) {
 
-        // FIXME: add more loop constructs here
-
-        if (loop->isSimpleInductive()) {
+        // TODO: add more loop constructs here
+        if (simpleInductive) {
             const PHINode* pn = loop->getCanonicalInductionVariable();
             Value* count = loop->getTripCount();
             assert(pn && count);
@@ -399,6 +411,14 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
 
             backEndTranslator->beginSimpleInductiveLoop(pn, tripCount);
             inductionVariables.insert(pn);
+        } else if (simpleConditional) {
+            assert(condition);
+            CmpInst* cmp = dyn_cast<CmpInst>(condition);
+            assert(cmp && cmp->getNumOperands() == 2);
+
+            // FIXME: do inversion/no inversion if need be
+            backEndTranslator->beginSimpleConditionalLoop(cmp, cmp->getOperand(0), cmp->getOperand(1), true);
+
         } else {
             backEndTranslator->beginLoop();
         }
@@ -412,9 +432,10 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
         assert(idConds->getConditional(bb));
         handleBranchingBlock(bb);
     } else {
-        // If we're simple inductive, then don't do the instructions computing
-        // the inductive variable or the exit condition
-        if ((isExiting || isLatch) && loop->isSimpleInductive()) {
+        if ((isExiting || isLatch) && simpleInductive) {
+            // If we're simple inductive, then don't do the instructions computing
+            // the inductive variable or the exit condition
+
             SmallVector<const Instruction*, 32> insts;
             const Instruction* lastInst  = bb->getTerminator();
 
@@ -426,8 +447,11 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
 
             addInstructions(insts);
 
-        }
-        else {
+        } else if (isHeader && simpleConditional) {
+            // If we're simple conditional, don't output any of the instructions
+            0;
+        } else {
+            // Otherwise output them all
             handleNonTerminatingInstructions(bb);
         }
     }
@@ -445,7 +469,7 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
         // the exit merge.
         if (condition) {
 
-            if (! loop->isSimpleInductive())
+            if (! simpleInductive && ! simpleConditional)
                 backEndTranslator->addIf(condition, pos == 1);
 
             // Add phi copies (if applicable)
@@ -458,11 +482,11 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
                 }
 
                 handleBlock(exitBlock);
-                assert(! loop->isSimpleInductive()); // I'm not sure how this can arise
+                assert(! simpleInductive); // I'm not sure how this can arise
             }
         }
 
-        if (! loop->isSimpleInductive()) {
+        if (! simpleInductive && ! simpleConditional) {
             backEndTranslator->addLoopExit();
             backEndTranslator->addEndif();
         }
@@ -480,7 +504,7 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
         SmallPtrSet<const PHINode*, 8> phis;
         getPHINodes(header, phis);
 
-        if (loop->isSimpleInductive())
+        if (simpleInductive)
             phis.erase(loop->getCanonicalInductionVariable());
 
         addPhiCopies(phis, bb);

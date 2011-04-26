@@ -45,10 +45,8 @@ namespace llvm {
     inline bool AreEmptyBB(SmallVectorImpl<const BasicBlock*>& bbs)
     {
         for (SmallVectorImpl<const BasicBlock*>::iterator i = bbs.begin(), e = bbs.end(); i != e; ++i)
-            if (! IsEmptyBB(*i)) {
-                errs() << "\n================================================================================\n" << **i << "\n================================================================================\n";
+            if (! IsEmptyBB(*i))
                 return false;
-            }
 
         return true;
     }
@@ -67,6 +65,17 @@ namespace llvm {
             return bi->isConditional();
 
         return false;
+    }
+
+    // If the block terminates in a conditional branch, get that condition, else
+    // return NULL
+    inline Value* GetCondition(const BasicBlock* bb)
+    {
+        const BranchInst* br = dyn_cast<BranchInst>(bb->getTerminator());
+        if (! br || br->isUnconditional())
+            return NULL;
+
+        return br->getCondition();
     }
 
     // Whether the block terminates in a unconditional branch
@@ -122,6 +131,22 @@ namespace llvm {
 
         return true;
     }
+
+    // // Returns true if the only purpose of the block's instructions is to
+    // // compute the terminator (except for phis, which can have other uses
+    // // outside the Basic Block). Operates by looking at each instruction (except
+    // // for phis), and sees if all of its uses lie only within the BB.
+    // inline bool SolelyComputesTerminator(const BasicBlock* bb)
+    // {
+    //     for (BasicBlock::const_iterator i = bb->begin(), e = bb->end(); i != e; ++i) {
+    //         if (isa<PHINode>(i))
+    //             continue;
+    //         if (i->isUsedOutsideOfBlock(bb))
+    //             return false;
+    //     }
+
+    //     return true;
+    // }
 
     // Gather up all the children of the passed basic block that are dominated
     // by it.

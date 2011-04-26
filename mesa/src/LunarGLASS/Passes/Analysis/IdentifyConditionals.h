@@ -117,7 +117,7 @@ namespace llvm {
         // they exist, are all empty blocks.
         bool isEmptyConditional() const;
 
-        // FIXME: add support/queries for latching (and exiting maybe) conditionals
+        // FIXME: add support/queries for latching (and exiting, maybe) conditionals
 
         BasicBlock* getEntryBlock() const { return entry; }
         BasicBlock* getMergeBlock() const { return merge; }
@@ -127,6 +127,9 @@ namespace llvm {
         BranchInst* getBranchInst() const { return dyn_cast<BranchInst>(entry->getTerminator()); }
 
         Value* getCondition() const { return getBranchInst()->getCondition(); };
+
+        // Returns the condition if it only has one use, NULL otherwise
+        Value* getSingleUseCondition() const { return getCondition()->hasOneUse() ? getCondition() : NULL; }
     };
 
 

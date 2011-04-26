@@ -32,6 +32,7 @@
 
 #include "llvm/Analysis/LoopInfo.h"
 
+#include "Passes/Util/ADT.h"
 #include "Passes/Util/BasicBlockUtil.h"
 
 #include <stack>
@@ -53,6 +54,8 @@ namespace llvm {
             , tripCount(loop->getTripCount())
         {
             loop->getUniqueExitBlocks(exits);
+
+            // FIXME: update to consider the presence of return
             exitMerge = GetSingleMergePoint(exits, *domFront);
         }
 
@@ -84,6 +87,45 @@ namespace llvm {
         bool isSimpleInductive()
         {
             return preservedBackedge && loop->getCanonicalInductionVariable() && loop->getTripCount();
+        }
+
+        // Is the loop a simple conditional loop. A simple conditional loop is a
+        // loop whose header is a conditionally exiting block, and the condition
+        // is some comparison operator whose operands are extracts, constants,
+        // or loads. Furthermore, all other instructions in the block can only
+        // be phis.
+        bool isSimpleConditional()
+        {
+            // It has to be conditional, comparison operator and the header has
+            // to be exiting
+            CmpInst* cond = dyn_cast<CmpInst>(GetCondition(header));
+            if (! cond || ! isLoopExiting(header))
+                return false;
+
+            // There can't be any other non-phi instructions in the block, so
+            // keep track of the number of instructions we've seen.
+            int count = 2;      // Already looked at the branch and condition
+
+            // They have to be constants, extracts (vector swizzle), or loads
+            // (uniforms). Add them to our count if they are in the header
+            for (Instruction::const_op_iterator i = cond->op_begin(), e = cond->op_end(); i != e; ++i) {
+                if (! (isa<ExtractElementInst>(i) || isa<LoadInst>(i) || isa<Constant>(i)))
+                    return false;
+                if (Instruction* inst = dyn_cast<Instruction>(i))
+                    if (inst->getParent() == header)
+                        ++count;
+            }
+
+            // Add up the phis
+            for (BasicBlock::const_iterator i = header->begin(), e = header->end(); i != e; ++i) {
+                if (! isa<PHINode>(i))
+                    break;
+                ++count;
+            }
+
+            errs() << "SimpleConditional count:  " << count << " header size: " << header->size() << *header;
+            // Our total has to be the number of instructions in the header.
+            return header->size() == count;
         }
 
         // Whether the loop is a canonical, structured loop.  In a canonical,

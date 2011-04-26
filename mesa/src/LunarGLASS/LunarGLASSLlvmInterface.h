@@ -210,20 +210,6 @@ namespace gla {
         // Return the number of latches in a loop
         static int getNumLatches(llvm::Loop* loop);
 
-        // Whether a SmallVector contains the given element
-        template<typename T>
-        static bool smallVectorContains(llvm::SmallVectorImpl<T>& vec, T val)
-        {
-            // We need to typedef it (with a typename) to access its iterator
-            for (typename llvm::SmallVectorImpl<T>::iterator i = vec.begin(), e = vec.end(); i != e; ++i) {
-                if (&**i == &*val)
-                    return true;
-            }
-
-            return false;
-        }
-
-
     };
 };
 

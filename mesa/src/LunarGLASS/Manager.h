@@ -41,6 +41,8 @@
 // Forward decls
 namespace llvm {
     class PHINode;
+    class Value;
+    class CmpInst;
 } // end namespace llvm
 
 namespace gla {
@@ -78,6 +80,8 @@ namespace gla {
 
         // Specialized loop constructs
 
+        // FIXME: add backend queries for each of these forms
+
         // Add a conditional (e.g. while) loop. Currently unimplemented.
         virtual void beginConditionalLoop(/* TBD */) = 0;
 
@@ -87,6 +91,21 @@ namespace gla {
         // // Add a canonical inductive loop as above where the bound is known statically
         // virtual void beginStaticInductiveLoop(/* TBD */) = 0;
 
+
+        // Add a simple conditional loop. A simple conditional loop has a simple
+        // conditional expression, which consists of a comparison operation and
+        // two arguments that must either be constants, extracts (from a vector),
+        // or loads (for uniforms). Recieves the comparison instruction, the
+        // first operand, and the second operand. If the result of the
+        // comparison should be inverted, invert will be passed as true.
+        virtual void beginSimpleConditionalLoop(const llvm::CmpInst* cmp, const llvm::Value* op1, const llvm::Value* op2, bool invert=false) = 0;
+
+        // Add a simple inductive loop. A simple inductive loop is a loop with
+        // an inductive variable starting at 0, and incrementing by 1 through
+        // the loop until some statically known final value. A simple inductive
+        // loop also has a statically known trip count (how many times it will
+        // be executed). It is given the phi node corresponding to the induction
+        // variable, and how many times the body will be executed.
         virtual void beginSimpleInductiveLoop(const llvm::PHINode* phi, unsigned count) = 0;
 
         // Generic loop constructs

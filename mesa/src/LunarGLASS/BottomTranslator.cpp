@@ -383,6 +383,8 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
     bool simpleInductive   = loop->isSimpleInductive();
     bool simpleConditional = loop->isSimpleConditional();
 
+    int exitPos = loop->exitSuccNumber(bb);
+
     // // Whether we have already handled the internal instructions (e.g. in a
     // // header for a conditional loop)
     // bool handledInsts = false;
@@ -394,8 +396,8 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
 
         // TODO: add more loop constructs here
         if (simpleInductive) {
-            const PHINode* pn = loop->getCanonicalInductionVariable();
-            Value* count = loop->getTripCount();
+            const PHINode* pn  = loop->getCanonicalInductionVariable();
+            const Value* count = loop->getTripCount();
             assert(pn && count);
 
             int tripCount = gla::Util::getConstantInt(count);
@@ -413,7 +415,7 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
             inductionVariables.insert(pn);
         } else if (simpleConditional) {
             assert(condition);
-            CmpInst* cmp = dyn_cast<CmpInst>(condition);
+            const CmpInst* cmp = dyn_cast<CmpInst>(condition);
             assert(cmp && cmp->getNumOperands() == 2);
 
             // FIXME: do inversion/no inversion if need be
@@ -460,39 +462,39 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
     // the other (non-exit) block if we dominate it.
     if (isExiting) {
 
-        int pos = loop->exitSuccNumber(bb);
-        assert(pos != -1);
-        if (pos == 2)
+        assert(exitPos != -1);
+        if (exitPos == 2)
             gla::UnsupportedFunctionality("complex loop exits (two exit branches from same block)");
+
+        bool shouldOutput = ! (simpleInductive || (simpleConditional && isHeader));
 
         // Set up the conditional, and add the exit block subgraph if it isn't
         // the exit merge.
-        if (condition) {
+        if (shouldOutput)
+            if (condition)
+                backEndTranslator->addIf(condition, exitPos == 1);
 
-            if (! simpleInductive && ! simpleConditional)
-                backEndTranslator->addIf(condition, pos == 1);
+        // Add phi copies (if applicable)
+        addPhiCopies(bb, br->getSuccessor(exitPos));
 
-            // Add phi copies (if applicable)
-            addPhiCopies(bb, br->getSuccessor(pos));
-
-            BasicBlock* exitBlock = br->getSuccessor(pos);
+        if (shouldOutput) {
+            BasicBlock* exitBlock = br->getSuccessor(exitPos);
             if (exitBlock != exitMerge) {
                 if (handledBlocks.count(exitBlock)) {
                     gla::UnsupportedFunctionality("complex loop exits (shared exit block)");
                 }
-
+                assert(! simpleInductive && "distinct merge point from exitBlock");
                 handleBlock(exitBlock);
-                assert(! simpleInductive); // I'm not sure how this can arise
             }
-        }
 
-        if (! simpleInductive && ! simpleConditional) {
             backEndTranslator->addLoopExit();
-            backEndTranslator->addEndif();
+
+            if (condition)
+                backEndTranslator->addEndif();
         }
 
         if (condition) {
-            attemptHandleDominatee(bb, br->getSuccessor(! pos));
+            attemptHandleDominatee(bb, br->getSuccessor(! exitPos));
         }
     }
 
@@ -530,6 +532,19 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
             errs() << " unhandled: " << **i << "\n";
         assert(handledBlocks.count(*i) && "Loop blocks remaining that were not handled structurally");
     }
+
+    // If we're simple conditional, make the exiting phi copies.
+    if (simpleConditional) {
+        BasicBlock* exitBlock = br->getSuccessor(exitPos);
+        if (exitBlock != exitMerge) {
+            if (handledBlocks.count(exitBlock)) {
+                gla::UnsupportedFunctionality("complex loop exits (shared exit block)");
+            }
+
+            handleBlock(exitBlock);
+        }
+    }
+
 
     backEndTranslator->endLoop();
     closeLoop();
@@ -650,6 +665,8 @@ void BottomTranslator::handleBlock(const BasicBlock* bb)
 {
     // If handleBlock is called on a non-preserved latch, then force its output
     // to happen.
+    // FIXME: keep around a "lastLoopBlock" member so that final continues need
+    // not be printed out
     if (loops->size() && loops->top()->getLatch() == bb && !loops->top()->preservesBackedge()) {
         assert(IsUnconditional(bb));
         forceOutputLatch();

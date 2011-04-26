@@ -115,6 +115,7 @@ namespace llvm {
                     if (inst->getParent() == header)
                         ++count;
             }
+            // FIXME: handle when the cmp's arguments are phis
 
             // Add up the phis
             for (BasicBlock::const_iterator i = header->begin(), e = header->end(); i != e; ++i) {

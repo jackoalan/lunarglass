@@ -63,10 +63,10 @@ void main()
         color += bigColor1_3;
     }
 
-    // // For (dynamic)
-    // for (int i = 0; i < Count; ++i) {
-    //     color += bigColor2;
-    // }
+    // For (dynamic)
+    for (int i = 0; i < Count; ++i) {
+        color += bigColor2;
+    }
 
     // // Do while
     // do {

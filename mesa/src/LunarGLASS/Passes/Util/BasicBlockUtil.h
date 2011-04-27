@@ -67,6 +67,12 @@ namespace llvm {
         return false;
     }
 
+    // Whether the block terminates in a unconditional branch
+    inline bool IsUnconditional(const BasicBlock* bb)
+    {
+        return !IsConditional(bb);
+    }
+
     // If the block terminates in a conditional branch, get that condition, else
     // return NULL
     inline Value* GetCondition(const BasicBlock* bb)
@@ -78,10 +84,13 @@ namespace llvm {
         return br->getCondition();
     }
 
-    // Whether the block terminates in a unconditional branch
-    inline bool IsUnconditional(const BasicBlock* bb)
+    // Collect all the phi nodes in bb into a phis
+    template<unsigned Size>
+    inline void GetPHINodes(const BasicBlock* bb, SmallPtrSet<const PHINode*, Size>& phis)
     {
-        return !IsConditional(bb);
+        for (BasicBlock::const_iterator i = bb->begin(), e = bb->end(); i != e; ++i)
+            if (const PHINode* pn = dyn_cast<PHINode>(i))
+                phis.insert(pn);
     }
 
     // Whether block A is a predecessor of B
@@ -92,15 +101,6 @@ namespace llvm {
                 return true;
 
         return false;
-    }
-
-    // Collect all the phi nodes in bb into a phis
-    template<unsigned Size>
-    inline void getPHINodes(const BasicBlock* bb, SmallPtrSet<const PHINode*, Size>& phis)
-    {
-        for (BasicBlock::const_iterator i = bb->begin(), e = bb->end(); i != e; ++i)
-            if (const PHINode* pn = dyn_cast<PHINode>(i))
-                phis.insert(pn);
     }
 
     // A is an indirect predecessor of B if A branches to some block that
@@ -158,6 +158,17 @@ namespace llvm {
 
             children.push_back(*i);
         }
+    }
+
+    // Returns the specified successor block. If bb does not end in a
+    // BranchInst, or i is out of range, returns NULL
+    inline const BasicBlock* GetSuccessor(int i, const BasicBlock* bb)
+    {
+        const BranchInst* br = dyn_cast<BranchInst>(bb->getTerminator());
+        if (! br || (br->isUnconditional() && i != 0) || (br->isConditional() && i != 0 && i != 1))
+            return NULL;
+
+        return br->getSuccessor(i);
     }
 
     // Return the single merge point of the given basic blocks.  Returns null if

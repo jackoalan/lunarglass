@@ -191,8 +191,6 @@ namespace {
 
         SmallPtrSet<const BasicBlock*, 8> handledBlocks;
 
-        SmallPtrSet<const PHINode*, 8> inductionVariables;
-
         // Data for handling loops
         LoopStack* loops;
 
@@ -200,7 +198,7 @@ namespace {
         void newLoop(const BasicBlock*);
 
         // Reset loop data
-        void closeLoop();
+        void closeLoop() { loops->pop(); };
 
         // Handle and dispatch the given block, updating handledBlocks.
         void handleBlock(const BasicBlock*);
@@ -215,6 +213,10 @@ namespace {
         // Call add (except for phis when applicable) on all the instructions
         // provided in insts.
         void addInstructions(SmallVectorImpl<const Instruction*>& insts);
+
+        void handleSimpleInductiveInstructions(const BasicBlock* bb);
+
+        void handleSimpleConditionalInstructions(const BasicBlock* bb) { return; }
 
         // Given a loop block, handle it. Dispatches to other methods and ends
         // up handling all blocks in the loop.
@@ -233,9 +235,61 @@ namespace {
         // If dominator properly dominates dominatee, then handle it, else do nothing
         void attemptHandleDominatee(const BasicBlock* dominator, const BasicBlock* dominatee);
 
+        // Sets up a the beginning of a loop for the loop at the top of our LoopStack.
+        // Assumes there is something on top of our LoopStack.
+        void setUpLoopBegin(const Value* condition);
+
+        // Sets up the exit from the loop at the top of our LoopStack. Assumes
+        // there is something on top of our LoopStack.
+        void setUpLoopExit(const Value* condition, const BasicBlock* bb);
+
+        // Sets up the preserved latch for the loop at the top of our
+        // LoopStack. Assumes there is something on top of our LoopStack
+        void setUpPreservedLatch();
+
     };
 
 } // end namespace
+
+static void CreateSimpleInductive(LoopWrapper* loop, gla::BackEndTranslator* bet)
+{
+    const PHINode* pn  = loop->getCanonicalInductionVariable();
+    const Value* count = loop->getTripCount();
+    assert(pn && count);
+
+    int tripCount = gla::Util::getConstantInt(count);
+    assert (tripCount  >= 0);
+
+    if (gla::Options.debug) {
+        errs() << "\ninductive variable:"   << *pn;
+        errs() << "\n  trip count:        " << tripCount;
+        errs() << "\n  increment:       "   << *loop->getIncrement();
+        errs() << "\n  exit condition:  "   << *loop->getExitCondition();
+        errs() << "\n";
+    }
+
+    bet->beginSimpleInductiveLoop(pn, tripCount);
+}
+
+static void CreateSimpleConditional(const Value* condition, gla::BackEndTranslator* bet)
+{
+    assert(condition);
+    const CmpInst* cmp = dyn_cast<CmpInst>(condition);
+    assert(cmp && cmp->getNumOperands() == 2);
+
+    // FIXME: do inversion/no inversion if need be
+    bet->beginSimpleConditionalLoop(cmp, cmp->getOperand(0), cmp->getOperand(1), true);
+}
+
+// Are all the blocks in the loop present in handledBlocks
+static bool AreAllHandled(const LoopWrapper* loop, SmallPtrSet<const BasicBlock*, 8>& handledBlocks)
+{
+    for (Loop::block_iterator i = loop->block_begin(), e = loop->block_end(); i != e; ++i)
+        if (! handledBlocks.count(*i))
+            return false;
+
+    return true;
+}
 
 void BottomTranslator::declarePhiCopies(const Function* function)
 {
@@ -310,23 +364,11 @@ void BottomTranslator::addInstructions(SmallVectorImpl<const Instruction*>& inst
             backEndTranslator->add(*i, lastBlock);
 }
 
-// static bool properExitBlock(const BasicBlock* bb, const Loop* loop)
-// {
-//     for (const_pred_iterator i = pred_begin(bb), e = pred_end(bb); i != e; ++i) {
-//         if (! loop->contains(*i))
-//             return false;
-//     }
-
-//     return true;
-// }
-
 void BottomTranslator::newLoop(const BasicBlock* bb)
 {
     assert(loopInfo->getLoopFor(bb) && "newLoop called on non-loop");
 
-    // FIXME: turn off when ready for nested loops, and test thoroughly
-    // if (loops->size() != 0)
-    //     gla::UnsupportedFunctionality("nested loops");
+    // FIXME: Test nested loops thoroughly
 
     loops->newLoop(bb);
 
@@ -347,204 +389,100 @@ void BottomTranslator::attemptHandleDominatee(const BasicBlock* dominator, const
     }
 }
 
-
-
 void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
 {
     assert(loops->size() != 0 && "handleLoopBlock called on a new loop without newLoop being called");
 
-    // FIXME: turn off when ready for nested loops, and test thoroughly
-    // if (loops->size() > 1)
-    //     gla::UnsupportedFunctionality("nested loops [2]");
+    // FIXME: Test nested loops thoroughly
 
-    const BranchInst* br = dyn_cast<BranchInst>(bb->getTerminator());
-    assert(br && "handleLoopBlock called with non-branch terminator");
+    const Value* condition = GetCondition(bb);
 
-    Value* condition = br->isConditional() ? br->getCondition() : NULL;
+    const LoopWrapper* loop  = loops->top();
+    const BasicBlock* header = loop->getHeader();
+    const BasicBlock* latch  = loop->getLatch();
 
-    LoopWrapper* loop = loops->top();
+    bool isHeader  = bb == header;
+    bool isLatch   = bb == latch;
+    bool isExiting = loop->isLoopExiting(bb);
+    assert(isHeader || isLatch || isExiting);
 
-    BasicBlock* header = loop->getHeader();
-    BasicBlock* latch  = loop->getLatch();
-    BasicBlock* exitMerge = loop->getExitMerge();
+    bool preserved         = loop->preservesBackedge();
+    bool simpleInductive   = loop->isSimpleInductive();
+    bool simpleConditional = loop->isSimpleConditional() && isHeader;
 
     // FIXME: have calculating exit merge take into account when some of the
     // exit blocks merge into a return (that is, you can have return statements
     // inside loops, with some exiting blocks going to it).
 
-    if (! exitMerge)
-        gla::UnsupportedFunctionality("complex exits/continues in loops");
-
-    bool isHeader  = bb == header;
-    bool isLatch   = bb == latch;
-    bool isExiting = loop->isLoopExiting(bb);
-
-    bool preserved         = loop->preservesBackedge();
-    bool simpleInductive   = loop->isSimpleInductive();
-    bool simpleConditional = loop->isSimpleConditional();
-
-    int exitPos = loop->exitSuccNumber(bb);
-
-    // // Whether we have already handled the internal instructions (e.g. in a
-    // // header for a conditional loop)
-    // bool handledInsts = false;
-
     assert(!isLatch || preserved); // isLatch => preserved
 
     // If it's a loop header, have the back-end add it
-    if (isHeader) {
-
-        // TODO: add more loop constructs here
-        if (simpleInductive) {
-            const PHINode* pn  = loop->getCanonicalInductionVariable();
-            const Value* count = loop->getTripCount();
-            assert(pn && count);
-
-            int tripCount = gla::Util::getConstantInt(count);
-            assert (tripCount  >= 0);
-
-            if (gla::Options.debug) {
-                errs() << "\ninductive variable:" << *pn;
-                errs() << "\n  trip count:        " << tripCount;
-                errs() << "\n  increment:       "   << *loop->getIncrement();
-                errs() << "\n  exit condition:  "   << *loop->getExitCondition();
-                errs() << "\n";
-            }
-
-            backEndTranslator->beginSimpleInductiveLoop(pn, tripCount);
-            inductionVariables.insert(pn);
-        } else if (simpleConditional) {
-            assert(condition);
-            const CmpInst* cmp = dyn_cast<CmpInst>(condition);
-            assert(cmp && cmp->getNumOperands() == 2);
-
-            // FIXME: do inversion/no inversion if need be
-            backEndTranslator->beginSimpleConditionalLoop(cmp, cmp->getOperand(0), cmp->getOperand(1), true);
-
-        } else {
-            backEndTranslator->beginLoop();
-        }
-    }
+    if (isHeader)
+        setUpLoopBegin(condition);
 
     // If the branch is conditional and not a latch nor exiting, we're dealing
     // with conditional (e.g. if-then-else) flow control from a header.
     // Otherwise handle it's instructions ourselves.
     if (condition && (!isLatch && !isExiting)) {
-        assert(isHeader);
         assert(idConds->getConditional(bb));
         handleBranchingBlock(bb);
     } else {
         if ((isExiting || isLatch) && simpleInductive) {
-            // If we're simple inductive, then don't do the instructions computing
-            // the inductive variable or the exit condition
-
-            SmallVector<const Instruction*, 32> insts;
-            const Instruction* lastInst  = bb->getTerminator();
-
-            for (BasicBlock::const_iterator i = bb->begin(); &*i != lastInst; ++i) {
-                if (&*i == loop->getExitCondition() || &*i == loop->getIncrement())
-                    continue;
-                insts.push_back(i);
-            }
-
-            addInstructions(insts);
-
-        } else if (isHeader && simpleConditional) {
-            // If we're simple conditional, don't output any of the instructions
-            0;
+            handleSimpleInductiveInstructions(bb);
+        } else if (simpleConditional) {
+            handleSimpleConditionalInstructions(bb);
         } else {
             // Otherwise output them all
             handleNonTerminatingInstructions(bb);
         }
     }
 
-    // If we're exiting, add the (possibly conditional) exit. Immediately handle
-    // the other (non-exit) block if we dominate it.
+    // If we're exiting, add the (possibly conditional) exit.
     if (isExiting) {
-
-        assert(exitPos != -1);
-        if (exitPos == 2)
-            gla::UnsupportedFunctionality("complex loop exits (two exit branches from same block)");
-
-        bool shouldOutput = ! (simpleInductive || (simpleConditional && isHeader));
-
-        // Set up the conditional, and add the exit block subgraph if it isn't
-        // the exit merge.
-        if (shouldOutput)
-            if (condition)
-                backEndTranslator->addIf(condition, exitPos == 1);
-
-        // Add phi copies (if applicable)
-        addPhiCopies(bb, br->getSuccessor(exitPos));
-
-        if (shouldOutput) {
-            BasicBlock* exitBlock = br->getSuccessor(exitPos);
-            if (exitBlock != exitMerge) {
-                if (handledBlocks.count(exitBlock)) {
-                    gla::UnsupportedFunctionality("complex loop exits (shared exit block)");
-                }
-                assert(! simpleInductive && "distinct merge point from exitBlock");
-                handleBlock(exitBlock);
-            }
-
-            backEndTranslator->addLoopExit();
-
-            if (condition)
-                backEndTranslator->addEndif();
-        }
-
-        if (condition) {
-            attemptHandleDominatee(bb, br->getSuccessor(! exitPos));
-        }
+        setUpLoopExit(condition, bb);
     }
 
-    // If it's a latch, we must be preserved and thus only need to add phi copies
     if (isLatch) {
         assert(preserved);
-
-        // Add phi copies (if applicable) excluding the one for the inductive variable
-        SmallPtrSet<const PHINode*, 8> phis;
-        getPHINodes(header, phis);
-
-        if (simpleInductive)
-            phis.erase(loop->getCanonicalInductionVariable());
-
-        addPhiCopies(phis, bb);
-
         assert(( !condition || isExiting) && "redundant assertion failed");
+
+        setUpPreservedLatch();
     }
 
     // We've been fully handled by now, unless we're a header
     if (! isHeader)
         return;
-    assert(isHeader);
 
     // If we're an unconditional header (e.g. branching immediately to an inner
     // loop), add our target
-    if (br->isUnconditional()) {
-        handleBlock(br->getSuccessor(0));
+    if (IsUnconditional(bb)) {
+        handleBlock(GetSuccessor(0, bb));
     }
 
     // By this point, we're a header and all of our blocks in our loop should of
     // been handled.
-    for (Loop::block_iterator i = loops->top()->block_begin(), e = loops->top()->block_end(); i != e; ++i) {
-        if (! handledBlocks.count(*i))
-            errs() << " unhandled: " << **i << "\n";
-        assert(handledBlocks.count(*i) && "Loop blocks remaining that were not handled structurally");
-    }
+    assert(AreAllHandled(loop, handledBlocks));
 
-    // If we're simple conditional, make the exiting phi copies.
-    if (simpleConditional) {
-        BasicBlock* exitBlock = br->getSuccessor(exitPos);
+
+    const BasicBlock* exitMerge = loop->getExitMerge();
+
+    // If we're simple conditional (and still a header), handle our exit block
+    if (loop->isSimpleConditional()) {
+        int exitPos = loop->exitSuccNumber(bb);
+        assert(exitPos != -1);
+        if (exitPos == 2)
+            gla::UnsupportedFunctionality("complex loop exits (two exit branches from same block)");
+
+        const BasicBlock* exitBlock = GetSuccessor(exitPos, bb);
+
         if (exitBlock != exitMerge) {
             if (handledBlocks.count(exitBlock)) {
-                gla::UnsupportedFunctionality("complex loop exits (shared exit block)");
+                gla::UnsupportedFunctionality("complex loop exits (shared exit block) [2]");
             }
 
             handleBlock(exitBlock);
         }
     }
-
 
     backEndTranslator->endLoop();
     closeLoop();
@@ -556,15 +494,6 @@ void BottomTranslator::handleLoopBlock(const BasicBlock* bb)
     return;
 }
 
-void BottomTranslator::closeLoop()
-{
-    loops->pop();
-
-    // FIXME: turn off when ready for nested loops, and test thoroughly
-    // if (loops->size() != 0)
-    //     gla::UnsupportedFunctionality("nested loops [3]");
-}
-
 void BottomTranslator::forceOutputLatch()
 {
     const BasicBlock* latch = loops->top()->getLatch();
@@ -573,8 +502,7 @@ void BottomTranslator::forceOutputLatch()
     assert(latch && !preserved);
     assert(handledBlocks.count(latch));
 
-    const BranchInst* br = dyn_cast<BranchInst>(latch->getTerminator());
-    assert(br && br->isUnconditional());
+    assert(IsUnconditional(latch));
 
     handleNonTerminatingInstructions(latch);
 
@@ -638,24 +566,19 @@ void BottomTranslator::handleReturnBlock(const BasicBlock* bb)
 
 void BottomTranslator::handleBranchingBlock(const BasicBlock* bb)
 {
-    const BranchInst* br = dyn_cast<BranchInst>(bb->getTerminator());
-    assert(br);
-
     // Handle it's instructions and do phi node removal if appropriate
     handleNonTerminatingInstructions(bb);
     addPhiCopies(bb);
 
     // If it's unconditional, we'll want to handle any subtrees (and introduced
     // latches) that it points to.
-    if (br->isUnconditional()) {
-        if (domTree->dominates(bb, br->getSuccessor(0))
-            || (loops->size() && !loops->top()->preservesBackedge() && br->getSuccessor(0) == loops->top()->getLatch()))
-            handleBlock(br->getSuccessor(0));
+    if (IsUnconditional(bb)) {
+        if (domTree->dominates(bb, GetSuccessor(0, bb))
+            || (loops->size() && !loops->top()->preservesBackedge() && GetSuccessor(0, bb) == loops->top()->getLatch()))
+            handleBlock(GetSuccessor(0, bb));
 
         return;
     }
-
-    assert(br->getNumSuccessors() == 2 && "Ill-formed conditional branch");
 
     handleIfBlock(bb);
     return;
@@ -706,7 +629,105 @@ void BottomTranslator::handleBlock(const BasicBlock* bb)
     // Otherwise we're a block ending in a return statement
     assert(isa<ReturnInst>(bb->getTerminator()));
     handleReturnBlock(bb);
-    return;
+}
+
+void BottomTranslator::handleSimpleInductiveInstructions(const BasicBlock* bb)
+{
+    assert(loops->size() != 0);
+
+    // If we're simple inductive, then don't do the instructions computing
+    // the inductive variable or the exit condition
+
+    SmallVector<const Instruction*, 32> insts;
+    const Instruction* lastInst  = bb->getTerminator();
+
+    for (BasicBlock::const_iterator i = bb->begin(); &*i != lastInst; ++i) {
+        if (&*i == loops->top()->getExitCondition() || &*i == loops->top()->getIncrement())
+            continue;
+        insts.push_back(i);
+    }
+
+    addInstructions(insts);
+}
+
+void BottomTranslator::setUpPreservedLatch()
+{
+    // If it's a latch, we must be preserved and thus only need to add phi copies
+
+    // Add phi copies (if applicable) excluding the one for the inductive variable
+    SmallPtrSet<const PHINode*, 8> phis;
+    GetPHINodes(loops->top()->getHeader(), phis);
+
+    if (loops->top()->isSimpleInductive())
+        phis.erase(loops->top()->getCanonicalInductionVariable());
+
+    addPhiCopies(phis, loops->top()->getLatch());
+
+}
+
+void BottomTranslator::setUpLoopBegin(const Value* condition)
+{
+    assert(loops->size() != 0);
+    LoopWrapper* loop = loops->top();
+
+    // TODO: add more loop constructs here
+    if (loop->isSimpleInductive()) {
+        CreateSimpleInductive(loop, backEndTranslator);
+    } else if (loop->isSimpleConditional()) {
+        CreateSimpleConditional(condition, backEndTranslator);
+    } else {
+        backEndTranslator->beginLoop();
+    }
+}
+
+void BottomTranslator::setUpLoopExit(const Value* condition, const BasicBlock* bb)
+{
+    assert(loops->size() != 0);
+    LoopWrapper* loop = loops->top();
+
+    assert(loop->isLoopExiting(bb));
+
+    int exitPos = loop->exitSuccNumber(bb);
+    assert(exitPos != -1);
+    if (exitPos == 2)
+        gla::UnsupportedFunctionality("complex loop exits (two exit branches from same block)");
+
+    bool shouldOutput = ! (loop->isSimpleInductive() || (loop->isSimpleConditional() && loop->getHeader() == bb));
+
+    const BasicBlock* exit      = GetSuccessor(exitPos, bb);
+    const BasicBlock* exitMerge = loop->getExitMerge();
+    if (! exitMerge)
+        gla::UnsupportedFunctionality("complex exits/continues in loops");
+
+    // Set up the conditional, and add the exit block subgraph if it isn't
+    // the exit merge.
+    if (shouldOutput && condition)
+        backEndTranslator->addIf(condition, exitPos == 1);
+
+    // Add phi copies (if applicable)
+    addPhiCopies(bb, exit);
+
+    // Output the exit if we should
+    if (shouldOutput) {
+        if (handledBlocks.count(exit)) {
+            gla::UnsupportedFunctionality("complex loop exits (shared exit block)");
+        }
+
+        if (exit != exitMerge) {
+            assert(! loop->isSimpleInductive() && "distinct merge point from exitBlock");
+            handleBlock(exit);
+        }
+
+        backEndTranslator->addLoopExit();
+
+        if (condition)
+            backEndTranslator->addEndif();
+    }
+
+    // Immediately handle the other (non-exit) block if we dominate it.
+    if (condition) {
+        attemptHandleDominatee(bb, GetSuccessor(! exitPos, bb));
+    }
 }
 
 bool BottomTranslator::runOnModule(Module& module)
@@ -741,12 +762,12 @@ bool BottomTranslator::runOnModule(Module& module)
             domTree   = &getAnalysis<DominatorTree>        (*function);
             domFront  = &getAnalysis<DominanceFrontier>    (*function);
             idConds   = &getAnalysis<IdentifyConditionals> (*function);
-            scalarEvo = &getAnalysis<ScalarEvolution>      (*function);
+            // scalarEvo = &getAnalysis<ScalarEvolution>      (*function);
             // lazyInfo  = &getAnalysis<LazyValueInfo>        (*function);
 
             loops->setDominanceFrontier(domFront);
             loops->setLoopInfo(loopInfo);
-            loops->setScalarEvolution(scalarEvo);
+            // loops->setScalarEvolution(scalarEvo);
 
             // debug stuff
             if (gla::Options.debug && loopInfo->begin() != loopInfo->end()) {
@@ -802,7 +823,7 @@ void BottomTranslator::getAnalysisUsage(AnalysisUsage& AU) const
     AU.addRequired<DominatorTree>();
     AU.addRequired<DominanceFrontier>();
     AU.addRequired<IdentifyConditionals>();
-    AU.addRequired<ScalarEvolution>();
+    // AU.addRequired<ScalarEvolution>();
     // AU.addRequired<LazyValueInfo>();
 }
 

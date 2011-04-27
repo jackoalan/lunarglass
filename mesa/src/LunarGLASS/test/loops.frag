@@ -31,29 +31,29 @@ void main()
 {
     vec4 color = BaseColor;
 
-    // While
-    while (color.x < d) {
-        color += bigColor;
-    }
-
-    // While (latchy)
-    while (color.z < d) {
-        color += bigColor1_1;
-        if (color.w < d)
-            continue;
-
-        color += bigColor1_1;
-    }
-
-    // While (constant)
-    while (color.x < 42.0) {
-        ++color;
-    }
-
-    // // While (complicated-conditional)
-    // while (color.w < d2 && color.y < d3) {
-    //     color += bigColor1_2;
+    // // While
+    // while (color.x < d) {
+    //     color += bigColor;
     // }
+
+    // // While (latchy)
+    // while (color.z < d) {
+    //     color += bigColor1_1;
+    //     if (color.w < d)
+    //         continue;
+
+    //     color += bigColor1_1;
+    // }
+
+    // // While (constant)
+    // while (color.x < 42.0) {
+    //     ++color;
+    // }
+
+    // While (complicated-conditional)
+    while (color.w < d2 && color.y < d3) {
+        color += bigColor1_2;
+    }
 
     // While (multi-exit)
     while (color.z < d3) {

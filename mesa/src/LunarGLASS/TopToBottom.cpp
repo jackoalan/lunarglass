@@ -95,7 +95,8 @@ void gla::PrivateManager::runLLVMOptimizations1()
     // Set up the function-level optimizations we want
     llvm::FunctionPassManager passManager(module);
     if (Options.optimizations.verify)      passManager.add(llvm::createVerifierPass());
-    if (Options.optimizations.mem2reg)     passManager.add(llvm::createPromoteMemoryToRegisterPass());
+    // if (Options.optimizations.mem2reg)     passManager.add(llvm::createPromoteMemoryToRegisterPass());
+    if (Options.optimizations.mem2reg)     passManager.add(llvm::createScalarReplAggregatesPass());
     passManager.add(llvm::createCanonicalizeCFGPass());
     if (Options.optimizations.reassociate) passManager.add(llvm::createReassociatePass());
     if (Options.optimizations.gvn)         passManager.add(llvm::createGVNPass());

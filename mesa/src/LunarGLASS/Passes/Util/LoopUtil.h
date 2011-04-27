@@ -84,7 +84,7 @@ namespace llvm {
         // where the backedge is preserved, a canonical induction variable
         // exists, and the execution count is known statically (e.g. there are
         // no breaks or continues)
-        bool isSimpleInductive()
+        bool isSimpleInductive() const
         {
             return preservedBackedge && loop->getCanonicalInductionVariable() && loop->getTripCount();
         }
@@ -94,7 +94,7 @@ namespace llvm {
         // is some comparison operator whose operands are extracts, constants,
         // or loads. Furthermore, all other instructions in the block can only
         // be phis.
-        bool isSimpleConditional()
+        bool isSimpleConditional() const
         {
             // It has to be conditional, comparison operator and the header has
             // to be exiting
@@ -136,7 +136,7 @@ namespace llvm {
         // multiple exit blocks, they should all eventually merge to a single
         // point that lies in the intersection of each of their dominance
         // frontiers (enforces structured flow control).
-        bool isCanonical()
+        bool isCanonical() const
         {
             return header && latch && exitMerge
                 && (IsUnconditional(latch) || loop->isLoopExiting(latch));
@@ -144,7 +144,7 @@ namespace llvm {
 
         // If the loop is simple inductive, then returns the instruction
         // recomputing the exit condition, else returns NULL
-        Instruction* getExitCondition()
+        Instruction* getExitCondition() const
         {
             if (! isSimpleInductive())
                 return NULL;
@@ -160,7 +160,7 @@ namespace llvm {
 
         // If the loop is simple inductive, then returns the instruction doing
         // the increment on the inductive variables, else returns NULL
-        Instruction* getIncrement()
+        Instruction* getIncrement() const
         {
             if (! isSimpleInductive())
                 return NULL;
@@ -174,7 +174,7 @@ namespace llvm {
 
         // Returns the successor number (0 or 1) of the exiting edge from an exiting
         // block. Returns -1 if none exit, and 2 if they both exit.
-        int exitSuccNumber(const BasicBlock* bb)
+        int exitSuccNumber(const BasicBlock* bb) const
         {
             if (! isLoopExiting(bb))
                 return -1;
@@ -244,7 +244,7 @@ namespace llvm {
 
         void setDominanceFrontier(DominanceFrontier* df) { domFront = df; }
         void setLoopInfo(LoopInfo* li)                   { loopInfo = li; }
-        void setScalarEvolution(ScalarEvolution* se)     { scalarEvo = se; }
+        // void setScalarEvolution(ScalarEvolution* se)     { scalarEvo = se; }
 
         ~LoopStack()
         {
@@ -254,7 +254,7 @@ namespace llvm {
     protected:
         DominanceFrontier* domFront;
         LoopInfo* loopInfo;
-        ScalarEvolution* scalarEvo;
+        // ScalarEvolution* scalarEvo;
 
         std::stack<LoopWrapper*> st;
 

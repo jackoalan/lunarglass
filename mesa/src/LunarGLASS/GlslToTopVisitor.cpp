@@ -52,14 +52,22 @@ void GlslToTop(struct gl_shader* glShader, llvm::Module* module)
 }
 
 GlslToTopVisitor::GlslToTopVisitor(struct gl_shader* s, llvm::Module* m)
-    : context(llvm::getGlobalContext()), builder(context), module(m), glShader(s), interpIndex(0), shaderEntry(0), inMain(false),
+    : context(llvm::getGlobalContext()), llvmBuilder(context), module(m), glShader(s), interpIndex(0), shaderEntry(0), inMain(false),
       localScope(false)
 {
-    builder.SetInsertPoint(getShaderEntry());
+    // Init the first GEP index chain
+    std::vector<llvm::Value*> firstChain;
+    gepIndexChainStack.push(firstChain);
+
+    llvmBuilder.SetInsertPoint(getShaderEntry());
+
+    // do this after the builder knows the module
+    glaBuilder = new gla::Builder(llvmBuilder);
 }
 
 GlslToTopVisitor::~GlslToTopVisitor()
 {
+    delete glaBuilder;
 }
 
 ir_visitor_status
@@ -87,78 +95,42 @@ ir_visitor_status
 
 llvm::Constant* GlslToTopVisitor::createLLVMConstant(ir_constant* constant)
 {
-    // XXXX Ints are 32-bit, bools are 1-bit
-    llvm::Constant* llvmConstant;
+    if (constant->type->matrix_columns > 1)
+        gla::UnsupportedFunctionality("Matrix constants");
 
-    unsigned vecCount = constant->type->vector_elements;
-    unsigned baseType = constant->type->base_type;
+    // vector of constants for LLVM
+    std::vector<llvm::Constant*> vals;
 
-    if(vecCount > 1) {
-        //Vectors require
-        std::vector<llvm::Constant*> vals;
-        const llvm::VectorType *destVecTy;
-
-        switch(baseType)
+    for (unsigned int i = 0; i < constant->type->vector_elements; ++i) {
+        switch(constant->type->base_type)
         {
         case GLSL_TYPE_UINT:
-            destVecTy = llvm::VectorType::get((llvm::Type*)llvm::Type::getInt32Ty(context), vecCount);
-            for(unsigned int i = 0; i < vecCount; ++i)
-                vals.push_back(llvm::ConstantInt::get(context, llvm::APInt(32, (uint64_t)constant->value.u[i], false)));
+            vals.push_back(gla::Util::makeUnsignedConstant(context, constant->value.i[i]));
             break;
         case GLSL_TYPE_INT:
-            destVecTy = llvm::VectorType::get((llvm::Type*)llvm::Type::getInt32Ty(context), vecCount);
-            for(unsigned int i = 0; i < vecCount; ++i)
-                vals.push_back(llvm::ConstantInt::get(context, llvm::APInt(32, (uint64_t)constant->value.i[i], true)));
+            vals.push_back(gla::Util::makeIntConstant(context, constant->value.u[i]));
             break;
         case GLSL_TYPE_FLOAT:
-            destVecTy = llvm::VectorType::get((llvm::Type*)llvm::Type::getFloatTy(context), vecCount);
-            for(unsigned int i = 0; i < vecCount; ++i)
-                vals.push_back(llvm::ConstantFP::get(context, llvm::APFloat(constant->value.f[i])));
+            vals.push_back(gla::Util::makeFloatConstant(context, constant->value.f[i]));
             break;
         case GLSL_TYPE_BOOL:
-            destVecTy = llvm::VectorType::get((llvm::Type*)llvm::Type::getInt1Ty(context), vecCount);
-            for(unsigned int i = 0; i < vecCount; ++i)
-                vals.push_back(llvm::ConstantInt::get(context, llvm::APInt(1, (uint64_t)constant->value.u[i], false)));
+            vals.push_back(gla::Util::makeBoolConstant(context, constant->value.i[i]));
             break;
-        case GLSL_TYPE_SAMPLER:
-        case GLSL_TYPE_ARRAY:
-        case GLSL_TYPE_STRUCT:
-        case GLSL_TYPE_VOID:
-        case GLSL_TYPE_ERROR:
-        default:
-            gla::UnsupportedFunctionality("Basic vector type: ", baseType);
-            break;
-        }
 
-        llvmConstant = llvm::ConstantVector::get(destVecTy, vals);
-    }
-    else {
-        switch(baseType)
-        {
-        case GLSL_TYPE_UINT:
-            llvmConstant = llvm::ConstantInt::get(context, llvm::APInt(32, (uint64_t)constant->value.u[0], false));
-            break;
-        case GLSL_TYPE_INT:
-            llvmConstant = llvm::ConstantInt::get(context, llvm::APInt(32, (uint64_t)constant->value.i[0], true));
-            break;
-        case GLSL_TYPE_FLOAT:
-            llvmConstant = llvm::ConstantFP::get(context, llvm::APFloat(constant->value.f[0]));
-            break;
-        case GLSL_TYPE_BOOL:
-           llvmConstant = llvm::ConstantInt::get(context, llvm::APInt(1, (uint64_t)constant->value.u[0], false));
-            break;
-        case GLSL_TYPE_SAMPLER:
         case GLSL_TYPE_ARRAY:
         case GLSL_TYPE_STRUCT:
+            gla::UnsupportedFunctionality("array or struct constant");
+            break;
+
+        case GLSL_TYPE_SAMPLER:
         case GLSL_TYPE_VOID:
         case GLSL_TYPE_ERROR:
-        default:
-            gla::UnsupportedFunctionality("Basic type: ", baseType);
+            assert(! "Bad vector constant type");
             break;
         }
     }
 
-    return llvmConstant;
+    return glaBuilder->getConstant(vals);
 }
 
 // If the loop is an inductive loop (to the front-end), set up the increment and
@@ -171,7 +143,7 @@ bool GlslToTopVisitor::setUpLatch()
     if (ld.isInductive) {
         assert(ld.counter && ld.counter->getType()->isPointerTy() && ld.increment && ld.finish);
 
-        llvm::Value* iPrev = builder.CreateLoad(ld.counter);
+        llvm::Value* iPrev = llvmBuilder.CreateLoad(ld.counter);
         llvm::Value* cmp   = NULL;
 
         // For now, the front end puts the increment inside the body of the
@@ -188,15 +160,15 @@ bool GlslToTopVisitor::setUpLatch()
 
         // note: If we do the increment ourselves, change iPrev to be iNext
         switch(ld.counter->getType()->getContainedType(0)->getTypeID()) {
-        case llvm::Type::FloatTyID:       cmp = builder.CreateFCmpOGE(iPrev, ld.finish);     break;
-        case llvm::Type::IntegerTyID:     cmp = builder.CreateICmpSGE(iPrev, ld.finish);     break;
+        case llvm::Type::FloatTyID:       cmp = llvmBuilder.CreateFCmpOGE(iPrev, ld.finish);     break;
+        case llvm::Type::IntegerTyID:     cmp = llvmBuilder.CreateICmpSGE(iPrev, ld.finish);     break;
 
         default: gla::UnsupportedFunctionality("unknown type in inductive variable [2]");
         }
 
         // If iNext exceeds ld.finish, exit the loop, else branch back to
         // the header
-        builder.CreateCondBr(cmp, ld.exit, ld.header);
+        llvmBuilder.CreateCondBr(cmp, ld.exit, ld.header);
 
         // Not going to dreate dummy basic block, as our callers should see if
         // we set up the latch
@@ -214,20 +186,20 @@ ir_visitor_status
 {
     // Create a block for the parent to continue inserting stuff into (e.g. this
     // break/continue is inside an if-then-else)
-    llvm::Function *function = builder.GetInsertBlock()->getParent();
+    llvm::Function *function = llvmBuilder.GetInsertBlock()->getParent();
     llvm::BasicBlock* postLoopJump = llvm::BasicBlock::Create(context, "post-loopjump", function);
 
     if (ir->is_break()) {
-        builder.CreateBr(loops.top().exit);
+        llvmBuilder.CreateBr(loops.top().exit);
     }
 
     if (ir->is_continue()) {
         bool done = setUpLatch();
         if (! done)
-            builder.CreateBr(loops.top().header);
+            llvmBuilder.CreateBr(loops.top().header);
     }
 
-    builder.SetInsertPoint(postLoopJump);
+    llvmBuilder.SetInsertPoint(postLoopJump);
 
     lastValue.clear();
 
@@ -258,7 +230,7 @@ ir_visitor_status
     ir_variable *var = derefVariable->variable_referenced();
 
     // Search our value map for existing entry
-    std::map<ir_variable*, llvm::Value*>::iterator iter;
+    std::map<ir_variable*, gla::Builder::SuperValue>::iterator iter;
     iter = namedValues.find(var);
 
     if (namedValues.end() == iter) {
@@ -270,16 +242,6 @@ ir_visitor_status
             namedValues[var] = createLLVMVariable(var);
         } else {
             isPipelineInput = true;
-        }
-
-        // For pipeline outputs, we must still maintain a non-pipeline
-        // variable for reading/writing that happens before the final
-        // copy out.  Make this current variable be that non-pipeline
-        // normal variable, but track it as one that now needs a copy out on
-        // shader exit.
-        if (var->mode == ir_var_out) {
-            // Track our copy-out for pipe write
-            glslOuts.push_back(namedValues[var]);
         }
     }
 
@@ -294,17 +256,42 @@ ir_visitor_status
     }
     else
     {
+        glsl_base_type baseType = var->type->base_type;
+
         if (isPipelineInput) {
             lastValue = createPipelineRead(var, 0);
         }
-        else if (GLSL_TYPE_ARRAY == var->type->base_type) {
-            // Just leave lastValue as a pointer to the array
-            // TODO:  With support for struct dereference chains,
-            // we should be able to clean this up.
+        else if (GLSL_TYPE_ARRAY == baseType || GLSL_TYPE_STRUCT == baseType) {
+            assert(gepIndexChainStack.top().size() >= 0);
+
+            // Since we're using GEP, but not supporting pointers, we can hard code the
+            // first index to zero.
+            gepIndexChainStack.top().push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
+
+            // Reverse the index order.  A deque would be great, but LLVM requires indices in
+            // contiguous memory
+            std::vector<llvm::Value*>::iterator start = gepIndexChainStack.top().begin();
+            std::vector<llvm::Value*>::iterator end   = gepIndexChainStack.top().end();
+
+            std::reverse(start, end);
+
+            // Use the indices we've built up to finally dereference the base type
+            lastValue = llvmBuilder.CreateGEP(lastValue,
+                                          gepIndexChainStack.top().begin(),
+                                          gepIndexChainStack.top().end());
+
+            lastValue = llvmBuilder.CreateLoad(lastValue);
+
+            gepIndexChainStack.top().clear();
         }
         else if (var->mode != ir_var_in) {
             // Don't load inputs again... just use them
-            lastValue = builder.CreateLoad(lastValue);
+            if (lastValue.isMatrix()) {
+                llvm::Value* newValue = llvmBuilder.CreateLoad(lastValue.getMatrix()->getMatrixValue(), "__matrix");
+                gla::Builder::Matrix* loadedMatrix = new gla::Builder::Matrix(newValue);
+                lastValue = gla::Builder::SuperValue(loadedMatrix);
+            } else
+                lastValue = llvmBuilder.CreateLoad(lastValue);
         }
     }
 
@@ -314,7 +301,7 @@ ir_visitor_status
 ir_visitor_status
     GlslToTopVisitor::visit_enter(ir_loop *ir)
 {
-    llvm::Function* function = builder.GetInsertBlock()->getParent();
+    llvm::Function* function = llvmBuilder.GetInsertBlock()->getParent();
 
     llvm::BasicBlock *headerBB = llvm::BasicBlock::Create(context, "loop-header", function);
     llvm::BasicBlock *mergeBB  = llvm::BasicBlock::Create(context, "loop-merge");
@@ -340,7 +327,7 @@ ir_visitor_status
 
         llvm::Constant* from = createLLVMConstant(ir->from->as_constant());
 
-        builder.CreateStore(from, ld.counter);
+        llvmBuilder.CreateStore(from, ld.counter);
     }
 
     // todo: see if a phi node for the counter needs to be added
@@ -348,21 +335,21 @@ ir_visitor_status
     loops.push(ld);
 
     // Branch into the loop
-    builder.CreateBr(headerBB);
+    llvmBuilder.CreateBr(headerBB);
 
     // Set ourselves inside the loop
-    builder.SetInsertPoint(headerBB);
+    llvmBuilder.SetInsertPoint(headerBB);
 
     visit_list_elements(this, &ir->body_instructions);
 
     // Branch back through the loop
     bool done = setUpLatch();
     if (! done)
-        builder.CreateBr(headerBB);
+        llvmBuilder.CreateBr(headerBB);
 
     // Now, create a new block for the rest of the post-loop program
     function->getBasicBlockList().push_back(mergeBB);
-    builder.SetInsertPoint(mergeBB);
+    llvmBuilder.SetInsertPoint(mergeBB);
 
     // Remove ourselves from the stacks
     loops.pop();
@@ -391,7 +378,7 @@ ir_visitor_status
         // For now, don't build parameter list or call for main()
         if (strcmp(sig->function_name(), "main") == 0) {
             inMain = true;
-            builder.SetInsertPoint(getShaderEntry());
+            llvmBuilder.SetInsertPoint(getShaderEntry());
 
             return visit_continue;
         }
@@ -414,7 +401,7 @@ ir_visitor_status
         function->setCallingConv(llvm::CallingConv::Fast);
 
         llvm::BasicBlock *functionBlock = llvm::BasicBlock::Create(context, sig->function_name(), function);
-        builder.SetInsertPoint(functionBlock);
+        llvmBuilder.SetInsertPoint(functionBlock);
 
         // Visit parameter list again to create local variables
         iterParam = sig->parameters.iterator();
@@ -443,8 +430,8 @@ ir_visitor_status
     // Ignore builtins for now
     if (!sig->is_builtin) {
 
-        llvm::BasicBlock* BB = builder.GetInsertBlock();
-        llvm::Function* F = builder.GetInsertBlock()->getParent();
+        llvm::BasicBlock* BB = llvmBuilder.GetInsertBlock();
+        llvm::Function* F = llvmBuilder.GetInsertBlock()->getParent();
         assert(BB && F);
 
         // If our function did not contain a return,
@@ -457,7 +444,7 @@ ir_visitor_status
             if (inMain && !unreachable) {
                 // If we're leaving main and it is not terminated,
                 // generate our pipeline writes
-                writePipelineOuts();
+                glaBuilder->copyOutPipeline(llvmBuilder);
                 inMain = false;
             }
 
@@ -465,15 +452,15 @@ ir_visitor_status
             // unreachable, so don't bother adding a return instruction in
             // (e.g. we're in a post-return block). Otherwise add a ret void.
             if (unreachable)
-                builder.CreateUnreachable();
+                llvmBuilder.CreateUnreachable();
             else
-                builder.CreateRet(0);
+                llvmBuilder.CreateRet(0);
 
         }
     }
 
     localScope = false;
-    builder.SetInsertPoint(getShaderEntry());
+    llvmBuilder.SetInsertPoint(getShaderEntry());
 
     return visit_continue;
 }
@@ -506,7 +493,7 @@ ir_visitor_status
 
     for (int i = 0; i < numOperands; ++i) {
         expression->operands[i]->accept(this);
-        operands[i] = collapseIndexChain(lastValue);
+        operands[i] = lastValue;
     }
 
     lastValue = expandGLSLOp(expression->operation, operands);
@@ -553,47 +540,55 @@ ir_visitor_status
 ir_visitor_status
     GlslToTopVisitor::visit_enter(ir_dereference_array *ir)
 {
-    if (0 == ir->array_index->constant_expression_value())
-        gla::UnsupportedFunctionality("non-constant array index");
+    // Derefences of array indexes could multiple base variables that
+    // require multiple GEP instructions.
+    // To support this, we create a new GEP index chain for each index.
+    // The algorithm to support this is as follows:
+    // - Startup: Init top of stack with empty chain
+    // - Struct field dereference: Visit struct field and add to chain on top of stack
+    // - Before evaluating array index:  Push new chain onto stack.
+    // - After evaluating array index:  Pop a chain from the stack and push lastValue
+    //   to the new top chain
+    // - Visit base:  collapse and clear current top GEP chain
 
-    std::string name;
-    llvm::Value* uniformPtr;
-    llvm::Value* indexPtr;
-
-    const int index = ir->array_index->constant_expression_value()->value.u[0];
+    int indexInt;
+    llvm::Value* indexVal;
+    std::vector<llvm::Value*> newChain;
 
     switch (ir->variable_referenced()->mode) {
     case ir_var_in:
-        lastValue = createPipelineRead(ir->variable_referenced(), index);
+        if (0 == ir->array_index->constant_expression_value())
+            gla::UnsupportedFunctionality("input using non-constant array index");
+
+        indexInt = ir->array_index->constant_expression_value()->value.u[0];
+        lastValue = createPipelineRead(ir->variable_referenced(), indexInt);
         break;
     case ir_var_uniform:
-        // Traverse the array to get base address
-        ir->array->accept(this);
-        uniformPtr = lastValue;
 
-        // Offset to our index
-        if (llvm::isa<llvm::StructType>(lastValue->getType())) {
-            elementIndexChain.push_back(index);
+        // The index could be a nested chain, so start a new one
+        gepIndexChainStack.push(newChain);
+
+        // Traverse the index, which could be a complicated expression
+        if (ir->array_index->constant_expression_value()) {
+            indexInt = ir->array_index->constant_expression_value()->value.u[0];
+            indexVal = llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), indexInt);
         } else {
-            // TODO:  With support for struct dereference chains,
-            // we should be able to clean this up and treat these
-            // uniformly
-            indexPtr = builder.CreateConstGEP2_32(lastValue, 0, index);
-            name = ir->variable_referenced()->name;
-            appendArrayIndexToName(name, index);
-            lastValue = builder.CreateLoad(indexPtr, name);
+            ir->array_index->accept(this);
+            assert(llvm::isa<llvm::IntegerType>(lastValue->getType()));
+            indexVal = lastValue;
         }
+
+        // Add the result of previous chain to current one
+        gepIndexChainStack.pop();
+        assert(gepIndexChainStack.size());
+        gepIndexChainStack.top().push_back(indexVal);
+
+        ir->array->accept(this);
 
         break;
     default:
         gla::UnsupportedFunctionality("unsupported array dereference");
     }
-
-    // Array notes
-    // Index will be tracked in lastValue...
-    // ir->array_index->accept(this);
-    // ... then consumed by the array deref
-    // ir->array->accept(this);
 
     // Continue to parent or parser will revisit the array
     return visit_continue_with_parent;
@@ -609,19 +604,11 @@ ir_visitor_status
 ir_visitor_status
     GlslToTopVisitor::visit_enter(ir_dereference_record *ir)
 {
-    (void) ir;
-    return visit_continue;
-}
-
-ir_visitor_status
-    GlslToTopVisitor::visit_leave(ir_dereference_record *ir)
-{
     const glsl_type *struct_type = ir->record->type;
     int offset = 0;
 
     if (in_assignee)
         gla::UnsupportedFunctionality("structure dereference in l-value");
-
 
     // Find and push the index that matches the requested field
     for (int i = 0; i < struct_type->length; i++) {
@@ -632,8 +619,15 @@ ir_visitor_status
 
     assert(offset < struct_type->length);
 
-    elementIndexChain.push_back(offset);
+    // Track the offset for collapse during variable dereference
+    gepIndexChainStack.top().push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), offset));
 
+    return visit_continue;
+}
+
+ir_visitor_status
+    GlslToTopVisitor::visit_leave(ir_dereference_record*)
+{
     return visit_continue;
 }
 
@@ -649,8 +643,6 @@ ir_visitor_status
     if(llvm::isa<llvm::StructType>(lValue->getType()->getContainedType(0)))
         gla::UnsupportedFunctionality("structure assignment");
 
-    lastValue = collapseIndexChain(lastValue);
-
     //Handle writemask
     if(!assignment->whole_variable_written()) {
         llvm::Value* targetVector;
@@ -659,20 +651,20 @@ ir_visitor_status
         llvm::Type::TypeID sourceType = lastValue->getType()->getTypeID();
 
         // Load our target vector
-        targetVector = builder.CreateLoad(lValue);
+        targetVector = llvmBuilder.CreateLoad(lValue);
 
         // Check each channel of the writemask
         for(int i = 0; i < 4; ++i) {
             if(writeMask & (1 << i)) {
                 if(llvm::Type::VectorTyID == sourceType) {
                     // Extract an element to a scalar, then immediately insert to our target
-                    targetVector = builder.CreateInsertElement(targetVector,
-                                            builder.CreateExtractElement(lastValue,
+                    targetVector = llvmBuilder.CreateInsertElement(targetVector,
+                                            llvmBuilder.CreateExtractElement(lastValue,
                                                     llvm::ConstantInt::get(context, llvm::APInt(32, sourceElement++, false))),
                                             llvm::ConstantInt::get(context, llvm::APInt(32, i, false)));
                 } else {
                     // Insert the scalar target
-                    targetVector = builder.CreateInsertElement(targetVector,
+                    targetVector = llvmBuilder.CreateInsertElement(targetVector,
                                             lastValue,
                                             llvm::ConstantInt::get(context, llvm::APInt(32, i, false)));
                 }
@@ -688,7 +680,7 @@ ir_visitor_status
         lastValue->setName(lValue->getName());
 
     // Store the last value into the l-value, using dest we track in base class.
-    llvm::StoreInst *store = builder.CreateStore(lastValue, lValue);
+    llvm::StoreInst *store = llvmBuilder.CreateStore(lastValue, lValue);
 
     lastValue = store;
 
@@ -712,7 +704,6 @@ ir_visitor_status
     {
         param = (ir_rvalue *) iter.get();
         param->accept(this);
-        lastValue = collapseIndexChain(lastValue);
         llvmParams[paramCount] = lastValue;
         paramCount++;
         iter.next();
@@ -730,12 +721,12 @@ ir_visitor_status
 
        // Create a call to it
         switch(paramCount) {
-        case 5:     callInst = builder.CreateCall5(function, llvmParams[0], llvmParams[1], llvmParams[2], llvmParams[3], llvmParams[4]);      break;
-        case 4:     callInst = builder.CreateCall4(function, llvmParams[0], llvmParams[1], llvmParams[2], llvmParams[3]);                     break;
-        case 3:     callInst = builder.CreateCall3(function, llvmParams[0], llvmParams[1], llvmParams[2]);                                    break;
-        case 2:     callInst = builder.CreateCall2(function, llvmParams[0], llvmParams[1]);                                                   break;
-        case 1:     callInst = builder.CreateCall (function, llvmParams[0]);                                                                  break;
-        case 0:     callInst = builder.CreateCall (function);                                                                                 break;
+        case 5:     callInst = llvmBuilder.CreateCall5(function, llvmParams[0], llvmParams[1], llvmParams[2], llvmParams[3], llvmParams[4]);      break;
+        case 4:     callInst = llvmBuilder.CreateCall4(function, llvmParams[0], llvmParams[1], llvmParams[2], llvmParams[3]);                     break;
+        case 3:     callInst = llvmBuilder.CreateCall3(function, llvmParams[0], llvmParams[1], llvmParams[2]);                                    break;
+        case 2:     callInst = llvmBuilder.CreateCall2(function, llvmParams[0], llvmParams[1]);                                                   break;
+        case 1:     callInst = llvmBuilder.CreateCall (function, llvmParams[0]);                                                                  break;
+        case 0:     callInst = llvmBuilder.CreateCall (function);                                                                                 break;
         default:    assert(! "Unsupported parameter count");
         }
 
@@ -750,8 +741,8 @@ ir_visitor_status
             returnValue = expandGLSLOp(ir_binop_mod, llvmParams);
         }
         else if(!strcmp(call->callee_name(), "mix")) {
-            if(llvm::Type::IntegerTyID == getLLVMBaseType(llvmParams[0]))
-                returnValue = builder.CreateSelect(llvmParams[2], llvmParams[0], llvmParams[1]);
+            if(llvm::Type::IntegerTyID == gla::Util::getBasicType(llvmParams[0]))
+                returnValue = llvmBuilder.CreateSelect(llvmParams[2], llvmParams[0], llvmParams[1]);
         }
         else if(!strcmp(call->callee_name(), "lessThan")) {
             returnValue = expandGLSLOp(ir_binop_less, llvmParams);
@@ -775,8 +766,26 @@ ir_visitor_status
             returnValue = expandGLSLOp(ir_unop_logic_not, llvmParams);
         }
 
+        // matrix built-ins that get decomposed into operations
+        // rather than translated to an intrinsic
+        else if (!strcmp(call->callee_name(), "matrixCompMult")) {
+            returnValue = glaBuilder->createMatrixOp(llvm::BinaryOperator::FMul, llvmParams[0], llvmParams[1]);
+        }
+        else if (!strcmp(call->callee_name(), "outerProduct")) {
+            returnValue = glaBuilder->createMatrixMultiply(llvmParams[0], llvmParams[1]);
+        }
+        else if (!strcmp(call->callee_name(), "transpose")) {
+            returnValue = glaBuilder->createMatrixTranspose(llvmParams[0].getMatrix());
+        }
+        else if (!strcmp(call->callee_name(), "inverse")) {
+            returnValue = glaBuilder->createMatrixInverse(llvmParams[0].getMatrix());
+        }
+        else if (!strcmp(call->callee_name(), "determinant")) {
+            returnValue = glaBuilder->createMatrixDeterminant(llvmParams[0].getMatrix());
+        }
+
         // If this call requires an intrinsic
-        if(!returnValue)
+        if(returnValue.getValue() == 0)
             returnValue = createLLVMIntrinsic(call, llvmParams, paramCount);
 
         // Track the return value for to be consumed by next instruction
@@ -790,7 +799,7 @@ llvm::Value* GlslToTopVisitor::createLLVMIntrinsic(ir_call *call, gla::Builder::
 {
     llvm::Function *intrinsicName = 0;
     gla::ETextureFlags texFlags = {0};
-    llvm::Type* resultType = convertGLSLToLLVMType(call->type);
+    const llvm::Type* resultType = convertGLSLToLLVMType(call->type);
 
     #define GLA_MAX_PARAMETER 5
     gla::Builder::SuperValue outParams[GLA_MAX_PARAMETER];
@@ -857,33 +866,28 @@ llvm::Value* GlslToTopVisitor::createLLVMIntrinsic(ir_call *call, gla::Builder::
 
     // Select intrinsic based on parameter types
     else if(!strcmp(call->callee_name(), "abs"))                {
-        switch(getLLVMBaseType(llvmParams[0]))                  {
+        switch(gla::Util::getBasicType(llvmParams[0]))                  {
         case llvm::Type::IntegerTyID:                           { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_abs, resultType, llvmParams[0]->getType()); break; }
         case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fAbs, resultType, llvmParams[0]->getType()); break; }  }  }
     else if(!strcmp(call->callee_name(), "sign"))               {
-        switch(getLLVMBaseType(llvmParams[0]))                  {
+        switch(gla::Util::getBasicType(llvmParams[0]))                  {
         case llvm::Type::IntegerTyID:                           { gla::UnsupportedFunctionality("Integer sign() ");  break;  }
         case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction2(llvm::Intrinsic::gla_fSign, resultType, llvmParams[0]->getType());  break; }  }  }
     else if(!strcmp(call->callee_name(), "min"))                {
-        switch(getLLVMBaseType(llvmParams[0]))                  {
+        switch(gla::Util::getBasicType(llvmParams[0]))                  {
         case llvm::Type::IntegerTyID:                           { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_sMin, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); break; }
         case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fMin, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); break; }  }  }
     else if(!strcmp(call->callee_name(), "max"))                {
-        switch(getLLVMBaseType(llvmParams[0]))                  {
+        switch(gla::Util::getBasicType(llvmParams[0]))                  {
         case llvm::Type::IntegerTyID:                           { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_sMax, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); break; }
         case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction3(llvm::Intrinsic::gla_fMax, resultType, llvmParams[0]->getType(), llvmParams[1]->getType()); break; }  }  }
     else if(!strcmp(call->callee_name(), "clamp"))              {
-        switch(getLLVMBaseType(llvmParams[0]))                  {
+        switch(gla::Util::getBasicType(llvmParams[0]))                  {
         case llvm::Type::IntegerTyID:                           { intrinsicName = getLLVMIntrinsicFunction4(llvm::Intrinsic::gla_sClamp, resultType, llvmParams[0]->getType(), llvmParams[1]->getType(), llvmParams[2]->getType()); break; }
         case llvm::Type::FloatTyID:                             { intrinsicName = getLLVMIntrinsicFunction4(llvm::Intrinsic::gla_fClamp, resultType, llvmParams[0]->getType(), llvmParams[1]->getType(), llvmParams[2]->getType()); break; }  }  }
 
     // Unsupported calls
     //noise*")) { }
-    //else if(!strcmp(call->callee_name(), "matrixCompMult"))   { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); }
-    //else if(!strcmp(call->callee_name(), "outerProduct"))     { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); }
-    //else if(!strcmp(call->callee_name(), "transpose"))        { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); }
-    //else if(!strcmp(call->callee_name(), "determinant"))      { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); }
-    //else if(!strcmp(call->callee_name(), "inverse"))          { intrinsicName = getLLVMIntrinsicFunction1(llvm::Intrinsic::xxxx, resultType); }
 
     // Texture calls
     else if(!strcmp(call->callee_name(), "texture1D")) {
@@ -1026,19 +1030,19 @@ llvm::Value* GlslToTopVisitor::createLLVMIntrinsic(ir_call *call, gla::Builder::
     switch(paramCount)
     {
     case 5:
-        callInst = builder.CreateCall5(intrinsicName, outParams[0] , outParams[1], outParams[2], outParams[3], outParams[4]);
+        callInst = llvmBuilder.CreateCall5(intrinsicName, outParams[0] , outParams[1], outParams[2], outParams[3], outParams[4]);
         break;
     case 4:
-        callInst = builder.CreateCall4(intrinsicName, outParams[0] , outParams[1], outParams[2], outParams[3]);
+        callInst = llvmBuilder.CreateCall4(intrinsicName, outParams[0] , outParams[1], outParams[2], outParams[3]);
         break;
     case 3:
-        callInst = builder.CreateCall3(intrinsicName, outParams[0] , outParams[1], outParams[2]);
+        callInst = llvmBuilder.CreateCall3(intrinsicName, outParams[0] , outParams[1], outParams[2]);
         break;
     case 2:
-        callInst = builder.CreateCall2(intrinsicName, outParams[0], outParams[1]);
+        callInst = llvmBuilder.CreateCall2(intrinsicName, outParams[0], outParams[1]);
         break;
     case 1:
-        callInst = builder.CreateCall (intrinsicName, outParams[0]);
+        callInst = llvmBuilder.CreateCall (intrinsicName, outParams[0]);
         break;
     default:
         assert(! "Unsupported parameter count");
@@ -1066,20 +1070,19 @@ ir_visitor_status
     // If we're traversing a return in main,
     // generate pipeline writes
     if (inMain) {
-        writePipelineOuts();
+        glaBuilder->copyOutPipeline(llvmBuilder);
     }
 
     // Return the expression result, which is tracked in lastValue
     if (ir->get_value()) {
-        lastValue = collapseIndexChain(lastValue);
-        builder.CreateRet(lastValue);
+        llvmBuilder.CreateRet(lastValue);
     } else {
-        builder.CreateRet(0);
+        llvmBuilder.CreateRet(0);
     }
 
-    // llvm::Function *function = builder.GetInsertBlock()->getParent();
+    // llvm::Function *function = llvmBuilder.GetInsertBlock()->getParent();
     // llvm::BasicBlock* postRet = llvm::BasicBlock::Create(context, "post-ret", function);
-    // builder.SetInsertPoint(postRet);
+    // llvmBuilder.SetInsertPoint(postRet);
 
     // lastValue.clear();
 
@@ -1109,7 +1112,7 @@ ir_visitor_status
     llvm::Value *condValue = lastValue;
     assert(condValue != 0);
 
-    llvm::Function *function = builder.GetInsertBlock()->getParent();
+    llvm::Function *function = llvmBuilder.GetInsertBlock()->getParent();
 
     // make the blocks, but only put the then-block into the function,
     // the else-block and merge-block will be added later, in order, after
@@ -1121,39 +1124,39 @@ ir_visitor_status
 
     // make the flow control split
     if (haveElse)
-        builder.CreateCondBr(condValue, ThenBB, ElseBB);
+        llvmBuilder.CreateCondBr(condValue, ThenBB, ElseBB);
     else
-        builder.CreateCondBr(condValue, ThenBB, MergeBB);
+        llvmBuilder.CreateCondBr(condValue, ThenBB, MergeBB);
 
-    builder.SetInsertPoint(ThenBB);
+    llvmBuilder.SetInsertPoint(ThenBB);
 
     // emit the then statement
     visit_list_elements(this, &(ifNode->then_instructions));
 
     // jump to the merge block
-    builder.CreateBr(MergeBB);
+    llvmBuilder.CreateBr(MergeBB);
 
     // emitting the then-block could change the current block, update
-    ThenBB = builder.GetInsertBlock();
+    ThenBB = llvmBuilder.GetInsertBlock();
 
     // add else block to the function
     if (haveElse) {
         function->getBasicBlockList().push_back(ElseBB);
-        builder.SetInsertPoint(ElseBB);
+        llvmBuilder.SetInsertPoint(ElseBB);
 
         // emit the else statement
         visit_list_elements(this, &(ifNode->else_instructions));
 
         // jump to the merge block
-        builder.CreateBr(MergeBB);
+        llvmBuilder.CreateBr(MergeBB);
 
         // emitting the else block could change the current block, update
-        ElseBB = builder.GetInsertBlock();
+        ElseBB = llvmBuilder.GetInsertBlock();
     }
 
     // add the merge block to the function
     function->getBasicBlockList().push_back(MergeBB);
-    builder.SetInsertPoint(MergeBB);
+    llvmBuilder.SetInsertPoint(MergeBB);
 
     // The glsl "value" of an if-else should never be taken (share code with "?:" though?)
     lastValue.clear();
@@ -1168,61 +1171,57 @@ ir_visitor_status
     return visit_continue;
 }
 
-llvm::Value* GlslToTopVisitor::createLLVMVariable(ir_variable* var)
+gla::Builder::SuperValue GlslToTopVisitor::createLLVMVariable(ir_variable* var)
 {
-    unsigned int addressSpace = gla::GlobalAddressSpace;
-    bool constant = var->read_only;
-    llvm::Constant* initializer = 0;
-    llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalVariable::InternalLinkage;
-    llvm::Type *llvmVarType = convertGLSLToLLVMType(var->type);
-    llvm::Value* value = 0;
-    bool globalQualifier = false;
+    if (strcmp(var->name, "gl_FragDepth") == 0)
+        gla::UnsupportedFunctionality("gl_FragDepth");
 
-    const char* typePrefix = 0;
-    if (var->type->base_type == GLSL_TYPE_SAMPLER)
-        typePrefix = getSamplerDeclaration(var);
+    if (strcmp(var->name, "gl_FragData") == 0)
+        gla::UnsupportedFunctionality("gl_FragData");
+
+    llvm::Constant* initializer = 0;
+    gla::Builder::EStorageQualifier storageQualifier;
+    int constantBuffer = 0;
 
     switch (var->mode) {
+    case ir_var_temporary:
     case ir_var_auto:
-        if (constant)
+        if (localScope)
+            storageQualifier = gla::Builder::ESQLocal;
+        else
+            storageQualifier = gla::Builder::ESQGlobal;
+        if (var->read_only) {
+            // The GLSL2 front-end confusingly writes to constants, so we can't
+            // actually treat them as constants.  Instead, they are just
+            // initialized variables.
             initializer = createLLVMConstant(var->constant_value);
-        else if (! localScope)
-            initializer = llvm::Constant::getNullValue(llvmVarType);
+        }
         break;
 
     case ir_var_uniform:
+        storageQualifier = gla::Builder::ESQUniform;
         // ?? need to generalize to N objects (constant buffers) for higher shader models
-        // ?? link:  we need link info to know how large the memory object is
-        linkage = llvm::GlobalVariable::ExternalLinkage;
-        globalQualifier = true;
-        addressSpace = gla::UniformAddressSpace;
-        assert(var->read_only == true);
+        constantBuffer = 0;
         break;
 
     case ir_var_in:
         // inputs should all be pipeline reads or created at function creation time
         assert(! "no memory allocations for inputs");
-        return 0;
+        break;
 
     case ir_var_out:
-        // use internal linkage, because epilogue will to the write out to the pipe
-        // internal linkage helps with global optimizations, so does having an initializer
-        globalQualifier = true;
-        initializer = llvm::Constant::getNullValue(llvmVarType);
-        break;
-
-    case ir_var_inout:
-        // can only be for function parameters
-        break;
-
-    case ir_var_temporary:
-        if (! localScope)
-            initializer = llvm::Constant::getNullValue(llvmVarType);
+        storageQualifier = gla::Builder::ESQOutput;
         break;
 
     default:
         assert(! "Unhandled var->mode");
-        break;
+    }
+
+    std::string* annotationAddr = 0;
+    std::string annotation;
+    if (var->type->base_type == GLSL_TYPE_SAMPLER) {
+        annotation = std::string(getSamplerTypeName(var));
+        annotationAddr = &annotation;
     }
 
     //?? still need to consume the following
@@ -1234,43 +1233,12 @@ llvm::Value* GlslToTopVisitor::createLLVMVariable(ir_variable* var)
     // var->pixel_center_integer;
     // var->location;
 
-    if (localScope && ! globalQualifier) {
+    const llvm::Type *llvmType = convertGLSLToLLVMType(var->type);
 
-        // LLVM promote memory to registers pass only works when alloca
-        // is in the entry block.
-
-        llvm::BasicBlock* entryBlock = &builder.GetInsertBlock()->getParent()->getEntryBlock();
-        llvm::IRBuilder<> entryBuilder(entryBlock, entryBlock->begin());
-        value = entryBuilder.CreateAlloca(llvmVarType, 0, var->name);
-    } else {
-        if (strcmp(var->name, "gl_FragDepth") == 0)
-            gla::UnsupportedFunctionality("gl_FragDepth");
-
-        if (strcmp(var->name, "gl_FragData") == 0)
-            gla::UnsupportedFunctionality("gl_FragData");
-
-        std::string name = var->name;
-        if (gla::Options.backend == gla::GLSL && typePrefix) {
-            name = typePrefix;
-            name.append(" ");
-            name.append(var->name);
-        } else
-            name = var->name;
-
-        //
-        // The GLSL2 front-end confusingly writes to constants, so we can't
-        // actually declare the llvm variable to be a constant.
-        //
-        llvm::GlobalVariable* globalValue = new llvm::GlobalVariable(llvmVarType, false /* constant */, linkage,
-                                         initializer, name, false /* ThreadLocal */, addressSpace);
-        module->getGlobalList().push_back(globalValue);
-        value = globalValue;
-    }
-
-    return value;
+    return glaBuilder->createVariable(storageQualifier, constantBuffer, llvmType, var->type->is_matrix(), initializer, annotationAddr, var->name);
 }
 
-const char* GlslToTopVisitor::getSamplerDeclaration(ir_variable* var)
+const char* GlslToTopVisitor::getSamplerTypeName(ir_variable* var)
 {
     if (var->type->sampler_shadow) {
         switch (var->type->sampler_dimensionality) {
@@ -1299,133 +1267,194 @@ const char* GlslToTopVisitor::getSamplerDeclaration(ir_variable* var)
 
 gla::Builder::SuperValue GlslToTopVisitor::expandGLSLOp(ir_expression_operation glslOp, gla::Builder::SuperValue* operands)
 {
-    // Initialize result to pass through unsupported ops
-    llvm::Value* result = operands[0];
-
+    gla::Builder::SuperValue result;
     const llvm::Type* varType;
-    const llvm::VectorType* vectorType;
 
-    vectorType = llvm::dyn_cast<llvm::VectorType>(operands[0]->getType());
+    //
+    // 0 or more operands
+    //
+
+    // no 0-only operand operations yet
+
+    //
+    // 1 or more operands
+    //
+
+    // Initialize result to first operand to pass through unsupported ops
+    result = operands[0];
+
+    bool haveMatrix = operands[0].isMatrix();
+    const llvm::VectorType* vectorType =  haveMatrix ? 0 : llvm::dyn_cast<llvm::VectorType>(operands[0]->getType());
+
+    if (haveMatrix) {
+        switch(glslOp) {
+        case ir_unop_f2i:
+        case ir_unop_i2f:
+        case ir_unop_f2b:
+        case ir_unop_b2f:
+        case ir_unop_i2b:
+        case ir_unop_b2i:
+        case ir_unop_u2f:
+            assert(! "Can't change matrix type");
+            break;
+        case ir_unop_neg:
+            gla::UnsupportedFunctionality("Matrix negation", gla::EATContinue);
+            return result;
+        }
+    }
 
     switch(glslOp) {
-
     case ir_unop_f2i:
         if(vectorType)  varType = llvm::VectorType::get(llvm::Type::getInt32Ty(context), vectorType->getNumElements());
         else            varType = llvm::Type::getInt32Ty(context);
-        return          builder.CreateFPToUI(operands[0], varType);
+        return          llvmBuilder.CreateFPToUI(operands[0], varType);
     case ir_unop_i2f:
         if(vectorType)  varType = llvm::VectorType::get(llvm::Type::getFloatTy(context), vectorType->getNumElements());
         else            varType = llvm::Type::getFloatTy(context);
-        return          builder.CreateSIToFP(operands[0], varType);
+        return          llvmBuilder.CreateSIToFP(operands[0], varType);
     case ir_unop_f2b:
         if(vectorType)  varType = llvm::VectorType::get(llvm::Type::getInt1Ty(context), vectorType->getNumElements());
         else            varType = llvm::Type::getInt1Ty(context);
-        return          builder.CreateFPToUI(operands[0], varType);
+        return          llvmBuilder.CreateFPToUI(operands[0], varType);
     case ir_unop_b2f:
         if(vectorType)  varType = llvm::VectorType::get(llvm::Type::getFloatTy(context), vectorType->getNumElements());
         else            varType = llvm::Type::getFloatTy(context);
-        return          builder.CreateUIToFP(operands[0], varType);
+        return          llvmBuilder.CreateUIToFP(operands[0], varType);
     case ir_unop_i2b:
         if(vectorType)  varType = llvm::VectorType::get(llvm::Type::getInt1Ty(context), vectorType->getNumElements());
         else            varType = llvm::Type::getInt1Ty(context);
-        return          builder.CreateIntCast(operands[0], varType, false);
+        return          llvmBuilder.CreateIntCast(operands[0], varType, false);
     case ir_unop_b2i:
         if(vectorType)  varType = llvm::VectorType::get(llvm::Type::getInt32Ty(context), vectorType->getNumElements());
         else            varType = llvm::Type::getInt32Ty(context);
-        return          builder.CreateIntCast(operands[0], varType, true);
+        return          llvmBuilder.CreateIntCast(operands[0], varType, true);
     case ir_unop_u2f:
         if(vectorType)  varType = llvm::VectorType::get(llvm::Type::getFloatTy(context), vectorType->getNumElements());
         else            varType = llvm::Type::getFloatTy(context);
-        return          builder.CreateUIToFP(operands[0], varType);
+        return          llvmBuilder.CreateUIToFP(operands[0], varType);
     case ir_unop_neg:
-        switch(getLLVMBaseType(operands[0])) {
-        case llvm::Type::FloatTyID:         return builder.CreateFNeg(operands[0]);
-        case llvm::Type::IntegerTyID:       return builder.CreateNeg (operands[0]);
+        switch(gla::Util::getBasicType(operands[0])) {
+        case llvm::Type::FloatTyID:         return llvmBuilder.CreateFNeg(operands[0]);
+        case llvm::Type::IntegerTyID:       return llvmBuilder.CreateNeg (operands[0]);
         }
+    }
+
+    //
+    // 2 or more operands
+    //
+
+    haveMatrix = operands[0].isMatrix() || operands[1].isMatrix();
+
+    if (haveMatrix) {
+        llvm::Instruction::BinaryOps llvmOp;
+        bool componentWise = true;
+
+        switch(glslOp) {
+        case ir_binop_add:
+            llvmOp = llvm::BinaryOperator::FAdd;
+            break;
+        case ir_binop_sub:
+            llvmOp = llvm::BinaryOperator::FSub;
+            break;
+        case ir_binop_mul:
+            componentWise = false;
+            llvmOp = llvm::BinaryOperator::FMul;
+            break;
+        case ir_binop_div:
+            llvmOp = llvm::BinaryOperator::FDiv;
+            break;
+        case ir_binop_all_equal:
+            return glaBuilder->createMatrixCompare(operands[0], operands[1], true);
+        case ir_binop_any_nequal:
+            return glaBuilder->createMatrixCompare(operands[0], operands[1], false);
+        default:
+            gla::UnsupportedFunctionality("Matrix operation");
+        }
+
+        if (componentWise)
+            return glaBuilder->createMatrixOp(llvmOp, operands[0], operands[1]);
+        else
+            return glaBuilder->createMatrixMultiply(operands[0], operands[1]);
+    }
+
+    // we now know we don't have a matrix
+    assert(! haveMatrix);
+
+    switch(glslOp) {
     case ir_binop_add:
-        findAndSmearScalars(operands, 2);
-        switch(getLLVMBaseType(operands[0])) {
-        case llvm::Type::FloatTyID:         return builder.CreateFAdd(operands[0], operands[1]);
-        case llvm::Type::IntegerTyID:       return builder.CreateAdd (operands[0], operands[1]);
+        glaBuilder->promoteScalar(operands[0], operands[1]);
+        switch(gla::Util::getBasicType(operands[0])) {
+        case llvm::Type::FloatTyID:         return llvmBuilder.CreateFAdd(operands[0], operands[1]);
+        case llvm::Type::IntegerTyID:       return llvmBuilder.CreateAdd (operands[0], operands[1]);
         }
     case ir_binop_sub:
-        findAndSmearScalars(operands, 2);
-        switch(getLLVMBaseType(operands[0])) {
-        case llvm::Type::FloatTyID:         return builder.CreateFSub(operands[0], operands[1]);
-        case llvm::Type::IntegerTyID:       return builder.CreateSub (operands[0], operands[1]);
+        glaBuilder->promoteScalar(operands[0], operands[1]);
+        switch(gla::Util::getBasicType(operands[0])) {
+        case llvm::Type::FloatTyID:         return llvmBuilder.CreateFSub(operands[0], operands[1]);
+        case llvm::Type::IntegerTyID:       return llvmBuilder.CreateSub (operands[0], operands[1]);
         }
     case ir_binop_mul:
-        if (operands[0].isMatrix() || operands[1].isMatrix())
-            return gla::Builder::createMatrixMultiply(builder, operands[0], operands[1]);
-        else {
-            findAndSmearScalars(operands, 2);
-            switch(getLLVMBaseType(operands[0])) {
-            case llvm::Type::FloatTyID:         return builder.CreateFMul(operands[0], operands[1]);
-            case llvm::Type::IntegerTyID:       return builder.CreateMul (operands[0], operands[1]);
-            }
+        glaBuilder->promoteScalar(operands[0], operands[1]);
+        switch(gla::Util::getBasicType(operands[0])) {
+        case llvm::Type::FloatTyID:         return llvmBuilder.CreateFMul(operands[0], operands[1]);
+        case llvm::Type::IntegerTyID:       return llvmBuilder.CreateMul (operands[0], operands[1]);
         }
     case ir_binop_div:
-        findAndSmearScalars(operands, 2);
-        switch(getLLVMBaseType(operands[0])) {
-        case llvm::Type::FloatTyID:         return builder.CreateFDiv(operands[0], operands[1]);
-        case llvm::Type::IntegerTyID:       return builder.CreateSDiv(operands[0], operands[1]);
+        glaBuilder->promoteScalar(operands[0], operands[1]);
+        switch(gla::Util::getBasicType(operands[0])) {
+        case llvm::Type::FloatTyID:         return llvmBuilder.CreateFDiv(operands[0], operands[1]);
+        case llvm::Type::IntegerTyID:       return llvmBuilder.CreateSDiv(operands[0], operands[1]);
         }
     case ir_binop_less:
-        findAndSmearScalars(operands, 2);
-        switch(getLLVMBaseType(operands[0])) {
-        case llvm::Type::FloatTyID:         return builder.CreateFCmpOLT(operands[0], operands[1]);
-        case llvm::Type::IntegerTyID:       return builder.CreateICmpSLT(operands[0], operands[1]);
+        switch(gla::Util::getBasicType(operands[0])) {
+        case llvm::Type::FloatTyID:         return llvmBuilder.CreateFCmpOLT(operands[0], operands[1]);
+        case llvm::Type::IntegerTyID:       return llvmBuilder.CreateICmpSLT(operands[0], operands[1]);
         }
     case ir_binop_greater:
-        findAndSmearScalars(operands, 2);
-        switch(getLLVMBaseType(operands[0])) {
-        case llvm::Type::FloatTyID:         return builder.CreateFCmpOGT(operands[0], operands[1]);
-        case llvm::Type::IntegerTyID:       return builder.CreateICmpSGT(operands[0], operands[1]);
+        switch(gla::Util::getBasicType(operands[0])) {
+        case llvm::Type::FloatTyID:         return llvmBuilder.CreateFCmpOGT(operands[0], operands[1]);
+        case llvm::Type::IntegerTyID:       return llvmBuilder.CreateICmpSGT(operands[0], operands[1]);
         }
     case ir_binop_lequal:
-        findAndSmearScalars(operands, 2);
-        switch(getLLVMBaseType(operands[0])) {
-        case llvm::Type::FloatTyID:         return builder.CreateFCmpOLE(operands[0], operands[1]);
-        case llvm::Type::IntegerTyID:       return builder.CreateICmpSLE(operands[0], operands[1]);
+        switch(gla::Util::getBasicType(operands[0])) {
+        case llvm::Type::FloatTyID:         return llvmBuilder.CreateFCmpOLE(operands[0], operands[1]);
+        case llvm::Type::IntegerTyID:       return llvmBuilder.CreateICmpSLE(operands[0], operands[1]);
         }
     case ir_binop_gequal:
-        findAndSmearScalars(operands, 2);
-        switch(getLLVMBaseType(operands[0])) {
-        case llvm::Type::FloatTyID:         return builder.CreateFCmpOGE(operands[0], operands[1]);
-        case llvm::Type::IntegerTyID:       return builder.CreateICmpSGE(operands[0], operands[1]);
+        switch(gla::Util::getBasicType(operands[0])) {
+        case llvm::Type::FloatTyID:         return llvmBuilder.CreateFCmpOGE(operands[0], operands[1]);
+        case llvm::Type::IntegerTyID:       return llvmBuilder.CreateICmpSGE(operands[0], operands[1]);
         }
     case ir_binop_equal:
-        findAndSmearScalars(operands, 2);
-        switch(getLLVMBaseType(operands[0])) {
-        case llvm::Type::FloatTyID:         return builder.CreateFCmpOEQ(operands[0], operands[1]);
-        case llvm::Type::IntegerTyID:       return builder.CreateICmpEQ (operands[0], operands[1]);
+        switch(gla::Util::getBasicType(operands[0])) {
+        case llvm::Type::FloatTyID:         return llvmBuilder.CreateFCmpOEQ(operands[0], operands[1]);
+        case llvm::Type::IntegerTyID:       return llvmBuilder.CreateICmpEQ (operands[0], operands[1]);
         }
     case ir_binop_nequal:
-        findAndSmearScalars(operands, 2);
-        switch(getLLVMBaseType(operands[0])) {
-        case llvm::Type::FloatTyID:         return builder.CreateFCmpONE(operands[0], operands[1]);
-        case llvm::Type::IntegerTyID:       return builder.CreateICmpNE (operands[0], operands[1]);
+        switch(gla::Util::getBasicType(operands[0])) {
+        case llvm::Type::FloatTyID:         return llvmBuilder.CreateFCmpONE(operands[0], operands[1]);
+        case llvm::Type::IntegerTyID:       return llvmBuilder.CreateICmpNE (operands[0], operands[1]);
         }
 
     case ir_binop_lshift:
-        findAndSmearScalars(operands, 2);
-        return builder.CreateShl (operands[0], operands[1]);
+        glaBuilder->promoteScalar(operands[0], operands[1]);
+        return llvmBuilder.CreateShl (operands[0], operands[1]);
     case ir_binop_rshift:
-        findAndSmearScalars(operands, 2);
-        return builder.CreateLShr(operands[0], operands[1]);
+        glaBuilder->promoteScalar(operands[0], operands[1]);
+        return llvmBuilder.CreateLShr(operands[0], operands[1]);
     case ir_binop_bit_and:
-        findAndSmearScalars(operands, 2);
-        return builder.CreateAnd (operands[0], operands[1]);
+        glaBuilder->promoteScalar(operands[0], operands[1]);
+        return llvmBuilder.CreateAnd (operands[0], operands[1]);
     case ir_binop_bit_or:
-        findAndSmearScalars(operands, 2);
-        return builder.CreateOr  (operands[0], operands[1]);
+        glaBuilder->promoteScalar(operands[0], operands[1]);
+        return llvmBuilder.CreateOr  (operands[0], operands[1]);
     case ir_binop_logic_xor:
     case ir_binop_bit_xor:
-        findAndSmearScalars(operands, 2);
-        return builder.CreateXor (operands[0], operands[1]);
+        glaBuilder->promoteScalar(operands[0], operands[1]);
+        return llvmBuilder.CreateXor (operands[0], operands[1]);
 
     case ir_unop_logic_not:
-    case ir_unop_bit_not:                   return builder.CreateNot (operands[0]);
+    case ir_unop_bit_not:                   return llvmBuilder.CreateNot (operands[0]);
 
     case ir_binop_logic_and:
         gla::UnsupportedFunctionality("logical and", gla::EATContinue);
@@ -1435,31 +1464,29 @@ gla::Builder::SuperValue GlslToTopVisitor::expandGLSLOp(ir_expression_operation 
         break;
 
     case ir_binop_mod:
-        findAndSmearScalars(operands, 2);
-        switch(getLLVMBaseType(operands[0])) {
-        case llvm::Type::FloatTyID:         return builder.CreateFRem(operands[0], operands[1]);
-        case llvm::Type::IntegerTyID:       return builder.CreateSRem(operands[0], operands[1]);
+        glaBuilder->promoteScalar(operands[0], operands[1]);
+        switch(gla::Util::getBasicType(operands[0])) {
+        case llvm::Type::FloatTyID:         return llvmBuilder.CreateFRem(operands[0], operands[1]);
+        case llvm::Type::IntegerTyID:       return llvmBuilder.CreateSRem(operands[0], operands[1]);
         }
     case ir_binop_all_equal:
         // Returns single boolean for whether all components of operands[0] equal the
         // components of operands[1]
-        findAndSmearScalars(operands, 2);
-        switch(getLLVMBaseType(operands[0])) {
-        case llvm::Type::FloatTyID:         result = builder.CreateFCmpOEQ(operands[0], operands[1]);  break;
-        case llvm::Type::IntegerTyID:       result = builder.CreateICmpEQ (operands[0], operands[1]);  break;
+        switch(gla::Util::getBasicType(operands[0])) {
+        case llvm::Type::FloatTyID:         result = llvmBuilder.CreateFCmpOEQ(operands[0], operands[1]);  break;
+        case llvm::Type::IntegerTyID:       result = llvmBuilder.CreateICmpEQ (operands[0], operands[1]);  break;
         }
-        if(vectorType)  return builder.CreateCall(getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_all, result->getType()), result);
+        if(vectorType)  return llvmBuilder.CreateCall(getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_all, result->getType()), result);
         else            return result;
 
     case ir_binop_any_nequal:
         // Returns single boolean for whether any component of operands[0] is
         // not equal to the corresponding component of operands[1].
-        findAndSmearScalars(operands, 2);
-        switch(getLLVMBaseType(operands[0])) {
-        case llvm::Type::FloatTyID:         result = builder.CreateFCmpONE(operands[0], operands[1]);  break;
-        case llvm::Type::IntegerTyID:       result = builder.CreateICmpNE (operands[0], operands[1]);  break;
+        switch(gla::Util::getBasicType(operands[0])) {
+        case llvm::Type::FloatTyID:         result = llvmBuilder.CreateFCmpONE(operands[0], operands[1]);  break;
+        case llvm::Type::IntegerTyID:       result = llvmBuilder.CreateICmpNE (operands[0], operands[1]);  break;
         }
-        if(vectorType)  return builder.CreateCall(getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_any, result->getType()), result);
+        if(vectorType)  return llvmBuilder.CreateCall(getLLVMIntrinsicFunction1(llvm::Intrinsic::gla_any, result->getType()), result);
         else            return result;
 
     case ir_binop_min:      gla::UnsupportedFunctionality("min",    gla::EATContinue);  break;
@@ -1482,20 +1509,19 @@ llvm::Value* GlslToTopVisitor::expandGLSLSwizzle(ir_swizzle* swiz)
 
     // traverse the tree we're swizzling
     swiz->val->accept(this);
-    lastValue = collapseIndexChain(lastValue);
     operand = lastValue;
 
     // convert our GLSL mask to an int
     int swizValMask = makeSwizzle(swiz->mask);
 
     const llvm::Type* sourceType = operand->getType();
-    llvm::Type* finalType = convertGLSLToLLVMType(swiz->type);
+    const llvm::Type* finalType = convertGLSLToLLVMType(swiz->type);
 
-    llvm::VectorType* vt = llvm::dyn_cast<llvm::VectorType>(finalType);
+    const llvm::VectorType* vt = llvm::dyn_cast<const llvm::VectorType>(finalType);
 
     // If we are dealing with a scalar, just put it in a register and return
     if (!vt) {
-        target = builder.CreateExtractElement(lastValue,
+        target = llvmBuilder.CreateExtractElement(lastValue,
                                               llvm::ConstantInt::get(context,
                                                                      llvm::APInt(32, swizValMask, false)));
         llvm::errs() << "Inst: " << *target;
@@ -1513,15 +1539,15 @@ llvm::Value* GlslToTopVisitor::expandGLSLSwizzle(ir_swizzle* swiz)
         // If we're constructing a vector from a scalar, then just
         // make inserts. Otherwise make insert/extract pairs
         if (false == llvm::isa<llvm::VectorType>(sourceType)) {
-            target = builder.CreateInsertElement(target,
+            target = llvmBuilder.CreateInsertElement(target,
                                                  operand,
                                                  llvm::ConstantInt::get(context, llvm::APInt(32, i, false)));
         } else {
             // Extract an element to a scalar, then immediately insert to our target
-            llvm::Value* extractInst = builder.CreateExtractElement(lastValue,
+            llvm::Value* extractInst = llvmBuilder.CreateExtractElement(lastValue,
                                                                     llvm::ConstantInt::get(context,
                                                                                            llvm::APInt(32, (swizValMask >> (2*i)) & 0x3, false)));
-            target = builder.CreateInsertElement(target,
+            target = llvmBuilder.CreateInsertElement(target,
                                                  extractInst,
                                                  llvm::ConstantInt::get(context, llvm::APInt(32, i, false)));
         }
@@ -1530,13 +1556,9 @@ llvm::Value* GlslToTopVisitor::expandGLSLSwizzle(ir_swizzle* swiz)
     return target;
 }
 
-llvm::Type* GlslToTopVisitor::convertGLSLToLLVMType(const glsl_type* type)
+const llvm::Type* GlslToTopVisitor::convertGLSLToLLVMType(const glsl_type* type)
 {
     const unsigned varType = type->base_type;
-    unsigned isMatrix = type->is_matrix();
-
-    if (isMatrix)
-        gla::UnsupportedFunctionality("matrices");
 
     llvm::Type *llvmVarType;
     std::vector<const llvm::Type*> structFields;
@@ -1587,6 +1609,9 @@ llvm::Type* GlslToTopVisitor::convertGLSLToLLVMType(const glsl_type* type)
         break;
     }
 
+    if (type->is_matrix())
+        return gla::Builder::Matrix::getType(llvmVarType, type->column_type()->vector_elements, type->row_type()->vector_elements);
+
     // If this variable has a vector element count greater than 1, create an LLVM vector
     unsigned vecCount = type->vector_elements;
     if(vecCount > 1)
@@ -1595,72 +1620,28 @@ llvm::Type* GlslToTopVisitor::convertGLSLToLLVMType(const glsl_type* type)
     return llvmVarType;
 }
 
-//llvm::Function* GlslToTopVisitor::getLLVMIntrinsicFunction(llvm::Intrinsic::ID ID, const llvm::Type* resultType, llvm::Value** paramTypes, int paramCount)
-//{
-//    int intrinsicTypeCount = paramCount;
-//    const llvm::Type* intrinsicTypes[GLA_MAX_PARAMETERS] = {0};
-//
-//    intrinsicTypes[0] = resultType;
-//
-//    for(int i = 0; i < paramCount; ++i)
-//        intrinsicTypes[i + 1] = paramTypes[i]->getType();
-//
-//    // Look up the intrinsic
-//    return llvm::Intrinsic::getDeclaration(module, ID, intrinsicTypes, intrinsicTypeCount);
-//}
-
 llvm::Function* GlslToTopVisitor::getLLVMIntrinsicFunction1(llvm::Intrinsic::ID ID, const llvm::Type* type1)
 {
-    int intrinsicTypeCount = 1;
-    const llvm::Type* intrinsicTypes[1] = {0};
-
-    intrinsicTypes[0] = type1;
-
-    // Look up the intrinsic
-    return llvm::Intrinsic::getDeclaration(module, ID, intrinsicTypes, intrinsicTypeCount);
+    return glaBuilder->getIntrinsic(ID, type1);
 }
 
 llvm::Function* GlslToTopVisitor::getLLVMIntrinsicFunction2(llvm::Intrinsic::ID ID, const llvm::Type* type1, const llvm::Type* type2)
 {
-    int intrinsicTypeCount = 2;
-    const llvm::Type* intrinsicTypes[2] = {0};
-
-    intrinsicTypes[0] = type1;
-    intrinsicTypes[1] = type2;
-
-    // Look up the intrinsic
-    return llvm::Intrinsic::getDeclaration(module, ID, intrinsicTypes, intrinsicTypeCount);
+    return glaBuilder->getIntrinsic(ID, type1, type2);
 }
 
 llvm::Function* GlslToTopVisitor::getLLVMIntrinsicFunction3(llvm::Intrinsic::ID ID, const llvm::Type* type1, const llvm::Type* type2, const llvm::Type* type3)
 {
-    int intrinsicTypeCount = 3;
-    const llvm::Type* intrinsicTypes[3] = {0};
-
-    intrinsicTypes[0] = type1;
-    intrinsicTypes[1] = type2;
-    intrinsicTypes[2] = type3;
-
-    // Look up the intrinsic
-    return llvm::Intrinsic::getDeclaration(module, ID, intrinsicTypes, intrinsicTypeCount);
+    return glaBuilder->getIntrinsic(ID, type1, type2, type3);
 }
 
 llvm::Function* GlslToTopVisitor::getLLVMIntrinsicFunction4(llvm::Intrinsic::ID ID, const llvm::Type* type1, const llvm::Type* type2, const llvm::Type* type3, const llvm::Type* type4)
 {
-    int intrinsicTypeCount = 4;
-    const llvm::Type* intrinsicTypes[4] = {0};
-
-    intrinsicTypes[0] = type1;
-    intrinsicTypes[1] = type2;
-    intrinsicTypes[2] = type3;
-    intrinsicTypes[3] = type4;
-
-    // Look up the intrinsic
-    return llvm::Intrinsic::getDeclaration(module, ID, intrinsicTypes, intrinsicTypeCount);
+    return glaBuilder->getIntrinsic(ID, type1, type2, type3, type4);
 }
 
 void GlslToTopVisitor::createLLVMTextureIntrinsic(llvm::Function* &intrinsicName, int &paramCount,
-                                                  gla::Builder::SuperValue* outParams, gla::Builder::SuperValue* llvmParams, llvm::Type* resultType,
+                                                  gla::Builder::SuperValue* outParams, gla::Builder::SuperValue* llvmParams, const llvm::Type* resultType,
                                                   llvm::Intrinsic::ID intrinsicID, gla::ESamplerType samplerType, gla::ETextureFlags texFlags)
 {
     bool isBiased = texFlags.EBias;
@@ -1697,83 +1678,6 @@ void GlslToTopVisitor::createLLVMTextureIntrinsic(llvm::Function* &intrinsicName
     return;
 }
 
-llvm::Type::TypeID GlslToTopVisitor::getLLVMBaseType(llvm::Value* value)
-{
-    switch(value->getType()->getTypeID()) {
-    case llvm::Type::VectorTyID:
-    case llvm::Type::ArrayTyID:
-        return getLLVMBaseType(value->getType()->getContainedType(0));
-    }
-
-    assert(gla::Util::isGlaScalar(value->getType()));
-    return value->getType()->getTypeID();
-}
-
-llvm::Type::TypeID GlslToTopVisitor::getLLVMBaseType(const llvm::Type* type)
-{
-    switch(type->getTypeID()) {
-    case llvm::Type::VectorTyID:
-    case llvm::Type::ArrayTyID:
-        return getLLVMBaseType(type->getContainedType(0));
-    }
-
-    assert(gla::Util::isGlaScalar(type));
-    return type->getTypeID();
-}
-
-llvm::Value* GlslToTopVisitor::smearScalar(llvm::Value* scalarVal, const llvm::Type* vectorType)
-{
-    llvm::UndefValue::get(vectorType);
-
-    // Use a swizzle to expand the scalar to a vector
-    llvm::Intrinsic::ID intrinsicID;
-    llvm::Type::TypeID scalarType = getLLVMBaseType(scalarVal);
-    switch(scalarType) {
-    case llvm::Type::IntegerTyID:   intrinsicID = llvm::Intrinsic::gla_swizzle;     break;
-    case llvm::Type::FloatTyID:     intrinsicID = llvm::Intrinsic::gla_fSwizzle;    break;
-    }
-
-    llvm::Function *intrinsicName = getLLVMIntrinsicFunction2(intrinsicID, vectorType, scalarVal->getType());
-
-    // Broadcast x
-    int swizVal = 0;
-
-    llvm::CallInst *callInst = builder.CreateCall2 (intrinsicName,
-                                                    scalarVal,
-                                                    llvm::ConstantInt::get(context, llvm::APInt(32, swizVal, true)));
-
-    return callInst;
-}
-
-void GlslToTopVisitor::findAndSmearScalars(gla::Builder::SuperValue* operands, int numOperands)
-{
-    assert(numOperands == 2);
-
-    int vectorSize = 0;
-    int scalarIndex = 0;
-    int vectorIndex = 0;
-    llvm::Value* scalarVal = 0;
-    const llvm::VectorType* vectorType[2];
-
-    // Find the scalar index and vector size
-    for (int i = 0; i < numOperands; ++i) {
-        vectorType[i] = llvm::dyn_cast<llvm::VectorType>(operands[i]->getType());
-        if(vectorType[i]) {
-            vectorSize = vectorType[i]->getNumElements();
-            vectorIndex = i;
-        } else {
-            scalarVal = operands[i];
-            scalarIndex = i;
-        }
-    }
-
-    // If both were vectors or both were scalar, just return
-    if( (vectorType[0] && vectorType[1]) || (!vectorType[0] && !vectorType[1]) )
-        return;
-
-    operands[scalarIndex] = smearScalar(scalarVal, operands[vectorIndex]->getType());
-}
-
 llvm::BasicBlock* GlslToTopVisitor::getShaderEntry()
 {
     if (shaderEntry)
@@ -1784,29 +1688,6 @@ llvm::BasicBlock* GlslToTopVisitor::getShaderEntry()
     shaderEntry = llvm::BasicBlock::Create(context, "entry", function);
 
     return shaderEntry;
-}
-
-void GlslToTopVisitor::writePipelineOuts()
-{
-    llvm::Intrinsic::ID intrinsicID;
-
-     std::list<llvm::Value*>::iterator outIter;
-
-    //Call writeData intrinsic on our outs
-    for ( outIter = glslOuts.begin(); outIter != glslOuts.end(); outIter++ ) {
-        llvm::Value* loadVal = builder.CreateLoad(*outIter);
-
-        switch(getLLVMBaseType(loadVal)) {
-        case llvm::Type::IntegerTyID:   intrinsicID = llvm::Intrinsic::gla_writeData;   break;
-        case llvm::Type::FloatTyID:     intrinsicID = llvm::Intrinsic::gla_fWriteData;  break;
-        }
-
-        llvm::Function *intrinsicName = getLLVMIntrinsicFunction1(intrinsicID, loadVal->getType());
-
-        lastValue = builder.CreateCall2 (intrinsicName,
-                                            llvm::ConstantInt::get(context, llvm::APInt(32, 0, true)),
-                                            loadVal);
-    }
 }
 
 void GlslToTopVisitor::appendArrayIndexToName(std::string &arrayName, int index)
@@ -1822,9 +1703,7 @@ llvm::Value* GlslToTopVisitor::createPipelineRead(ir_variable* var, int index)
 {
     // For pipeline inputs, and we will generate a fresh pipeline read at each reference,
     // which we will optimize later.
-    llvm::Function *intrinsicName = 0;
     std::string name(var->name);
-    int paramCount = 0;
     const llvm::Type* readType;
 
     if (GLSL_TYPE_ARRAY == var->type->base_type) {
@@ -1838,46 +1717,24 @@ llvm::Value* GlslToTopVisitor::createPipelineRead(ir_variable* var, int index)
         readType = convertGLSLToLLVMType(var->type);
     }
 
+    gla::EInterpolationMode mode = gla::EIMNone;
+    if (glShader->Type != GL_FRAGMENT_SHADER)
+        gla::UnsupportedFunctionality("non-fragment shader pipeline read");
+
+    switch (var->interpolation) {
+    case ir_var_smooth:
+        mode = gla::EIMSmooth;
+        break;
+    case ir_var_noperspective:
+        mode = gla::EIMNoperspective;
+        break;
+    case ir_var_flat:
+        mode = gla::EIMNone;
+        break;
+    default:
+        gla::UnsupportedFunctionality("interpolation mode");
+    }
+
     // Give each interpolant a temporary unique index
-    llvm::Constant *interpLoc = llvm::ConstantInt::get(context, llvm::APInt(32, getNextInterpIndex(name), true));
-    llvm::Constant *interpOffset = llvm::ConstantInt::get(context, llvm::APInt(32, 0, true));
-
-    // Select intrinsic based on target stage
-    if(glShader->Type == GL_FRAGMENT_SHADER) {
-        llvm::Intrinsic::ID intrinsicID;
-        switch(getLLVMBaseType(readType)) {
-        case llvm::Type::IntegerTyID:   intrinsicID = llvm::Intrinsic::gla_readData;            paramCount = 1; break;
-        case llvm::Type::FloatTyID:     intrinsicID = llvm::Intrinsic::gla_fReadInterpolant;    paramCount = 2; break;
-        }
-        intrinsicName = getLLVMIntrinsicFunction1(intrinsicID, readType);
-    } else {
-        gla::UnsupportedFunctionality("non-fragment shaders");
-    }
-
-    // Call the selected intrinsic
-    llvm::Value* retVal;
-    switch(paramCount) {
-    case 2:  retVal = builder.CreateCall2 (intrinsicName, interpLoc, interpOffset, name); break;
-    case 1:  retVal = builder.CreateCall  (intrinsicName, interpLoc, name);               break;
-    }
-
-    return retVal;
+    return glaBuilder->readPipeline(readType, name, getNextInterpIndex(name), mode);
 }
-
-llvm::Value* GlslToTopVisitor::collapseIndexChain(llvm::Value* val)
-{
-    // Turn the vector of indices we've been building into an extract value
-    // TODO:  Maybe create a GEP for arrays here when we unify?
-    llvm::Value* retVal = val;
-
-    if (llvm::isa<llvm::StructType>(val->getType())) {
-        int chainSize = elementIndexChain.size();
-        if (chainSize > 0) {
-            retVal = builder.CreateExtractValue(val, &elementIndexChain.front(), &elementIndexChain.back() + 1);
-            elementIndexChain.clear();
-        }
-    }
-
-    return retVal;
-}
-

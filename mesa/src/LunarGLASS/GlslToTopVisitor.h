@@ -1,7 +1,7 @@
 //===- GlslToTopVisitor.h - Header for GlslToTopVisitor.cpp ---------------===//
 //
 // LunarGLASS: An Open Modular Shader Compiler Architecture
-// Copyright © 2011, LunarG, Inc.
+// Copyright ï¿½ 2011, LunarG, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -52,6 +52,7 @@
 
 #include "LunarGLASSTopIR.h"
 #include "LunarGLASSLlvmInterface.h"
+#include "TopBuilder.h"
 
 void GlslToTop(struct gl_shader*, llvm::Module*);
 
@@ -96,49 +97,42 @@ public:
 	virtual ir_visitor_status visit_enter(class ir_if *);
 	virtual ir_visitor_status visit_leave(class ir_if *);
 
+protected:
     // help functions to build LLVM
-    llvm::Value* createLLVMVariable(ir_variable*);
-    const char* getSamplerDeclaration(ir_variable*);
+    gla::Builder::SuperValue createLLVMVariable(ir_variable*);
+    const char* getSamplerTypeName(ir_variable*);
     gla::Builder::SuperValue expandGLSLOp(ir_expression_operation, gla::Builder::SuperValue*);
     llvm::Value* expandGLSLSwizzle(ir_swizzle*);
     llvm::Value* createLLVMIntrinsic(ir_call*, gla::Builder::SuperValue*, int);
     llvm::Value* createPipelineRead(ir_variable*, int);
-    llvm::Value* smearScalar(llvm::Value*, const llvm::Type*);
     llvm::Value* collapseIndexChain(llvm::Value*);
     llvm::Constant* createLLVMConstant(ir_constant*);
-    llvm::Type*  convertGLSLToLLVMType(const glsl_type*);
+    const llvm::Type* convertGLSLToLLVMType(const glsl_type*);
     llvm::Function* getLLVMIntrinsicFunction1(llvm::Intrinsic::ID, const llvm::Type*);
     llvm::Function* getLLVMIntrinsicFunction2(llvm::Intrinsic::ID, const llvm::Type*, const llvm::Type*);
     llvm::Function* getLLVMIntrinsicFunction3(llvm::Intrinsic::ID, const llvm::Type*, const llvm::Type*, const llvm::Type*);
     llvm::Function* getLLVMIntrinsicFunction4(llvm::Intrinsic::ID, const llvm::Type*, const llvm::Type*, const llvm::Type*, const llvm::Type*);
 
-    void createLLVMTextureIntrinsic(llvm::Function* &, int &, gla::Builder::SuperValue*, gla::Builder::SuperValue*, llvm::Type*, llvm::Intrinsic::ID,  gla::ESamplerType, gla::ETextureFlags);
-    void findAndSmearScalars(gla::Builder::SuperValue*, int);
+    void createLLVMTextureIntrinsic(llvm::Function* &, int &, gla::Builder::SuperValue*, gla::Builder::SuperValue*, const llvm::Type*, llvm::Intrinsic::ID,  gla::ESamplerType, gla::ETextureFlags);
     void writePipelineOuts(void);
     void appendArrayIndexToName(std::string &, int);
 
-    llvm::Type::TypeID getLLVMBaseType(llvm::Value*);
-    llvm::Type::TypeID getLLVMBaseType(const llvm::Type*);
-
     int getNextInterpIndex(std::string);
 
-protected:
     llvm::BasicBlock* getShaderEntry();
 
     llvm::LLVMContext &context;
-    llvm::IRBuilder<> builder;
+    llvm::IRBuilder<> llvmBuilder;
     llvm::Module* module;
 
     struct gl_shader* glShader;
 
-    std::map<ir_variable*, llvm::Value*> namedValues;
+    std::map<ir_variable*, gla::Builder::SuperValue> namedValues;
     std::map<std::string, int> interpMap;
     std::map<std::string, llvm::StructType*> structMap;
     std::map<ir_function_signature *, llvm::Function*> functionMap;
 
-    std::list<llvm::Value*> glslOuts;
-
-    std::vector<unsigned> elementIndexChain;
+    std::stack<std::vector<llvm::Value*> > gepIndexChainStack;
 
     gla::Builder::SuperValue lastValue;
     gla::Builder::SuperValue lValue;
@@ -167,4 +161,6 @@ protected:
     bool setUpLatch();
 
     llvm::BasicBlock* shaderEntry;
+
+    gla::Builder* glaBuilder;
 };

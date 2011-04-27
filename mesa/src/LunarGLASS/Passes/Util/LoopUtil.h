@@ -130,7 +130,6 @@ namespace llvm {
                 ++count;
             }
 
-            errs() << "SimpleConditional count:  " << count << " header size: " << header->size() << *header;
             // Our total has to be the number of instructions in the header.
             return header->size() == count;
         }

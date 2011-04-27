@@ -152,7 +152,7 @@ bool FlattenCondAssn::removeDeadCode(const Conditional* cond)
     changed |= SimplifyInstructionsInBlock(cond->getThenBlock());
     changed |= SimplifyInstructionsInBlock(cond->getElseBlock());
 
-    // TODO: Remove dead code in the then and else subgraphs
+    // FIXME: Remove dead code in the then and else subgraphs
 
     // <do stuff>
     return false;

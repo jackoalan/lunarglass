@@ -1522,9 +1522,8 @@ llvm::Value* GlslToTopVisitor::expandGLSLSwizzle(ir_swizzle* swiz)
     // If we are dealing with a scalar, just put it in a register and return
     if (!vt) {
         target = llvmBuilder.CreateExtractElement(lastValue,
-                                              llvm::ConstantInt::get(context,
-                                                                     llvm::APInt(32, swizValMask, false)));
-        llvm::errs() << "Inst: " << *target;
+                                                  llvm::ConstantInt::get(context,
+                                                                         llvm::APInt(32, swizValMask, false)));
         return target;
     }
     assert(vt);
@@ -1540,16 +1539,16 @@ llvm::Value* GlslToTopVisitor::expandGLSLSwizzle(ir_swizzle* swiz)
         // make inserts. Otherwise make insert/extract pairs
         if (false == llvm::isa<llvm::VectorType>(sourceType)) {
             target = llvmBuilder.CreateInsertElement(target,
-                                                 operand,
-                                                 llvm::ConstantInt::get(context, llvm::APInt(32, i, false)));
+                                                     operand,
+                                                     llvm::ConstantInt::get(context, llvm::APInt(32, i, false)));
         } else {
             // Extract an element to a scalar, then immediately insert to our target
             llvm::Value* extractInst = llvmBuilder.CreateExtractElement(lastValue,
-                                                                    llvm::ConstantInt::get(context,
-                                                                                           llvm::APInt(32, (swizValMask >> (2*i)) & 0x3, false)));
+                                                                        llvm::ConstantInt::get(context,
+                                                                                               llvm::APInt(32, (swizValMask >> (2*i)) & 0x3, false)));
             target = llvmBuilder.CreateInsertElement(target,
-                                                 extractInst,
-                                                 llvm::ConstantInt::get(context, llvm::APInt(32, i, false)));
+                                                     extractInst,
+                                                     llvm::ConstantInt::get(context, llvm::APInt(32, i, false)));
         }
     }
 

@@ -1259,7 +1259,6 @@ const char* gla::GlslTarget::mapGlaXor(const llvm::Instruction* llvmInstruction,
         if (intrinsic)
             return "not";
 
-        llvm::errs() << *llvmInstruction;
         return 0;
     }
 }

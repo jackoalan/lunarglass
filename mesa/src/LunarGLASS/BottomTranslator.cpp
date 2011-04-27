@@ -50,35 +50,17 @@
 //   (there is only 1 per loop) has the loop's backedge branching to it.  It
 //   also is the first block encountered in program or LLVM IR order.  An
 //   exiting block is a block that exits the loop, and the block outside the
-//   loop that the exiting block branches to is called an exit block.  If flow
-//   control is structured, then there should only be 1 exit block, but there
-//   may be many exiting blocks.  A latch is a block with a backedge.
-//   Canonicalization (via loop-simplify or a prerequisite for any of the loop
-//   optimizations) enforces that there is only 1 latch, and that all of the
-//   predecessors of an exit block are inside the loop.  During
-//   canonicalization, if there are more than 1 latches, a new (unconditional)
-//   latch block is created and the previous latches now branch to it instead of
-//   the header.  Any blocks without one of the above properties can be handled
-//   normally, as though they weren't even in a loop.
+//   loop that the exiting block branches to is called an exit block.  A latch
+//   is a block with a backedge.  Canonicalization (via loop-simplify or a
+//   prerequisite for any of the loop optimizations) enforces that there is only
+//   1 latch, and that all of the predecessors of an exit block are inside the
+//   loop.  During canonicalization, if there are more than 1 latches, a new
+//   (unconditional) latch block is created and the previous latches now branch
+//   to it instead of the header.  Any blocks without one of the above
+//   properties can be handled normally, as though they weren't even in a loop.
 //
 // * Loops are presented to the backend using the loop interfaces present in
 //   Manager.h.  Nested loops are currently not supported.
-//
-// * handleLoopBlock proceeds as follows for the following loop block types:
-//
-//     - Header:  Call beginLoop interface. If the header is not also a latch or
-//                exiting block, then it's the start of some internal control
-//                flow, so pass it off to handleBranchingBlock.  Otherwise
-//                handle its instructions, handle it as a latch or exit if it's
-//                also a latch or exit, and pass every block in the loop to
-//                handleBlock. This is done to make sure that all loop internal
-//                blocks are handled before further loop external blocks are.
-//                Finally, end the loop.
-//
-//     - Latch:   Handle its instructions, add phi copies if applicable, call
-//                addLoopBack interface.
-//
-//     - Exiting: Handle its instructions, call addLoopExit interface
 //
 // * handleBranching handles it's instructions, and adds phi nodes if specified
 //   by the backend. On an unconditional branch, it checks to see if the block

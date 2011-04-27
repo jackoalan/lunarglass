@@ -31,7 +31,7 @@ TESTS=(test.frag \
        matrix.frag \
        newTexture.frag \
        structure.frag \
-	   structAssignment.frag
+       structAssignment.frag
        structDeref.frag \
        texture.frag \
        types.frag \

@@ -80,22 +80,27 @@ namespace gla {
 
         // Specialized loop constructs
 
+        // TODO: add more loop constructs here
+
         // FIXME: add backend queries for each of these forms
 
-        // Add a conditional (e.g. while) loop. Currently unimplemented.
-        virtual void beginConditionalLoop(/* TBD */) = 0;
+        // // Add a conditional (e.g. while) loop. Currently unimplemented.
+        // virtual void beginConditionalLoop(/* TBD */) = 0;
 
-        // Add a canonical inductive loop (e.g. for (int i = 0; i < ...; ++i)). Currently unimplemented.
-        virtual void beginInductiveLoop(/* TBD */) = 0;
+        // // Add a canonical inductive loop (e.g. for (int i = 0; i < ...; ++i)). Currently unimplemented.
+        // virtual void beginInductiveLoop(/* TBD */) = 0;
 
         // // Add a canonical inductive loop as above where the bound is known statically
         // virtual void beginStaticInductiveLoop(/* TBD */) = 0;
 
+        // FIXME: figure out how to name things, as this for now simpleInductive
+        // really means "simpleStaticInductive". Alternatively, you could remove
+        // all the static constraints.
 
         // Add a simple conditional loop. A simple conditional loop has a simple
         // conditional expression, which consists of a comparison operation and
         // two arguments that must either be constants, extracts (from a vector),
-        // or loads (for uniforms). Recieves the comparison instruction, the
+        // or loads (for uniforms). Receives the comparison instruction, the
         // first operand, and the second operand. If the result of the
         // comparison should be inverted, invert will be passed as true.
         virtual void beginSimpleConditionalLoop(const llvm::CmpInst* cmp, const llvm::Value* op1, const llvm::Value* op2, bool invert=false) = 0;

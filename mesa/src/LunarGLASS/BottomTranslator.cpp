@@ -251,7 +251,7 @@ namespace {
 
 } // end namespace
 
-static void CreateSimpleInductive(LoopWrapper* loop, gla::BackEndTranslator* bet)
+static void CreateSimpleInductiveLoop(LoopWrapper* loop, gla::BackEndTranslator* bet)
 {
     const PHINode* pn  = loop->getCanonicalInductionVariable();
     const Value* count = loop->getTripCount();
@@ -271,7 +271,7 @@ static void CreateSimpleInductive(LoopWrapper* loop, gla::BackEndTranslator* bet
     bet->beginSimpleInductiveLoop(pn, tripCount);
 }
 
-static void CreateSimpleConditional(const Value* condition, gla::BackEndTranslator* bet)
+static void CreateSimpleConditionalLoop(const Value* condition, gla::BackEndTranslator* bet)
 {
     assert(condition);
     const CmpInst* cmp = dyn_cast<CmpInst>(condition);
@@ -367,8 +367,6 @@ void BottomTranslator::addInstructions(SmallVectorImpl<const Instruction*>& inst
 void BottomTranslator::newLoop(const BasicBlock* bb)
 {
     assert(loopInfo->getLoopFor(bb) && "newLoop called on non-loop");
-
-    // FIXME: Test nested loops thoroughly
 
     loops->newLoop(bb);
 
@@ -672,9 +670,9 @@ void BottomTranslator::setUpLoopBegin(const Value* condition)
 
     // TODO: add more loop constructs here
     if (loop->isSimpleInductive()) {
-        CreateSimpleInductive(loop, backEndTranslator);
+        CreateSimpleInductiveLoop(loop, backEndTranslator);
     } else if (loop->isSimpleConditional()) {
-        CreateSimpleConditional(condition, backEndTranslator);
+        CreateSimpleConditionalLoop(condition, backEndTranslator);
     } else {
         backEndTranslator->beginLoop();
     }

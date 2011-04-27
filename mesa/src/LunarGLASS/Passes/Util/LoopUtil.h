@@ -80,6 +80,8 @@ namespace llvm {
 
         // New functionality
 
+        // FIXME: cache the results of the more complicated queries
+
         // Is the loop simple inductive one. A simple inductive loop is one
         // where the backedge is preserved, a canonical induction variable
         // exists, and the execution count is known statically (e.g. there are
@@ -98,8 +100,12 @@ namespace llvm {
         {
             // It has to be conditional, comparison operator and the header has
             // to be exiting
-            CmpInst* cond = dyn_cast<CmpInst>(GetCondition(header));
-            if (! cond || ! isLoopExiting(header))
+            Value* v = GetCondition(header);
+            if (! v || ! isLoopExiting(header))
+                return false;
+
+            CmpInst* cond = dyn_cast<CmpInst>(v);
+            if (! cond)
                 return false;
 
             // There can't be any other non-phi instructions in the block, so

@@ -1498,6 +1498,7 @@ llvm::Value* GlslToTopVisitor::expandGLSLSwizzle(ir_swizzle* swiz)
         target = builder.CreateExtractElement(lastValue,
                                               llvm::ConstantInt::get(context,
                                                                      llvm::APInt(32, swizValMask, false)));
+        llvm::errs() << "Inst: " << *target;
         return target;
     }
     assert(vt);

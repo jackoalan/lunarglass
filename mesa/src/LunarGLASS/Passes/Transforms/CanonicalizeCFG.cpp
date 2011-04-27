@@ -80,6 +80,7 @@ bool CanonicalizeCFG::runOnFunction(Function& F)
 
     changed |= removeNoPredecessorBlocks(F);
 
+    // FIXME: do it in one pass
     while (removeUnneededPHIs(F)) {
         changed = true;
     }
@@ -126,6 +127,8 @@ bool CanonicalizeCFG::removeNoPredecessorBlocks(Function& F)
         // again. Note that the for-loop incrementation is ok, as all functions
         // have an entry block and we don't mind incrementing past it right
         // away.
+        // FIXME: do it in one pass, perhaps by just having a set/vector of all
+        // the blocks in the function
         if (flag) {
             flag = false;
             changed = true;

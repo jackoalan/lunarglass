@@ -76,7 +76,7 @@ namespace gla {
     float GetConstantFloat(const llvm::Value*);
     double GetConstantDouble(const llvm::Value*);
 
-    int GetComponentCount(const llvm::Type*);
+    int GetComponentCount(llvm::Type*);
     int GetComponentCount(const llvm::Value*);
 
     // Whether the argument is undefined or defined (an undef in llvm)
@@ -86,7 +86,7 @@ namespace gla {
 
 
     // true if a scalar Boolean or vector of Boolean
-    bool IsBoolean(const llvm::Type*);
+    bool IsBoolean(llvm::Type*);
 
     //
     // A value we compute with is exactly one of the following:
@@ -105,9 +105,9 @@ namespace gla {
     // If a matrix has been converted to llvm as an array of columns, then it will
     // also be an aggregate.
     //
-    inline bool IsVector(const llvm::Type* type)      { return type->isVectorTy(); }
-    inline bool IsAggregate(const llvm::Type* type)   { return type->isAggregateType(); }
-    inline bool IsScalar(const llvm::Type* type)      { return ! IsAggregate(type) && ! IsVector(type); }
+    inline bool IsVector(llvm::Type* type)      { return type->isVectorTy(); }
+    inline bool IsAggregate(llvm::Type* type)   { return type->isAggregateType(); }
+    inline bool IsScalar(llvm::Type* type)      { return ! IsAggregate(type) && ! IsVector(type); }
 
     inline bool IsVector(const llvm::Value* value)    { return IsVector(value->getType()); }
     inline bool IsAggregate(const llvm::Value* value) { return IsAggregate(value->getType()); }
@@ -132,20 +132,20 @@ namespace gla {
     bool HasAllSet(const llvm::Value*);
 
     // is the name something like "%42"?
-    inline bool IsTempName(const std::string& name)
+    inline bool IsTempName(llvm::StringRef name)
     {
-        return name.length() < 2 || (name[1] >= '0' && name[1] <= '9');
+        return name.size() < 2 || (name[1] >= '0' && name[1] <= '9');
     }
 
-    void AppendArrayIndexToName(std::string &, int);
+    void AppendArrayIndexToName(llvm::StringRef, int);
 
-    const llvm::Type* GetBasicType(const llvm::Value*);
-    const llvm::Type* GetBasicType(const llvm::Type*);
+    llvm::Type* GetBasicType(const llvm::Value*);
+    llvm::Type* GetBasicType(llvm::Type*);
 
     llvm::Type::TypeID GetBasicTypeID(const llvm::Value*);
-    llvm::Type::TypeID GetBasicTypeID(const llvm::Type*);
+    llvm::Type::TypeID GetBasicTypeID(llvm::Type*);
 
-    bool ConvertValuesToUnsigned(unsigned*, int &, std::vector<llvm::Value*>);
+    bool ConvertValuesToUnsigned(unsigned*, int &, llvm::ArrayRef<llvm::Value*>);
 
 };  // end gla namespace
 

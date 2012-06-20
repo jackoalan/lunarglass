@@ -76,7 +76,7 @@ double GetConstantDouble(const llvm::Value* value)
     return constantFP->getValueAPF().convertToDouble();
 }
 
-int GetComponentCount(const llvm::Type* type)
+int GetComponentCount(llvm::Type* type)
 {
     if (type->getTypeID() == llvm::Type::VectorTyID)
         return llvm::dyn_cast<llvm::VectorType>(type)->getNumElements();
@@ -112,7 +112,7 @@ bool AreAllDefined(const llvm::Value* value)
     return true;
 }
 
-bool IsBoolean(const llvm::Type* type)
+bool IsBoolean(llvm::Type* type)
 {
     if (llvm::Type::VectorTyID == type->getTypeID()) {
         if (type->getContainedType(0) == type->getInt1Ty(type->getContext()))
@@ -154,12 +154,12 @@ void AppendArrayIndexToName(std::string &arrayName, int index)
     arrayName.append("]");
 }
 
-const llvm::Type* GetBasicType(const llvm::Value* value)
+llvm::Type* GetBasicType(const llvm::Value* value)
 {
     return GetBasicType(value->getType());
 }
 
-const llvm::Type* GetBasicType(const llvm::Type* type)
+llvm::Type* GetBasicType(llvm::Type* type)
 {
     switch(type->getTypeID()) {
     case llvm::Type::VectorTyID:
@@ -175,7 +175,7 @@ llvm::Type::TypeID GetBasicTypeID(const llvm::Value* value)
     return GetBasicTypeID(value->getType());
 }
 
-llvm::Type::TypeID GetBasicTypeID(const llvm::Type* type)
+llvm::Type::TypeID GetBasicTypeID(llvm::Type* type)
 {
     return GetBasicType(type)->getTypeID();
 }
@@ -184,9 +184,9 @@ llvm::Type::TypeID GetBasicTypeID(const llvm::Type* type)
 // i.e. llvm::IRBuilder::CreateExtractValue()
 // This method will do the conversion and inform the caller if not every element was
 // a constant integer.
-bool ConvertValuesToUnsigned(unsigned* indices, int &count, std::vector<llvm::Value*> chain)
+bool ConvertValuesToUnsigned(unsigned* indices, int &count, llvm::ArrayRef<llvm::Value*> chain)
 {
-    std::vector<llvm::Value*>::iterator start = chain.begin();
+    llvm::ArrayRef<llvm::Value*>::iterator start = chain.begin();
 
     for (count = 0; start != chain.end(); ++start, ++count) {
         if (llvm::Constant* constant = llvm::dyn_cast<llvm::Constant>(*start)) {

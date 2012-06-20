@@ -35,11 +35,12 @@
 #include "llvm/GlobalVariable.h"
 #include "llvm/Instructions.h"
 #include "llvm/Module.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CFG.h"
 
 namespace gla {
@@ -74,7 +75,7 @@ void Builder::clearAccessChain()
     accessChain.isRValue = false;
 }
 
-void Builder::accessChainPushSwizzleLeft(std::vector<int>& swizzle, const llvm::Type* type, int width)
+void Builder::accessChainPushSwizzleLeft(llvm::ArrayRef<int> swizzle, llvm::Type* type, int width)
 {
     // if needed, propagate the swizzle for the current access chain
     if (accessChain.swizzle.size()) {
@@ -274,7 +275,7 @@ llvm::BasicBlock* Builder::makeMain()
     assert(! mainFunction);
 
     llvm::BasicBlock* entry;
-    std::vector<const llvm::Type*> params;
+    llvm::SmallVector<llvm::Type*, 1> params;
 
     stageEpilogue = llvm::BasicBlock::Create(context, "stage-epilogue");
     stageExit    = llvm::BasicBlock::Create(context, "stage-exit");
@@ -326,14 +327,14 @@ void Builder::makeDiscard(bool isMain)
     createAndSetNoPredecessorBlock("post-discard");
 }
 
-void Builder::createAndSetNoPredecessorBlock(std::string name)
+void Builder::createAndSetNoPredecessorBlock(llvm::StringRef name)
 {
     builder.SetInsertPoint(llvm::BasicBlock::Create(context, name,
                                                     builder.GetInsertBlock()->getParent()));
 
 }
 
-llvm::Function* Builder::makeFunctionEntry(const llvm::Type* type, const char* name, const std::vector<const llvm::Type*>& paramTypes, llvm::BasicBlock** entry, bool external)
+llvm::Function* Builder::makeFunctionEntry(llvm::Type* type, const char* name, llvm::ArrayRef<llvm::Type*> paramTypes, llvm::BasicBlock** entry, bool external)
 {
     llvm::FunctionType *functionType = llvm::FunctionType::get(type, paramTypes, false);
     llvm::Function *function = llvm::Function::Create(functionType, external ? llvm::Function::ExternalLinkage : llvm::Function::InternalLinkage, name, module);
@@ -347,7 +348,7 @@ llvm::Function* Builder::makeFunctionEntry(const llvm::Type* type, const char* n
     return function;
 }
 
-llvm::Constant* Builder::getConstant(std::vector<llvm::Constant*>& constants, const llvm::Type* type)
+llvm::Constant* Builder::getConstant(llvm::ArrayRef<llvm::Constant*> constants, llvm::Type* type)
 {
     assert(type);
 
@@ -369,12 +370,12 @@ llvm::Constant* Builder::getConstant(std::vector<llvm::Constant*>& constants, co
 }
 
 Builder::SuperValue Builder::createVariable(EStorageQualifier storageQualifier, int storageInstance,
-                                            const llvm::Type* type, bool isMatrix, llvm::Constant* initializer, const std::string* annotation,
-                                            const std::string& name)
+                                            llvm::Type* type, bool isMatrix, llvm::Constant* initializer, llvm::StringRef annotation,
+                                            llvm::StringRef name)
 {
     std::string annotatedName;
-    if (annotation != 0) {
-        annotatedName = *annotation;
+    if (annotation.size() != 0) {
+        annotatedName = annotation;
         annotatedName.append(" ");
         annotatedName.append(name);
     } else
@@ -468,7 +469,7 @@ Builder::SuperValue Builder::createStore(SuperValue rValue, SuperValue lValue)
 
     // Retroactively change the name of the last-value temp to the name of the
     // l-value, to help debuggability, if it's just an llvm temp name.
-    if (llvmRValue->getNameStr().length() < 2 || (llvmRValue->getNameStr()[1] >= '0' && llvmRValue->getNameStr()[1] <= '9'))
+    if (llvmRValue->getName().size() < 2 || (llvmRValue->getName()[1] >= '0' && llvmRValue->getName()[1] <= '9'))
         llvmRValue->setName(llvmLValue->getName());
 
     builder.CreateStore(llvmRValue, llvmLValue);
@@ -489,9 +490,7 @@ Builder::SuperValue Builder::createLoad(SuperValue lValue)
 Builder::SuperValue Builder::createGEP(SuperValue gepValue, llvm::ArrayRef<llvm::Value*> gepIndexChain)
 {
     if (gepValue.isMatrix()) {
-        llvm::Value* newValue = builder.CreateGEP(gepValue.getMatrix()->getValue(),
-                                gepIndexChain.begin(),
-                                gepIndexChain.end());
+        llvm::Value* newValue = builder.CreateGEP(gepValue.getMatrix()->getValue(), gepIndexChain);
 
         if (gepIndexChain.size() == 1) {
             gla::Builder::Matrix* gepMatrix = new gla::Builder::Matrix(newValue);
@@ -501,17 +500,17 @@ Builder::SuperValue Builder::createGEP(SuperValue gepValue, llvm::ArrayRef<llvm:
         }
 
     } else
-         return builder.CreateGEP(gepValue, gepIndexChain.begin(), gepIndexChain.end());
+         return builder.CreateGEP(gepValue, gepIndexChain);
 }
 
 Builder::SuperValue Builder::createInsertValue(SuperValue target, SuperValue source, unsigned* indices, int indexCount)
 {
     if (target.isMatrix()) {
-        llvm::Value* newValue = builder.CreateInsertValue(target.getMatrix()->getValue(), source, indices, indices + indexCount);
+        llvm::Value* newValue = builder.CreateInsertValue(target.getMatrix()->getValue(), source, llvm::ArrayRef<unsigned>(indices, indices + indexCount));
         gla::Builder::Matrix* insertValMatrix = new gla::Builder::Matrix(newValue);
         return gla::Builder::SuperValue(insertValMatrix);
     } else
-        return builder.CreateInsertValue(target, source, indices, indices + indexCount);
+        return builder.CreateInsertValue(target, source, llvm::ArrayRef<unsigned>(indices, indices + indexCount));
 }
 
 void Builder::copyOutPipeline()
@@ -561,7 +560,7 @@ void Builder::writePipeline(llvm::Value* outValue, llvm::Value* slot, int mask, 
     }
 }
 
-llvm::Value* Builder::readPipeline(const llvm::Type* type, std::string& name, int slot, int mask,
+llvm::Value* Builder::readPipeline(llvm::Type* type, llvm::StringRef name, int slot, int mask,
                                    EInterpolationMethod method, EInterpolationLocation location,
                                    llvm::Value* offset, llvm::Value* sampleIdx)
 {
@@ -603,7 +602,7 @@ llvm::Value* Builder::readPipeline(const llvm::Type* type, std::string& name, in
     }
 }
 
-llvm::Value* Builder::createSwizzle(llvm::Value* source, int swizzleMask, const llvm::Type* finalType)
+llvm::Value* Builder::createSwizzle(llvm::Value* source, int swizzleMask, llvm::Type* finalType)
 {
     const int numComponents = gla::GetComponentCount(finalType);
 
@@ -632,7 +631,7 @@ llvm::Value* Builder::createSwizzle(llvm::Value* source, int swizzleMask, const 
     return target;
 }
 
-llvm::Value* Builder::createSwizzle(llvm::Value* source, const std::vector<int>& channels, const llvm::Type* finalType)
+llvm::Value* Builder::createSwizzle(llvm::Value* source, llvm::ArrayRef<int> channels, llvm::Type* finalType)
 {
     int swizMask = 0;
     for (unsigned int i = 0; i < channels.size(); ++i) {
@@ -675,12 +674,12 @@ Builder::Matrix::Matrix(int c, int r, Matrix* oldMatrix) : numColumns(c), numRow
     UnsupportedFunctionality("construction of matrix from matrix");
 }
 
-const llvm::Type* Builder::Matrix::getType(const llvm::Type* elementType, int numColumns, int numRows)
+llvm::Type* Builder::Matrix::getType(llvm::Type* elementType, int numColumns, int numRows)
 {
     // This is not a matrix... it's a cache of types for all possible matrix sizes.
     static const int minSize = 2;
     static const int maxSize = 4;
-    static const llvm::Type* typeCache[maxSize-minSize+1][maxSize-minSize+1] =
+    static llvm::Type* typeCache[maxSize-minSize+1][maxSize-minSize+1] =
         { {0, 0, 0},
           {0, 0, 0},
           {0, 0, 0} };
@@ -688,7 +687,7 @@ const llvm::Type* Builder::Matrix::getType(const llvm::Type* elementType, int nu
     assert(numColumns >= minSize && numRows >= minSize);
     assert(numColumns <= maxSize && numRows <= maxSize);
 
-    const llvm::Type** type = &typeCache[numColumns-minSize][numRows-minSize];
+    llvm::Type** type = &typeCache[numColumns-minSize][numRows-minSize];
     if (*type == 0) {
         // a matrix is an array of vectors
         llvm::VectorType* columnType = llvm::VectorType::get(elementType, numRows);
@@ -1030,48 +1029,48 @@ llvm::Function* Builder::getIntrinsic(llvm::Intrinsic::ID ID)
     return llvm::Intrinsic::getDeclaration(module, ID);
 }
 
-llvm::Function* Builder::getIntrinsic(llvm::Intrinsic::ID ID, const llvm::Type* type1)
+llvm::Function* Builder::getIntrinsic(llvm::Intrinsic::ID ID, llvm::Type* type1)
 {
     // Look up the intrinsic
-    return llvm::Intrinsic::getDeclaration(module, ID, &type1, 1);
+    return llvm::Intrinsic::getDeclaration(module, ID, type1);
 }
 
-llvm::Function* Builder::getIntrinsic(llvm::Intrinsic::ID ID, const llvm::Type* type1, const llvm::Type* type2)
+llvm::Function* Builder::getIntrinsic(llvm::Intrinsic::ID ID, llvm::Type* type1, llvm::Type* type2)
 {
-    const llvm::Type* intrinsicTypes[] = {
+    llvm::Type* intrinsicTypes[] = {
         type1,
         type2 };
 
     // Look up the intrinsic
-    return llvm::Intrinsic::getDeclaration(module, ID, intrinsicTypes, 2);
+    return llvm::Intrinsic::getDeclaration(module, ID, intrinsicTypes);
 }
 
-llvm::Function* Builder::getIntrinsic(llvm::Intrinsic::ID ID, const llvm::Type* type1, const llvm::Type* type2, const llvm::Type* type3)
+llvm::Function* Builder::getIntrinsic(llvm::Intrinsic::ID ID, llvm::Type* type1, llvm::Type* type2, llvm::Type* type3)
 {
-    const llvm::Type* intrinsicTypes[] = {
+    llvm::Type* intrinsicTypes[] = {
         type1,
         type2,
         type3 };
 
     // Look up the intrinsic
-    return llvm::Intrinsic::getDeclaration(module, ID, intrinsicTypes, 3);
+    return llvm::Intrinsic::getDeclaration(module, ID, intrinsicTypes);
 }
 
-llvm::Function* Builder::getIntrinsic(llvm::Intrinsic::ID ID, const llvm::Type* type1, const llvm::Type* type2, const llvm::Type* type3, const llvm::Type* type4)
+llvm::Function* Builder::getIntrinsic(llvm::Intrinsic::ID ID, llvm::Type* type1, llvm::Type* type2, llvm::Type* type3, llvm::Type* type4)
 {
-    const llvm::Type* intrinsicTypes[] = {
+    llvm::Type* intrinsicTypes[] = {
         type1,
         type2,
         type3,
         type4 };
 
     // Look up the intrinsic
-    return llvm::Intrinsic::getDeclaration(module, ID, intrinsicTypes, 4);
+    return llvm::Intrinsic::getDeclaration(module, ID, intrinsicTypes);
 }
 
-llvm::Function* Builder::getIntrinsic(llvm::Intrinsic::ID ID, const llvm::Type* type1, const llvm::Type* type2, const llvm::Type* type3, const llvm::Type* type4, const llvm::Type* type5)
+llvm::Function* Builder::getIntrinsic(llvm::Intrinsic::ID ID, llvm::Type* type1, llvm::Type* type2, llvm::Type* type3, llvm::Type* type4, llvm::Type* type5)
 {
-    const llvm::Type* intrinsicTypes[] = {
+    llvm::Type* intrinsicTypes[] = {
         type1,
         type2,
         type3,
@@ -1079,7 +1078,7 @@ llvm::Function* Builder::getIntrinsic(llvm::Intrinsic::ID ID, const llvm::Type* 
         type5};
 
     // Look up the intrinsic
-    return llvm::Intrinsic::getDeclaration(module, ID, intrinsicTypes, 5);
+    return llvm::Intrinsic::getDeclaration(module, ID, intrinsicTypes);
 }
 
 void Builder::promoteScalar(SuperValue& left, SuperValue& right)
@@ -1098,7 +1097,7 @@ void Builder::promoteScalar(SuperValue& left, SuperValue& right)
     return;
 }
 
-llvm::Value* Builder::smearScalar(llvm::Value* scalar, const llvm::Type* vectorType)
+llvm::Value* Builder::smearScalar(llvm::Value* scalar, llvm::Type* vectorType)
 {
     assert(gla::IsScalar(scalar->getType()));
     return createSwizzle(scalar, 0x00, vectorType);
@@ -1107,7 +1106,7 @@ llvm::Value* Builder::smearScalar(llvm::Value* scalar, const llvm::Type* vectorT
 // Accept all parameters needed to create LunarGLASS texture intrinsics
 // Select the correct intrinsic based on the inputs, and make the call
 // TODO:  Expand this beyond current level of GLSL 1.2 functionality
-llvm::Value* Builder::createTextureCall(const llvm::Type* resultType, gla::ESamplerType samplerType, int texFlags, const TextureParameters& parameters)
+llvm::Value* Builder::createTextureCall(llvm::Type* resultType, gla::ESamplerType samplerType, int texFlags, const TextureParameters& parameters)
 {
     bool floatReturn = gla::GetBasicType(resultType)->isFloatTy();
 
@@ -1302,10 +1301,10 @@ llvm::Value* Builder::createTextureCall(const llvm::Type* resultType, gla::ESamp
 
     assert(intrinsic);
 
-    return builder.CreateCall(intrinsic, texArgs, texArgs + numArgs);
+    return builder.CreateCall(intrinsic, llvm::ArrayRef<llvm::Value*>(texArgs, texArgs + numArgs));
 }
 
-llvm::Value* Builder::createTextureQueryCall(llvm::Intrinsic::ID intrinsicID, const llvm::Type* returnType, llvm::Constant* samplerType, llvm::Value* sampler, llvm::Value* src)
+llvm::Value* Builder::createTextureQueryCall(llvm::Intrinsic::ID intrinsicID, llvm::Type* returnType, llvm::Constant* samplerType, llvm::Value* sampler, llvm::Value* src)
 {
     llvm::Function* intrinsicName = 0;
 
@@ -1325,7 +1324,7 @@ llvm::Value* Builder::createTextureQueryCall(llvm::Intrinsic::ID intrinsicID, co
     return builder.CreateCall3(intrinsicName, samplerType, sampler, src);
 }
 
-llvm::Value* Builder::createSamplePositionCall(const llvm::Type* returnType, llvm::Value* sampleIdx)
+llvm::Value* Builder::createSamplePositionCall(llvm::Type* returnType, llvm::Value* sampleIdx)
 {
     // Return type is only flexible type
     llvm::Function* intrinsicName = getIntrinsic(llvm::Intrinsic::gla_fSamplePosition, returnType);
@@ -1366,7 +1365,7 @@ llvm::Value* Builder::createBitFieldInsertCall(llvm::Value* base, llvm::Value* i
 
 llvm::Value* Builder::createRecip(llvm::Value* operand)
 {
-    const llvm::Type* ty = operand->getType();
+    llvm::Type* ty = operand->getType();
 
     if (GetBasicType(ty)->isFloatTy())
         return builder.CreateFDiv(llvm::ConstantFP::get(ty, 1.0), operand);

@@ -95,7 +95,6 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TypeSymbolTable.h"
 
 #include <cstdio>
 #include <string>

@@ -86,6 +86,13 @@
 using namespace llvm;
 using namespace gla_llvm;
 
+
+// LunarGLASS 3.1 TODO: implement or find alternative for dominance frontier
+namespace llvm {
+class DominanceFrontier;
+class PostDominanceFrontier;
+};
+
 namespace  {
     class IntrinsicCombine : public FunctionPass {
     public:
@@ -237,8 +244,8 @@ bool IntrinsicCombine::hoistDiscards(Function& F)
             cond = builder.CreateNot(cond);
         }
 
-        const Type* boolTy = gla::GetBoolType(*context);
-        builder.CreateCall(Intrinsic::getDeclaration(module, Intrinsic::gla_discardConditional, &boolTy, 1 ),
+        Type* boolTy = gla::GetBoolType(*context);
+        builder.CreateCall(Intrinsic::getDeclaration(module, Intrinsic::gla_discardConditional, boolTy),
                            cond);
 
         // Make the branch now branch on a constant
@@ -306,7 +313,7 @@ bool IntrinsicCombine::splitWriteData(IntrinsicInst* intr)
             continue;
 
         Value* arg = components[i];
-        const Type* ty = arg->getType();
+        Type* ty = arg->getType();
         Constant* select = selects[i];
 
         // If this is a vector source, see if the select just carries the
@@ -339,8 +346,8 @@ bool IntrinsicCombine::splitWriteData(IntrinsicInst* intr)
             wmask |= (1 << *componentI);
         }
 
-        const Type* ty = i->first->getType();
-        Function* writeData = Intrinsic::getDeclaration(module, intr->getIntrinsicID(), &ty, 1);
+        Type* ty = i->first->getType();
+        Function* writeData = Intrinsic::getDeclaration(module, intr->getIntrinsicID(), ty);
         builder.CreateCall3(writeData, intr->getArgOperand(0), ConstantInt::get(wm->getType(), wmask), i->first);
     }
 
@@ -487,7 +494,7 @@ bool IntrinsicCombine::partiallyEvaluateMultiInsert(IntrinsicInst* miIntr)
         return false;
 
     const FunctionType* miTypes = miIntr->getCalledFunction()->getFunctionType();
-    const Type* declTys[6] = { miTypes->getReturnType(),
+    Type* declTys[] = { miTypes->getReturnType(),
                                miTypes->getParamType(0),
                                miTypes->getParamType(2),
                                miTypes->getParamType(4),
@@ -512,7 +519,7 @@ bool IntrinsicCombine::partiallyEvaluateMultiInsert(IntrinsicInst* miIntr)
         declTys[i->second / 2 + 1] = constant->getType();
     }
 
-    Function* newDecl = Intrinsic::getDeclaration(module, miIntr->getIntrinsicID(), declTys, 6);
+    Function* newDecl = Intrinsic::getDeclaration(module, miIntr->getIntrinsicID(), declTys);
     miIntr->setCalledFunction(newDecl);
 
     return true;

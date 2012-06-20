@@ -36,12 +36,13 @@
 #ifndef Backend_H
 #define Backend_H
 
+#include "llvm/ADT/StringRef.h"
+
 #include "LunarGLASSManager.h"
 
 // Forward decls
 namespace llvm {
     class PHINode;
-    class Value;
     class CmpInst;
     class GlobalVariable;
     class Instruction;
@@ -122,10 +123,10 @@ namespace gla {
 
         explicit BackEndTranslator(Manager* m) : manager(m) { }
         virtual ~BackEndTranslator() { }
-        virtual void addStructType(const std::string, const llvm::Type*) { }
+        virtual void addStructType(llvm::StringRef, llvm::Type*) { }
         virtual void addGlobal(const llvm::GlobalVariable*) { }
         virtual void addOutputs(const PipelineSymbols&) { }
-        virtual void startFunctionDeclaration(const llvm::Type*, const std::string&) = 0;
+        virtual void startFunctionDeclaration(llvm::Type*, llvm::StringRef) = 0;
         virtual void addArgument(const llvm::Value*, bool last) = 0;
         virtual void endFunctionDeclaration() = 0;
         virtual void startFunctionBody() = 0;

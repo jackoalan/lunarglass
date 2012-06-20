@@ -35,6 +35,8 @@
 #include "Passes/PassSupport.h"
 #include "Backend.h"
 
+#include "llvm/ADT/StringRef.h"
+
 #include "llvm/Support/ErrorHandling.h"
 
 namespace gla_llvm {

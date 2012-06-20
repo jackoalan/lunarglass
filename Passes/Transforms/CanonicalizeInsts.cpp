@@ -80,7 +80,7 @@ namespace  {
 
         void hoistUndefOps(Instruction*);
 
-        CallInst* createSwizzleIntrinsic(Value* val, const SmallVectorImpl<Constant*>& mask);
+        CallInst* createSwizzleIntrinsic(Value* val, ArrayRef<Constant*> mask);
 
         CanonicalizeInsts(const CanonicalizeInsts&); // do not implement
         void operator=(const CanonicalizeInsts&); // do not implement
@@ -97,7 +97,7 @@ inline bool NeedsToKeepUndefs(const Instruction* inst)
     return isa<ShuffleVectorInst>(inst) || IsGlaSwizzle(inst) || IsMultiInsert(inst);
 }
 
-CallInst* CanonicalizeInsts::createSwizzleIntrinsic(Value* val, const SmallVectorImpl<Constant*>& mask)
+CallInst* CanonicalizeInsts::createSwizzleIntrinsic(Value* val, ArrayRef<Constant*> mask)
 {
     Instruction* inst = dyn_cast<Instruction>(val);
     if (! inst)
@@ -106,11 +106,11 @@ CallInst* CanonicalizeInsts::createSwizzleIntrinsic(Value* val, const SmallVecto
     Intrinsic::ID id = GetBasicType(inst)->isFloatTy() ? Intrinsic::gla_fSwizzle
                                                        : Intrinsic::gla_swizzle;
 
-    const Type* retTy = VectorType::get(GetBasicType(inst), mask.size());
+    Type* retTy = VectorType::get(GetBasicType(inst), mask.size());
 
     Constant* maskArg = ConstantVector::get(mask);
 
-    const Type* tys[] = { retTy, inst->getType(), maskArg->getType() };
+    Type* tys[] = { retTy, inst->getType(), maskArg->getType() };
 
     // Make a builder ready to insert right after the value, or after all the
     // PHINodes if the value is the result of a PHI.
@@ -119,7 +119,7 @@ CallInst* CanonicalizeInsts::createSwizzleIntrinsic(Value* val, const SmallVecto
     IRBuilder<> builder(module->getContext());
     builder.SetInsertPoint(insertPoint);
 
-    Function* sig = Intrinsic::getDeclaration(module, id, tys, 3);
+    Function* sig = Intrinsic::getDeclaration(module, id, tys);
     return builder.CreateCall2(sig, inst, maskArg);
 }
 
@@ -213,7 +213,7 @@ void CanonicalizeInsts::hoistConstantGEPs(Instruction* inst)
                     gepIndices.push_back(*expIter);
 
                 // Insert new instruction and replace operand
-                *constIter = GetElementPtrInst::Create(constExpr->getOperand(0), gepIndices.begin(), gepIndices.end(), "gla_constGEP", insertLoc);
+                *constIter = GetElementPtrInst::Create(constExpr->getOperand(0), gepIndices, "gla_constGEP", insertLoc);
                 changed = true;
 
             } else {

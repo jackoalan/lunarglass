@@ -237,7 +237,6 @@ void gla::PrivateManager::runLLVMOptimizations1()
     pm.add(llvm::createDeadStoreEliminationPass());
     pm.add(llvm::createAggressiveDCEPass());
     pm.add(llvm::createStripDeadPrototypesPass());
-    pm.add(llvm::createDeadTypeEliminationPass());
 
     // TODO: Consider using the below in the presense of functions
     // pm.add(llvm::createGlobalDCEPass());

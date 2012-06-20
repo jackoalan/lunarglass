@@ -36,6 +36,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Constants.h"
 
 #include "Passes/Util/ADT.h"
 #include "Passes/Util/BasicBlockUtil.h"
@@ -191,7 +192,7 @@ namespace gla_llvm {
                     preds.push_back(*i);
             }
 
-            merge = SplitBlockPredecessors(merge, &preds.front(), preds.size(), "_split", parentPass);
+            merge = SplitBlockPredecessors(merge, preds, "_split", parentPass);
             assert(! hasSharedMerge() && "Entry still does not dominate merge?");
 
             return true;

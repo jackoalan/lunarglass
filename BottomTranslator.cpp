@@ -281,10 +281,9 @@ namespace {
 static void CreateSimpleInductiveLoop(LoopWrapper& loop, gla::BackEndTranslator& bet)
 {
     const PHINode* pn  = loop.getCanonicalInductionVariable();
-    const Value* count = loop.getTripCount();
-    assert(pn && count);
+    assert(pn);
 
-    int tripCount = gla::GetConstantInt(count);
+    int tripCount = loop.getTripCount();
     assert (tripCount  >= 0);
 
     if (gla::Options.debug && ! gla::Options.bottomIROnly) {

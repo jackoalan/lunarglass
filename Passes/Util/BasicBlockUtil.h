@@ -330,6 +330,10 @@ namespace gla_llvm {
         return br->getSuccessor(i);
     }
 
+
+    // LunarGLASS 3.1 TODO: refine to compute the needed partial dominance
+    // frontier, and use it.
+
     // Add all the merge points of the given basic blocks to the (empty) merges
     // set. Clears merges first if non-empty.
     // Note: body must appear in this header file, or else explicit

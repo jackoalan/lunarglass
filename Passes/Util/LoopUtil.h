@@ -32,6 +32,7 @@
 
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 
 #include "Passes/Util/ADT.h"
 #include "Passes/Util/BasicBlockUtil.h"
@@ -42,18 +43,23 @@ namespace gla_llvm {
     using namespace llvm;
     class LoopStack;
 
+    // LunarGLASS 3.1 TODO: Remove the need for the dominance frontier, it's
+    // only used for the merges and testing for returns/discards. The second
+    // purpose can be generalized elsewhere.
+
     // Loop wrapper providing more queries/information
     class LoopWrapper {
     public:
-        LoopWrapper(Loop* loop, DominanceFrontier* df, bool simpleBE)
+        LoopWrapper(Loop* loop, DominanceFrontier* df, ScalarEvolution* sev, bool simpleBE)
             : domFront(df)
+            , scalarEvo(sev)
             , simpleLatch(simpleBE)
             , header(loop->getHeader())
             , latch(loop->getLoopLatch())
             , blocks(loop->getBlocks().begin(), loop->getBlocks().end())
             , uniqueExiting(loop->getExitingBlock())
+            , tripCount(scalarEvo->getSmallConstantTripCount(loop, header))
             , inductiveVar(loop->getCanonicalInductionVariable())
-            , tripCount(loop->getTripCount())
             , loopDepth(loop->getLoopDepth())
             , simpleConditional(-1)
             , function(loop->getHeader()->getParent())
@@ -148,7 +154,7 @@ namespace gla_llvm {
         PHINode* getCanonicalInductionVariable() const { return inductiveVar; }
         bool     contains(const BasicBlock* bb)  const { return blocks.count(bb); }
         bool     contains(const Instruction* i)  const { return blocks.count(i->getParent()); }
-        Value*   getTripCount()                  const { return tripCount; }
+        unsigned int getTripCount()              const { return tripCount; }
 
         const SmallPtrSet<const BasicBlock*,16>& getBlocks() const { return blocks; }
 
@@ -295,7 +301,7 @@ namespace gla_llvm {
     protected:
         // LoopInfo* loopInfo;
         DominanceFrontier* domFront;
-        // ScalarEvolution* scalarEvo;
+        ScalarEvolution* scalarEvo;
 
         bool simpleLatch;
 
@@ -307,7 +313,7 @@ namespace gla_llvm {
         BasicBlock* uniqueExiting;
 
         PHINode* inductiveVar;
-        Value*   tripCount;
+        unsigned int tripCount;
 
         unsigned loopDepth;
 

@@ -30,8 +30,9 @@
 //
 //   * Any instruction dominated or post-dominated by discard is DCEed
 //
-//   * Change (hoist) discards into discardConditionals which will reside in the
-//     post-dominance frontier. TODO: place these discards right after the
+//   * Hoist discards into discardConditionals which will reside in the only
+//     block in the post-dominance frontier. This block is determined lazily
+//     from the post-dominator tree. TODO: place these discards right after the
 //     condition is computed. TODO: only do based on backend query. TODO:
 //     migrate the condition as high as it can go.
 //
@@ -214,14 +215,14 @@ bool IntrinsicCombine::hoistDiscards(Function& F)
 
     IRBuilder<> builder(*context);
     for (DiscardList::iterator i = discards.begin(), e = discards.end(); i != e; ++i) {
-        // LunarGLASS 3.1 TODO: PostDominanceFrontier has gone away, and is way
-        // more heavy-weight than needed. Instead, find the block to insert
-        // into dynamically.
-        UnsupportedFunctionality("temporarily for 3.1, hoisting discards");
 
-        //PostDominanceFrontier::DomSetType pds = postDomFront->find((*i)->getParent())->second;
-        //assert(pds.size() == 1 && "Unknown flow control layout or unstructured flow control");
-        BasicBlock* targetBlock = 0; //*pds.begin();
+        SmallVector<BasicBlock*, 1> postDomFront;
+        ComputeDominanceFrontier((*i)->getParent(), *postDomTree->DT, postDomFront);
+        if (postDomFront.size() != 1) {
+            UnsupportedFunctionality("multiple post-dominance frontier entries for a discarding block");
+        }
+
+        BasicBlock* targetBlock = postDomFront.front();
         BranchInst* br = dyn_cast<BranchInst>(targetBlock->getTerminator());
         assert(br && br->isConditional());
 

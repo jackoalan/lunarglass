@@ -865,9 +865,10 @@ bool BottomTranslator::runOnModule(Module& module)
     //
     // Translate named struct types.
     //
-    const TypeSymbolTable& symbolTable = module.getTypeSymbolTable();
-    for (TypeSymbolTable::const_iterator tableIter = symbolTable.begin(), tableEnd = symbolTable.end(); tableIter != tableEnd; ++tableIter)
-        backEndTranslator->addStructType(tableIter->first, tableIter->second);
+    std::vector<StructType*> structTys;
+    module.findUsedStructTypes(structTys);
+    for (std::vector<StructType*>::iterator i = structTys.begin(), e = structTys.end(); i != e; ++i)
+        backEndTranslator->addStructType((*i)->getName(), *i);
 
     //
     // Translate globals.
@@ -903,7 +904,7 @@ bool BottomTranslator::runOnModule(Module& module)
 
             // handle function's with bodies
 
-            backEndTranslator->startFunctionDeclaration(function->getFunctionType(), function->getNameStr());
+            backEndTranslator->startFunctionDeclaration(function->getFunctionType(), function->getName());
 
             // paramaters and arguments
             for (Function::const_arg_iterator arg = function->arg_begin(), endArg = function->arg_end(); arg != endArg; ++arg) {

@@ -44,6 +44,7 @@
 #include "llvm/Type.h"
 
 #include "Passes/PassSupport.h"
+#include "Passes/Util/ConstantUtil.h"
 
 // LunarGLASS helpers
 #include "Util.h"
@@ -269,7 +270,7 @@ static void GetUnderlyingOffsetAndValue(Value*& value, unsigned& offset)
 
             int sourceSize = gla::GetComponentCount(inst->getOperand(0));
 
-            shuffleMask->getVectorElements(elts);
+            GetElements(shuffleMask, elts);
             assert(elts.size() >= offset && "out-of-range offset");
 
             // Get the offset, if it's undef, then return back an undef value.
@@ -457,7 +458,7 @@ void MultiInsertIntrinsic::buildFromGroup()
         Constant* shuffleMask = dyn_cast<Constant>(toReplace->getOperand(2));
         assert(shuffleMask);
 
-        shuffleMask->getVectorElements(elts);
+        GetElements(shuffleMask, elts);
         assert(elts.size() <= 4);
 
         int sourceSize = gla::GetComponentCount(toReplace->getOperand(0));

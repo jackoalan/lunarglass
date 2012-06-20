@@ -54,20 +54,16 @@ namespace gla_llvm {
         return false;
     }
 
-    // Get the given constant's component, e.g. a scalar undef for any component
-    // of a UndefValue vector. Returns 0 if unable to get a component
-    inline Constant* GetComponentFromConstant(Constant* c, int component)
+    // Get all the elements of an aggregate data type. Will fill with zeros for
+    // ConstantAggregateZero and undefs for UndefValues. Result may contain 
+    // NULLs from calls to getAggregateElement()
+    inline void GetElements(const Constant* c, SmallVectorImpl<Constant*>& res)
     {
-        if (ConstantVector* cv = dyn_cast<ConstantVector>(c)) {
-            return cv->getOperand(component);
-        } else if (isa<ConstantAggregateZero>(c)) {
-            return Constant::getNullValue(gla::GetBasicType(c));
-        } else if (isa<UndefValue>(c)) {
-            return UndefValue::get(gla::GetBasicType(c));
+        for (unsigned int i = 0; i < c->getNumOperands(); ++i) {
+            res.push_back(c->getAggregateElement(i));
         }
-
-        return 0;
     }
+
 
 } // end namespace gla_llvm
 

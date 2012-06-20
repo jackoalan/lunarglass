@@ -171,7 +171,10 @@ Value* Scalarize::getComponent(int component, Value* v)
 
     if (v->getType()->isVectorTy()) {
         if (Constant* c = dyn_cast<Constant>(v)) {
-            return GetComponentFromConstant(c, component);
+            Constant* ret = c->getAggregateElement(component);
+            assert(ret && "out-of-bounds component");
+
+            return ret;
         } else {
             return vectorVals[v].getComponent(component);
         }

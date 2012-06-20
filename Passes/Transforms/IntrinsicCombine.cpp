@@ -507,8 +507,8 @@ bool IntrinsicCombine::partiallyEvaluateMultiInsert(IntrinsicInst* miIntr)
 
         // Find the component's value
         int component = gla::GetConstantInt(miIntr->getArgOperand(i->second + 1));
-        Constant* constant = GetComponentFromConstant(i->first, component);
-        assert(gla::IsScalar(constant));
+        Constant* constant = i->first->getAggregateElement(component);
+        assert(constant && gla::IsScalar(constant));
 
         // Set it, updating the select bit
         miIntr->setArgOperand(i->second, constant);

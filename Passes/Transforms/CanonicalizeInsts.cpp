@@ -45,6 +45,7 @@
 
 #include "Passes/PassSupport.h"
 #include "Passes/Immutable/BackEndPointer.h"
+#include "Passes/Util/ConstantUtil.h"
 #include "Passes/Util/InstructionUtil.h"
 
 // LunarGLASS helpers
@@ -142,7 +143,7 @@ void CanonicalizeInsts::intrinsicSelection(BasicBlock* bb)
 
             Constant* mask = dyn_cast<Constant>(instI->getOperand(2));
             assert(mask);
-            mask->getVectorElements(elts);
+            GetElements(mask, elts);
         } else {
             assert(IsMultiInsert(instI));
             source = GetMultiInsertUniqueSource(instI);

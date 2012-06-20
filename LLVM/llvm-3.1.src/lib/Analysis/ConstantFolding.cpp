@@ -1644,10 +1644,9 @@ static Constant *ConstantFoldGlaCall(Function *F, Constant *const *Operands, uns
     // Get the corresponding component from each operand
     Arguments.clear();
     for (unsigned Op = 0; Op < NumOperands; ++Op) {
-      if (const ConstantVector* CV = dyn_cast<ConstantVector>(Operands[Op])) {
-        Arguments.push_back(CV->getOperand(Comp));
-      } else if (isa<ConstantAggregateZero>(Operands[Op])) {
-        Arguments.push_back(Constant::getNullValue(Operands[Op]->getType()->getScalarType()));
+      Constant *C = Operands[Op]->getAggregateElement(Comp);
+      if (C) {
+        Arguments.push_back(C);
       } else {
         return 0;
       }

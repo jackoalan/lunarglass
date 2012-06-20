@@ -86,13 +86,6 @@
 using namespace llvm;
 using namespace gla_llvm;
 
-
-// LunarGLASS 3.1 TODO: implement or find alternative for dominance frontier
-namespace llvm {
-class DominanceFrontier;
-class PostDominanceFrontier;
-};
-
 namespace  {
     class IntrinsicCombine : public FunctionPass {
     public:
@@ -152,7 +145,6 @@ namespace  {
 
         DominatorTree* domTree;
         PostDominatorTree* postDomTree;
-        PostDominanceFrontier* postDomFront;
 
         Module* module;
         LLVMContext* context;
@@ -222,10 +214,14 @@ bool IntrinsicCombine::hoistDiscards(Function& F)
 
     IRBuilder<> builder(*context);
     for (DiscardList::iterator i = discards.begin(), e = discards.end(); i != e; ++i) {
-        PostDominanceFrontier::DomSetType pds = postDomFront->find((*i)->getParent())->second;
-        assert(pds.size() == 1 && "Unknown flow control layout or unstructured flow control");
+        // LunarGLASS 3.1 TODO: PostDominanceFrontier has gone away, and is way
+        // more heavy-weight than needed. Instead, find the block to insert
+        // into dynamically.
+        UnsupportedFunctionality("temporarily for 3.1, hoisting discards");
 
-        BasicBlock* targetBlock = *pds.begin();
+        //PostDominanceFrontier::DomSetType pds = postDomFront->find((*i)->getParent())->second;
+        //assert(pds.size() == 1 && "Unknown flow control layout or unstructured flow control");
+        BasicBlock* targetBlock = 0; //*pds.begin();
         BranchInst* br = dyn_cast<BranchInst>(targetBlock->getTerminator());
         assert(br && br->isConditional());
 
@@ -371,7 +367,6 @@ bool IntrinsicCombine::runOnFunction(Function& F)
 
     domTree = &getAnalysis<DominatorTree>();
     postDomTree = &getAnalysis<PostDominatorTree>();
-    postDomFront = &getAnalysis<PostDominanceFrontier>();
 
     module  = F.getParent();
     context = &F.getContext();
@@ -530,7 +525,6 @@ void IntrinsicCombine::getAnalysisUsage(AnalysisUsage& AU) const
 {
     AU.addRequired<DominatorTree>();
     AU.addRequired<PostDominatorTree>();
-    AU.addRequired<PostDominanceFrontier>();
     return;
 }
 
@@ -548,7 +542,6 @@ INITIALIZE_PASS_BEGIN(IntrinsicCombine,
                       false); // Whether it is an analysis pass
 INITIALIZE_PASS_DEPENDENCY(DominatorTree)
 INITIALIZE_PASS_DEPENDENCY(PostDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(PostDominanceFrontier)
 INITIALIZE_PASS_END(IntrinsicCombine,
                     "intrinsic-combine",
                     "Combine intrinsics for LunarGLASS",

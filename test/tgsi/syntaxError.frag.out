@@ -1,9 +1,0 @@
-compiling syntaxError.frag...
-uniform vec4 bigColor ; 
-varying vec4 BaseColor ; 
-uniform float d ; 
-
-
-Info log for syntaxError.frag:
-0:7(7): error: syntax error, unexpected NEW_IDENTIFIER, expecting ',' or ';'
-

@@ -58,7 +58,12 @@ namespace gla_llvm {
             , latch(loop->getLoopLatch())
             , blocks(loop->getBlocks().begin(), loop->getBlocks().end())
             , uniqueExiting(loop->getExitingBlock())
-            , tripCount(scalarEvo->getSmallConstantTripCount(loop, header))
+            // Scalar Evolution's trip count for the header block will be 1
+            // higher than the inductive loop's true trip count. This is
+            // because it is counting the number of times that the exit
+            // condition may be tested, which is 1 + the number of times the
+            // exit condition fails.
+            , tripCount(scalarEvo->getSmallConstantTripCount(loop, header) - 1)
             , inductiveVar(loop->getCanonicalInductionVariable())
             , loopDepth(loop->getLoopDepth())
             , simpleConditional(-1)

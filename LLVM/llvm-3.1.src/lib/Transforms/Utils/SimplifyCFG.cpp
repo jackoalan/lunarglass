@@ -553,6 +553,9 @@ bool SimplifyCFGOpt::
 SimplifyEqualityComparisonWithOnlyPredecessor(TerminatorInst *TI,
                                               BasicBlock *Pred,
                                               IRBuilder<> &Builder) {
+  // LunarGLASS: Don't do jump threading
+  return false;
+
   Value *PredVal = isValueEqualityComparison(Pred->getTerminator());
   if (!PredVal) return false;  // Not a value comparison in predecessor.
 
@@ -689,9 +692,8 @@ static int ConstantIntSortPredicate(const void *P1, const void *P2) {
 /// on the same value.  If so, and if safe to do so, fold them together.
 bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(TerminatorInst *TI,
                                                          IRBuilder<> &Builder) {
-  // LunarGLASS 3.1 TODO: see if still applies
-  //// LunarGLASS: don't make switches
-  //return false;
+  // LunarGLASS: don't make switches
+  return false;
 
   BasicBlock *BB = TI->getParent();
   Value *CV = isValueEqualityComparison(TI);  // CondVal
@@ -1109,9 +1111,9 @@ static bool SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *BB1) {
 /// BlockIsSimpleEnoughToThreadThrough - Return true if we can thread a branch
 /// across this block.
 static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
-  // LunarGLASS 3.1 TODO: see if still applies
-  //// LunarGLASS: don't do threading
-  //return false;
+  // LunarGLASS: don't do threading
+  return false;
+
   BranchInst *BI = cast<BranchInst>(BB->getTerminator());
   unsigned Size = 0;
   
@@ -1140,9 +1142,9 @@ static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
 /// constants, thread edges corresponding to that entry to be branches to their
 /// ultimate destination.
 static bool FoldCondBranchOnPHI(BranchInst *BI, const TargetData *TD) {
-  // LunarGLASS 3.1 TODO: see if still applies
-  //// LunarGLASS: don't do threading
-  //return false;
+  // LunarGLASS: don't do threading
+  return false;
+
   BasicBlock *BB = BI->getParent();
   PHINode *PN = dyn_cast<PHINode>(BI->getCondition());
   // NOTE: we currently cannot transform this case if the PHI node is used
@@ -2068,10 +2070,8 @@ static bool SimplifyIndirectBrOnSelect(IndirectBrInst *IBI, SelectInst *SI) {
 static bool TryToSimplifyUncondBranchWithICmpInIt(ICmpInst *ICI,
                                                   const TargetData *TD,
                                                   IRBuilder<> &Builder) {
-
-  // LunarGLASS 3.1 TODO: see if still applies
-  //// LunarGLASS: don't make switches
-  //return false;
+  // LunarGLASS: don't make switches
+  return false;
 
   BasicBlock *BB = ICI->getParent();
 
@@ -2165,7 +2165,6 @@ static bool TryToSimplifyUncondBranchWithICmpInIt(ICmpInst *ICI,
 static bool SimplifyBranchOnICmpChain(BranchInst *BI, const TargetData *TD,
                                       IRBuilder<> &Builder) {
 
-  // LunarGLASS 3.1 TODO: see if still applies
   // LunarGLASS: don't make switches
   return false;
 
@@ -2761,7 +2760,6 @@ bool SimplifyCFGOpt::SimplifyIndirectBr(IndirectBrInst *IBI) {
 }
 
 bool SimplifyCFGOpt::SimplifyUncondBranch(BranchInst *BI, IRBuilder<> &Builder){
-  // LunarGLASS 3.1 TODO: see if still applies
   // LunarGLASS: don't do this here, will be done only in special cases
   // elsewhere
   return false;

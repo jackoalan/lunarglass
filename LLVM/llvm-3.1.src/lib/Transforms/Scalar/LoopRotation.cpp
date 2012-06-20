@@ -49,6 +49,10 @@ namespace {
       AU.addPreservedID(LoopSimplifyID);
       AU.addRequiredID(LCSSAID);
       AU.addPreservedID(LCSSAID);
+
+      // LunarGLASS: We need scalar evolution available
+      AU.addRequired<ScalarEvolution>();
+
       AU.addPreserved<ScalarEvolution>();
     }
 
@@ -66,6 +70,10 @@ INITIALIZE_PASS_BEGIN(LoopRotate, "loop-rotate", "Rotate Loops", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopInfo)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(LCSSA)
+
+// LunarGLASS: We need scalar evolution available
+INITIALIZE_PASS_DEPENDENCY(ScalarEvolution)
+
 INITIALIZE_PASS_END(LoopRotate, "loop-rotate", "Rotate Loops", false, false)
 
 Pass *llvm::createLoopRotatePass() { return new LoopRotate(); }
@@ -153,25 +161,24 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
   }
 }
 
-// LunarGLASS 3.1 TODO: See if this still is needed
-//// LunarGLASS: Take this from LoopUnrollPass so as to enable us to only rotate a
-////loop that we will later inline
-///// ApproximateLoopSize - Approximate the size of the loop.
-//static unsigned ApproximateLoopSize(const Loop *L) {
-//  CodeMetrics Metrics;
-//  for (Loop::block_iterator I = L->block_begin(), E = L->block_end();
-//       I != E; ++I)
-//    Metrics.analyzeBasicBlock(*I);
+// LunarGLASS: Take this from LoopUnrollPass so as to enable us to only rotate a
+// loop that we will later inline
+/// ApproximateLoopSize - Approximate the size of the loop.
+static unsigned ApproximateLoopSize(const Loop *L) {
+  CodeMetrics Metrics;
+  for (Loop::block_iterator I = L->block_begin(), E = L->block_end();
+       I != E; ++I)
+    Metrics.analyzeBasicBlock(*I);
 
-//  unsigned LoopSize = Metrics.NumInsts;
+  unsigned LoopSize = Metrics.NumInsts;
 
-//  // Don't allow an estimate of size zero.  This would allows unrolling of loops
-//  // with huge iteration counts, which is a compile time problem even if it's
-//  // not a problem for code quality.
-//  if (LoopSize == 0) LoopSize = 1;
+  // Don't allow an estimate of size zero.  This would allows unrolling of loops
+  // with huge iteration counts, which is a compile time problem even if it's
+  // not a problem for code quality.
+  if (LoopSize == 0) LoopSize = 1;
 
-//  return LoopSize;
-//}
+  return LoopSize;
+}
 
 /// Determine whether the instructions in this range my be safely and cheaply
 /// speculated. This is not an important enough situation to develop complex
@@ -304,12 +311,6 @@ bool LoopRotate::rotateLoop(Loop *L) {
       return false;
   }
 
-  // LunarGLASS 3.1 TODO: see if this is still the case
-  //// LunarGLASS: We're only interested in loop-rotation if we have the potential
-  //// to unroll the loop
-  //if (! L->getTripCount() || L->getSmallConstantTripCount() * ApproximateLoopSize(L) >= 500 )
-     //return false;
-  // Now, this loop is suitable for rotation.
   BasicBlock *OrigPreheader = L->getLoopPreheader();
   BasicBlock *OrigLatch = L->getLoopLatch();
 
@@ -320,8 +321,23 @@ bool LoopRotate::rotateLoop(Loop *L) {
 
   // Anything ScalarEvolution may know about this loop or the PHI nodes
   // in its header will soon be invalidated.
-  if (ScalarEvolution *SE = getAnalysisIfAvailable<ScalarEvolution>())
+  if (ScalarEvolution *SE = getAnalysisIfAvailable<ScalarEvolution>()) {
+    // LunarGLASS: We're only interested in loop-rotation if we have the potential
+    // to unroll the loop
+    // LunarGLASS TODO: pass the threshold as an argument to this pass.
+    BasicBlock* Exiting = ExitBlocks.front()->getUniquePredecessor();
+    if (! Exiting)
+      return false;
+
+    unsigned int C = SE->getSmallConstantTripCount(L, Exiting);
+    if (C == 0 || (C-1) * ApproximateLoopSize(L) >= 350)
+      return false;
+
     SE->forgetLoop(L);
+  } else {
+    // LunarGLASS: We need scalar evolution available
+    return false;
+  }
 
   // Find new Loop header. NewHeader is a Header's one and only successor
   // that is inside loop.  Header's other successor is outside the

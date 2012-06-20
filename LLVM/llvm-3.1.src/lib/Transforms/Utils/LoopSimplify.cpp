@@ -538,10 +538,9 @@ void LoopSimplify::PlaceSplitBlockCarefully(BasicBlock *NewBB,
 ///
 Loop *LoopSimplify::SeparateNestedLoop(Loop *L, LPPassManager &LPM,
                                        BasicBlock *Preheader) {
-  // LunarGLASS 3.1 TODO: see if this still applies
-  //// LunarGLASS: We don't want to separate out loops, due to the risk of
-  //// introducing targeted breaks/continues.
-  //return 0;
+  // LunarGLASS: We don't want to separate out loops, due to the risk of
+  // introducing targeted breaks/continues.
+  return 0;
 
   // Don't try to separate loops without a preheader.
   if (!Preheader)

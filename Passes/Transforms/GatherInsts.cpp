@@ -301,6 +301,12 @@ bool GatherInsts::matchBinOpExtended(const BinaryOperator* binOp, Value*& operan
         if (! shiftBy)
             return false;
 
+        if (const ConstantDataVector* shiftByVec = dyn_cast<ConstantDataVector>(shiftBy)) {
+            shiftBy = shiftByVec->getSplatValue();
+            if (! shiftBy)
+                return false;
+        }
+
         if (const ConstantVector* shiftByVec = dyn_cast<ConstantVector>(shiftBy)) {
             shiftBy = shiftByVec->getSplatValue();
             if (! shiftBy)

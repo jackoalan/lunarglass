@@ -186,7 +186,7 @@ Value* Scalarize::getComponent(int component, Value* v)
 bool Scalarize::canGetComponent(Value* v)
 {
     if (v->getType()->isVectorTy()) {
-        if (isa<ConstantVector>(v) || isa<ConstantAggregateZero>(v) || isa<UndefValue>(v)) {
+        if (isa<ConstantVector>(v) || isa<ConstantDataVector>(v) || isa<ConstantAggregateZero>(v) || isa<UndefValue>(v)) {
             return true;
         } else {
             assert(isa<Instruction>(v) && "Non-constant non-instuction?");

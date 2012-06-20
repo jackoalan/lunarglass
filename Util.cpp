@@ -78,8 +78,8 @@ double GetConstantDouble(const llvm::Value* value)
 
 int GetComponentCount(llvm::Type* type)
 {
-    if (type->getTypeID() == llvm::Type::VectorTyID)
-        return llvm::dyn_cast<llvm::VectorType>(type)->getNumElements();
+    if (llvm::VectorType* vTy = llvm::dyn_cast<llvm::VectorType>(type))
+        return vTy->getNumElements();
     else
         return 1;
 }
@@ -127,17 +127,17 @@ bool IsBoolean(llvm::Type* type)
 
 bool HasAllSet(const llvm::Value* value)
 {
-    if (! llvm::isa<llvm::Constant>(value))
+    const llvm::Constant* c = llvm::dyn_cast<llvm::Constant>(value);
+    if (! c)
         return false;
 
-    if (IsScalar(value->getType())) {
-        return GetConstantInt(value) == -1;
+    if (IsScalar(c->getType())) {
+        return GetConstantInt(c) == -1;
     } else {
-        const llvm::ConstantVector* vector = llvm::dyn_cast<llvm::ConstantVector>(value);
-        assert(vector);
+        assert(llvm::isa<llvm::ConstantDataVector>(c) || llvm::isa<llvm::ConstantVector>(c));
 
-        for (unsigned int op = 0; op < vector->getNumOperands(); ++op) {
-            if (GetConstantInt(vector->getOperand(op)) != -1)
+        for (unsigned int op = 0; op < GetComponentCount(c); ++op) {
+            if (GetConstantInt(c->getAggregateElement(op)) != -1)
                 return false;
         }
 

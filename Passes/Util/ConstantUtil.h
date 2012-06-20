@@ -48,6 +48,11 @@ namespace gla_llvm {
             return splat && IsOne(splat);
         }
 
+        if (ConstantDataVector* cVector = dyn_cast<ConstantDataVector>(c)) {
+            Constant* splat = cVector->getSplatValue();
+            return splat && IsOne(splat);
+        }
+
         if (ConstantInt* cInt = dyn_cast<ConstantInt>(c))
             return cInt->equalsInt(1);
 
@@ -55,15 +60,14 @@ namespace gla_llvm {
     }
 
     // Get all the elements of an aggregate data type. Will fill with zeros for
-    // ConstantAggregateZero and undefs for UndefValues. Result may contain 
-    // NULLs from calls to getAggregateElement()
+    // ConstantAggregateZero and undefs for UndefValues. Result may contain
+    // NULLs from calls to getAggregateElement(). Currently only supports
+    // vectors.
     inline void GetElements(const Constant* c, SmallVectorImpl<Constant*>& res)
     {
-        for (unsigned int i = 0; i < c->getNumOperands(); ++i) {
+        for (unsigned int i = 0; i < gla::GetComponentCount(c); ++i)
             res.push_back(c->getAggregateElement(i));
-        }
     }
-
 
 } // end namespace gla_llvm
 

@@ -181,7 +181,7 @@ namespace gla_llvm {
         bool isSimpleInductive() const
         {
             // TODO: extend functionality to support early exit
-            return inductiveVar && tripCount;
+            return inductiveVar && tripCount && uniqueExiting;
         }
 
         // Is the loop a simple conditional loop. A simple conditional loop is a
